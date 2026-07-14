@@ -1,50 +1,71 @@
 ---
 name: claude-power-practices
-description: Repo-specific working agreements for the ReVision toolkit — the invariants and workflows an AI assistant must respect when editing this codebase. Use when adding endpoints, touching the Anthropic proxy, wiring the frontend, adding dependencies, or before committing changes.
+description: Repo-specific working agreements for the ReVision toolkit — the security/architecture invariants an AI assistant must respect when editing this codebase. Use when adding endpoints, touching the Anthropic proxy, wiring the frontend, adding dependencies, or before committing changes.
 ---
 
 # Claude power practices for ReVision
 
-Distilled from `CLAUDE.md`. When any of these apply to your change, follow them
-exactly — they encode security and architecture invariants, not preferences.
+`CLAUDE.md` at the repo root is the **single source of truth** for how this
+project is built. This skill is a fast-access checklist of the load-bearing
+invariants plus the local automation that supports them — not a second copy of
+the docs. When this skill and `CLAUDE.md` disagree, `CLAUDE.md` wins; fix the
+skill in the same change (see "Keep in sync" below).
 
-## Hard invariants (do not break)
+## Hard invariants (break these and you break the product)
+
+Kept inline because they're safety-critical and you should see them without
+opening another file. Full rationale lives in `CLAUDE.md` → *Architecture* and
+*Security notes*.
 
 - **Server-side API key.** The browser calls same-origin `/api/messages` only,
   never `api.anthropic.com`. The `x-api-key` / `anthropic-version` headers are
   added in `anthropic_client.py`. Never move the key or a direct Anthropic call
   into `static/index.html`.
 - **Model is server-controlled.** The model id lives in `config.py`
-  (`REVISION_MODEL`, default `claude-sonnet-5`) — never hard-code it in the
-  frontend, and always use a real model id.
-- **Stdlib-only backend.** Runtime code uses only the standard library
-  (`http.server`, `urllib`). Don't add runtime deps without a strong reason;
-  `pytest` / `ruff` are dev-only.
+  (`REVISION_MODEL`) — never hard-code it in the frontend, and always use a
+  real model id.
+- **Stdlib-only backend.** Runtime code uses only the standard library; add a
+  runtime dependency only with strong reason. `pytest` / `ruff` are dev-only.
 - **Static server is sandboxed.** `do_GET` serves only from
   `src/revision/static/` with a path-traversal guard — preserve it.
 - **Preserve the test seam.** `create_server(config, client=...)` accepts an
   injected client so tests run a real server against a fake Anthropic client
   with no network. Keep it injectable.
 
-## Conventions
+## Conventions — see `CLAUDE.md`, don't duplicate here
 
-- **src layout.** Shippable code under `src/revision/`; tests under `tests/`
-  mirror their module (`server.py` → `test_server.py`). `static/` lives inside
-  the package so it ships in the wheel.
-- **Errors to the browser.** Return `{"error": {"message": ...}}` JSON with an
-  apt status (400 bad input, 401 auth, 429 rate limit + `Retry-After`, 502
-  Anthropic). The frontend's `callClaude` reads `data.error.message`.
-- **HTTP handlers.** `do_GET` / `do_POST` carry `# noqa: N802`; keep the handler
-  bound to its client via `make_handler`.
-- **Style.** ruff, line length 100, rules `E, F, I, UP, B, SIM`. Type-hint
-  public functions. Run `ruff format` before committing.
+These live in `CLAUDE.md` and are the authority; this is just a map so you know
+which section to open:
+
+- **Layout & structure** → *Repository structure* (src layout; `tests/` mirror
+  their module; `static/` ships inside the package).
+- **Error contract** → *HTTP endpoints* (`{"error": {"message": ...}}` with
+  400 / 401 / 429+`Retry-After` / 502; `callClaude` reads `data.error.message`).
+- **Handler style & lint rules** → *Conventions* (`do_GET`/`do_POST` `# noqa:
+  N802` via `make_handler`; ruff line length 100, rules `E,F,I,UP,B,SIM`;
+  type-hint public functions).
+
+## Local automation (this repo's `.claude/`)
+
+- `/check` — the CI gate: `ruff check .` + `ruff format --check .` + `pytest`.
+- `/run-app` — start the server; `/smoke` — curl health / UI / messages.
+- A `PostToolUse` hook auto-runs `ruff check --fix --select I` then
+  `ruff format` on `.py` files, so writes don't leave import order failing the
+  gate. It's a safety net, not a substitute for running `/check`.
+- The `SessionStart` hook installs `pip install -e ".[dev]"` on a cold remote
+  container. See `.claude/README.md` for how these load (and the mid-session
+  watcher caveat).
 
 ## Before you commit
 
-- Run the CI gate: `ruff check .`, `ruff format --check .`, `pytest` (the
-  `/check` command does all three). Note: if `python -m pytest` can't find the
-  module, call the `pytest` / `ruff` binaries directly.
-- Keep docs honest: when you add a top-level directory, tool, endpoint, or
-  workflow, update the matching section of `CLAUDE.md` in the same change.
+- Run `/check` (or `ruff check .`, `ruff format --check .`, `pytest`). If
+  `python -m pytest` can't find the module, call the `pytest` / `ruff` binaries
+  directly.
 - Verify claims against the actual repo before asserting them.
 - Only open a PR when explicitly asked.
+
+## Keep in sync
+
+When you change a rule this skill mentions, update `CLAUDE.md` (the source of
+truth) **and** this skill in the same change. Documentation drift is a bug —
+`CLAUDE.md` says so, and a checklist that lies is worse than none.
