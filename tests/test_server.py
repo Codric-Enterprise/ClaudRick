@@ -27,8 +27,15 @@ class _FakeClient:
 
 
 @contextmanager
-def running_server(client):
-    config = Config(api_key="sk-test", model="claude-sonnet-5", host="127.0.0.1", port=0)
+def running_server(client, **config_kwargs):
+    kwargs = {
+        "api_key": "sk-test",
+        "model": "claude-sonnet-5",
+        "host": "127.0.0.1",
+        "port": 0,
+    }
+    kwargs.update(config_kwargs)
+    config = Config(**kwargs)
     httpd = create_server(config, client=client)
     thread = threading.Thread(target=httpd.serve_forever, daemon=True)
     thread.start()
@@ -41,16 +48,16 @@ def running_server(client):
         thread.join(timeout=5)
 
 
-def _post(url, payload):
+def _post(url, payload, headers=None):
     data = json.dumps(payload).encode()
-    req = urllib.request.Request(
-        url, data=data, method="POST", headers={"content-type": "application/json"}
-    )
+    hdrs = {"content-type": "application/json"}
+    hdrs.update(headers or {})
+    req = urllib.request.Request(url, data=data, method="POST", headers=hdrs)
     try:
         with urllib.request.urlopen(req) as resp:
-            return resp.status, json.loads(resp.read())
+            return resp.status, json.loads(resp.read()), dict(resp.headers)
     except urllib.error.HTTPError as exc:
-        return exc.code, json.loads(exc.read())
+        return exc.code, json.loads(exc.read()), dict(exc.headers)
 
 
 def test_get_index_served():
@@ -63,10 +70,20 @@ def test_get_index_served():
         assert "/api/messages" in body
 
 
+def test_healthz():
+    client = _FakeClient(result={"content": []})
+    with (
+        running_server(client) as base,
+        urllib.request.urlopen(base + "/healthz") as resp,
+    ):
+        assert resp.status == 200
+        assert json.loads(resp.read()) == {"status": "ok"}
+
+
 def test_api_messages_proxies_to_client():
     client = _FakeClient(result={"content": [{"type": "text", "text": "ok"}]})
     with running_server(client) as base:
-        status, data = _post(base + "/api/messages", {"prompt": "hi", "max_tokens": 500})
+        status, data, _ = _post(base + "/api/messages", {"prompt": "hi", "max_tokens": 500})
     assert status == 200
     assert data["content"][0]["text"] == "ok"
     assert client.calls == [("hi", 500)]
@@ -75,7 +92,7 @@ def test_api_messages_proxies_to_client():
 def test_api_messages_requires_prompt():
     client = _FakeClient(result={"content": []})
     with running_server(client) as base:
-        status, data = _post(base + "/api/messages", {"max_tokens": 500})
+        status, data, _ = _post(base + "/api/messages", {"max_tokens": 500})
     assert status == 400
     assert "prompt" in data["error"]["message"].lower()
     assert client.calls == []
@@ -84,7 +101,7 @@ def test_api_messages_requires_prompt():
 def test_api_messages_wraps_anthropic_error():
     client = _FakeClient(error=AnthropicError("boom"))
     with running_server(client) as base:
-        status, data = _post(base + "/api/messages", {"prompt": "hi"})
+        status, data, _ = _post(base + "/api/messages", {"prompt": "hi"})
     assert status == 502
     assert data["error"]["message"] == "boom"
 
@@ -95,3 +112,35 @@ def test_unknown_path_404():
         with pytest.raises(urllib.error.HTTPError) as exc:
             urllib.request.urlopen(base + "/../etc/passwd")
         assert exc.value.code == 404
+
+
+def test_auth_required_when_token_set():
+    client = _FakeClient(result={"content": []})
+    with running_server(client, api_token="secret") as base:
+        # No header -> 401
+        status, _, _ = _post(base + "/api/messages", {"prompt": "hi"})
+        assert status == 401
+        # Wrong token -> 401
+        status, _, _ = _post(
+            base + "/api/messages", {"prompt": "hi"}, headers={"Authorization": "Bearer nope"}
+        )
+        assert status == 401
+        # Correct token -> 200
+        status, _, _ = _post(
+            base + "/api/messages", {"prompt": "hi"}, headers={"Authorization": "Bearer secret"}
+        )
+        assert status == 200
+    assert client.calls == [("hi", 3000)]
+
+
+def test_rate_limit_returns_429_with_retry_after():
+    client = _FakeClient(result={"content": []})
+    with running_server(client, rate_limit=2, rate_window=60.0) as base:
+        assert _post(base + "/api/messages", {"prompt": "a"})[0] == 200
+        assert _post(base + "/api/messages", {"prompt": "b"})[0] == 200
+        status, data, headers = _post(base + "/api/messages", {"prompt": "c"})
+    assert status == 429
+    assert "rate limit" in data["error"]["message"].lower()
+    assert int(headers["Retry-After"]) >= 1
+    # Only the two allowed requests reached the client.
+    assert client.calls == [("a", 3000), ("b", 3000)]

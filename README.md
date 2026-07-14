@@ -55,12 +55,44 @@ ANTHROPIC_API_KEY=sk-ant-... PYTHONPATH=src python -m revision.cli
 
 All settings come from the environment (CLI flags override where provided):
 
-| Variable             | Default             | Purpose                          |
-| -------------------- | ------------------- | -------------------------------- |
-| `ANTHROPIC_API_KEY`  | *(required)*        | Anthropic API key (server-side). |
-| `REVISION_MODEL`     | `claude-sonnet-5`   | Claude model id.                 |
-| `REVISION_HOST`      | `127.0.0.1`         | Bind host.                       |
-| `REVISION_PORT`      | `8000`              | Bind port.                       |
+| Variable               | Default            | Purpose                                                        |
+| ---------------------- | ------------------ | -------------------------------------------------------------- |
+| `ANTHROPIC_API_KEY`    | *(required)*       | Anthropic API key (server-side only).                          |
+| `REVISION_MODEL`       | `claude-sonnet-5`  | Claude model id.                                               |
+| `REVISION_HOST`        | `127.0.0.1`        | Bind host.                                                     |
+| `REVISION_PORT`        | `8000`             | Bind port.                                                     |
+| `REVISION_API_TOKEN`   | *(unset)*          | If set, `/api/messages` requires `Authorization: Bearer <token>`. |
+| `REVISION_RATE_LIMIT`  | `30`               | Max `/api/messages` requests per window per client (0 = off). |
+| `REVISION_RATE_WINDOW` | `60`               | Rate-limit window, in seconds.                                 |
+| `REVISION_TRUST_PROXY` | `false`            | Trust `X-Forwarded-For` for client IP (enable only behind a proxy). |
+
+### Auth & rate limiting
+
+- **Rate limiting** is on by default (30 requests / 60s per client IP) via a
+  thread-safe sliding window. Exceeding it returns `429` with a `Retry-After`
+  header. Set `REVISION_RATE_LIMIT=0` to disable.
+- **Bearer auth** is opt-in: set `REVISION_API_TOKEN` and callers must send
+  `Authorization: Bearer <token>` on `/api/messages` (constant-time compared).
+  Leave it unset for open local use.
+- Behind a reverse proxy, set `REVISION_TRUST_PROXY=true` so per-client rate
+  limiting keys off the real client IP from `X-Forwarded-For` rather than the
+  proxy's address.
+
+## Docker
+
+```bash
+docker build -t revision .
+docker run -e ANTHROPIC_API_KEY=sk-ant-... -p 8000:8000 revision
+```
+
+The image has no dependencies beyond the standard library, binds `0.0.0.0:8000`,
+and includes a `HEALTHCHECK` hitting `/healthz`.
+
+## CI
+
+`.github/workflows/ci.yml` runs on pushes and PRs: `ruff check`,
+`ruff format --check`, and `pytest` across Python 3.11–3.13, plus a Docker image
+build.
 
 ## Development
 
@@ -82,10 +114,13 @@ ruff format .       # format
 │   ├── __init__.py
 │   ├── config.py            # env-driven configuration
 │   ├── anthropic_client.py  # server-side Anthropic API client (stdlib only)
-│   ├── server.py            # serves the UI + /api/messages proxy
+│   ├── ratelimit.py         # thread-safe sliding-window rate limiter
+│   ├── server.py            # serves the UI + /api/messages proxy (auth + limits)
 │   ├── cli.py               # `revision` entry point
 │   └── static/index.html    # the single-page UI
-├── tests/                   # pytest suite (config, client, server)
+├── tests/                   # pytest suite (config, client, ratelimit, server)
+├── .github/workflows/ci.yml # lint + format + tests + docker build
+├── Dockerfile
 └── pyproject.toml
 ```
 
@@ -94,5 +129,6 @@ ruff format .       # format
 - The API key is only ever read server-side; it is never sent to the browser.
 - The static file server is restricted to `src/revision/static/` and rejects
   path traversal.
-- For public deployment you should additionally put ReVision behind HTTPS and
-  consider adding rate limiting / auth on `/api/messages`.
+- Rate limiting (on by default) and optional bearer auth guard `/api/messages`.
+- For public deployment, additionally put ReVision behind HTTPS (terminate TLS at
+  a reverse proxy) and set `REVISION_TRUST_PROXY=true`.

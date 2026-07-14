@@ -42,19 +42,33 @@ Key design decisions:
 .
 ├── src/revision/
 │   ├── __init__.py            # package metadata (__version__)
-│   ├── config.py             # Config.from_env(); model/host/port/key
+│   ├── config.py             # Config.from_env(); model/host/port/key/auth/limits
 │   ├── anthropic_client.py   # AnthropicClient.create_message() (stdlib urllib)
+│   ├── ratelimit.py          # RateLimiter: thread-safe sliding window
 │   ├── server.py             # RevisionHandler, create_server(), serve()
 │   ├── cli.py                # `revision` console entry point
 │   └── static/index.html     # the single-page UI (all four tools)
 ├── tests/
 │   ├── test_config.py
 │   ├── test_anthropic_client.py   # mocks urllib.request.urlopen
+│   ├── test_ratelimit.py          # limiter unit tests (monkeypatched clock)
 │   └── test_server.py             # runs a live server on port 0, fake client
+├── .github/workflows/ci.yml  # ruff check + ruff format --check + pytest (3.11-3.13) + docker build
+├── Dockerfile                # stdlib-only image; binds 0.0.0.0:8000; HEALTHCHECK /healthz
+├── .dockerignore
 ├── pyproject.toml            # hatchling build; pytest + ruff config
 ├── README.md
 └── .gitignore
 ```
+
+## HTTP endpoints
+
+- `GET /` and other paths → static files from `src/revision/static/` (traversal-guarded).
+- `GET /healthz` → `{"status": "ok"}`; does not call Anthropic (used by Docker HEALTHCHECK).
+- `POST /api/messages` → `{prompt, max_tokens?}`; enforces optional bearer auth,
+  then rate limiting, then proxies to Claude. Errors are `{"error": {"message"}}`
+  with `400` (bad input), `401` (auth), `429` (rate limit, sends `Retry-After`),
+  or `502` (Anthropic error).
 
 Uses a **src layout**: importable code is under `src/`; `pyproject.toml` sets
 `pythonpath = ["src"]` so tests run without an editable install. The
@@ -108,19 +122,27 @@ Uses a **src layout**: importable code is under `src/`; `pyproject.toml` sets
 - The API key is read only server-side; it must never reach the browser.
 - The static file server is confined to `src/revision/static/` and rejects path
   traversal — keep that guard when touching `do_GET`.
-- Before any public deployment: serve over HTTPS and add rate limiting / auth on
-  `/api/messages`.
+- Rate limiting (on by default) and optional bearer auth guard `/api/messages`;
+  see `config.py`. Before any public deployment, additionally serve over HTTPS
+  (terminate TLS at a reverse proxy) and set `REVISION_TRUST_PROXY=true` so rate
+  limiting keys off the real client IP.
 
 ## Roadmap / "going mainstream" notes
 
-Not yet implemented; likely next steps toward production:
+Done:
 
-- Rate limiting and optional auth on `/api/messages`.
+- ✅ Per-client rate limiting and optional bearer auth on `/api/messages`.
+- ✅ Docker image with `/healthz` HEALTHCHECK.
+- ✅ CI: ruff (lint + format) and pytest on 3.11–3.13, plus a Docker build.
+
+Likely next steps toward production:
+
 - Streaming responses (SSE) for faster perceived latency.
 - Persisting the model/config and per-tool token limits.
+- Publishing the Docker image (registry) and a deploy target.
 - A proper ASGI stack (e.g. FastAPI + uvicorn) *if* concurrency needs outgrow
   the stdlib `ThreadingHTTPServer` — this would add the first runtime deps.
-- Packaging/deploy (Docker image, CI running `pytest` + `ruff`).
+- Shared/persistent rate-limit store (e.g. Redis) if run multi-process.
 
 ## Git & branching
 

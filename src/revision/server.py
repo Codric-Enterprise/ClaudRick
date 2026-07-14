@@ -1,16 +1,19 @@
 """HTTP server for ReVision.
 
 Serves the static single-page UI and proxies browser requests to the Anthropic
-API through ``/api/messages`` so the API key stays server-side. Built on the
+API through ``/api/messages`` so the API key stays server-side. Optional bearer
+auth and per-client rate limiting protect that endpoint. Built on the
 standard-library ``http.server`` to avoid runtime dependencies.
 """
 
+import hmac
 import json
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 from revision.anthropic_client import AnthropicClient, AnthropicError
 from revision.config import Config
+from revision.ratelimit import RateLimiter
 
 STATIC_DIR = Path(__file__).parent / "static"
 
@@ -26,23 +29,49 @@ _CONTENT_TYPES = {
 
 
 class RevisionHandler(BaseHTTPRequestHandler):
-    """Request handler bound to a client and static dir via :func:`make_handler`."""
+    """Request handler bound to config/client/limiter via :func:`make_handler`."""
 
     client: AnthropicClient
     static_dir: Path
+    config: Config
+    limiter: RateLimiter
 
     server_version = "ReVision"
 
-    def _send_json(self, status: int, obj: dict) -> None:
+    def _send_json(self, status: int, obj: dict, extra_headers: dict | None = None) -> None:
         body = json.dumps(obj).encode("utf-8")
         self.send_response(status)
         self.send_header("content-type", "application/json")
         self.send_header("content-length", str(len(body)))
+        for key, value in (extra_headers or {}).items():
+            self.send_header(key, value)
         self.end_headers()
         self.wfile.write(body)
 
+    def _client_key(self) -> str:
+        """Best-effort client identifier for rate limiting."""
+        if self.config.trust_proxy:
+            forwarded = self.headers.get("X-Forwarded-For")
+            if forwarded:
+                # Left-most entry is the original client.
+                return forwarded.split(",")[0].strip()
+        return self.client_address[0]
+
+    def _authorized(self) -> bool:
+        token = self.config.api_token
+        if not token:
+            return True
+        header = self.headers.get("Authorization", "")
+        prefix = "Bearer "
+        if not header.startswith(prefix):
+            return False
+        return hmac.compare_digest(header[len(prefix) :], token)
+
     def do_GET(self) -> None:  # noqa: N802 (http.server API)
         path = self.path.split("?", 1)[0]
+        if path == "/healthz":
+            self._send_json(200, {"status": "ok"})
+            return
         if path == "/":
             path = "/index.html"
 
@@ -68,6 +97,19 @@ class RevisionHandler(BaseHTTPRequestHandler):
         path = self.path.split("?", 1)[0]
         if path != "/api/messages":
             self.send_error(404, "Not found")
+            return
+
+        if not self._authorized():
+            self._send_json(401, {"error": {"message": "Unauthorized."}})
+            return
+
+        allowed, retry_after = self.limiter.check(self._client_key())
+        if not allowed:
+            self._send_json(
+                429,
+                {"error": {"message": "Rate limit exceeded. Please retry shortly."}},
+                extra_headers={"Retry-After": str(retry_after)},
+            )
             return
 
         length = int(self.headers.get("content-length", 0) or 0)
@@ -99,12 +141,19 @@ class RevisionHandler(BaseHTTPRequestHandler):
         """Suppress the default per-request stderr logging."""
 
 
-def make_handler(client: AnthropicClient, static_dir: Path) -> type[RevisionHandler]:
-    """Return a handler subclass bound to ``client`` and ``static_dir``."""
+def make_handler(
+    client: AnthropicClient, static_dir: Path, config: Config, limiter: RateLimiter
+) -> type[RevisionHandler]:
+    """Return a handler subclass bound to its dependencies."""
     return type(
         "BoundRevisionHandler",
         (RevisionHandler,),
-        {"client": client, "static_dir": static_dir},
+        {
+            "client": client,
+            "static_dir": static_dir,
+            "config": config,
+            "limiter": limiter,
+        },
     )
 
 
@@ -114,7 +163,8 @@ def create_server(
     """Build (but do not start) the ReVision HTTP server."""
     config = config or Config.from_env()
     client = client or AnthropicClient(config.api_key, config.model)
-    handler = make_handler(client, STATIC_DIR)
+    limiter = RateLimiter(config.rate_limit, config.rate_window)
+    handler = make_handler(client, STATIC_DIR, config, limiter)
     return ThreadingHTTPServer((config.host, config.port), handler)
 
 
@@ -126,6 +176,10 @@ def serve(config: Config | None = None) -> None:
     print(f"ReVision serving on http://{host}:{port}  (model: {config.model})")
     if not config.api_key:
         print("WARNING: ANTHROPIC_API_KEY is not set — API calls will fail until it is.")
+    if config.api_token:
+        print("Auth: bearer token required on /api/messages.")
+    if config.rate_limit > 0:
+        print(f"Rate limit: {config.rate_limit} requests / {config.rate_window:g}s per client.")
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:

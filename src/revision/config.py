@@ -17,6 +17,24 @@ ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages"
 ANTHROPIC_VERSION = "2023-06-01"
 
 
+def _env_int(name: str, default: int) -> int:
+    """Read an int env var, falling back to ``default`` if unset or invalid."""
+    raw = os.environ.get(name)
+    if raw is None or raw.strip() == "":
+        return default
+    try:
+        return int(raw)
+    except ValueError:
+        return default
+
+
+def _env_bool(name: str, default: bool = False) -> bool:
+    raw = os.environ.get(name)
+    if raw is None:
+        return default
+    return raw.strip().lower() in {"1", "true", "yes", "on"}
+
+
 @dataclass
 class Config:
     """Server configuration resolved from the environment.
@@ -29,6 +47,14 @@ class Config:
     model: str
     host: str
     port: int
+    #: Optional bearer token required on ``/api/messages`` (auth disabled if None).
+    api_token: str | None = None
+    #: Max ``/api/messages`` requests per client within ``rate_window`` (0 = off).
+    rate_limit: int = 30
+    #: Rate-limit sliding window in seconds.
+    rate_window: float = 60.0
+    #: Trust ``X-Forwarded-For`` for the client IP (enable only behind a proxy).
+    trust_proxy: bool = False
 
     @classmethod
     def from_env(cls) -> "Config":
@@ -37,5 +63,9 @@ class Config:
             api_key=os.environ.get("ANTHROPIC_API_KEY"),
             model=os.environ.get("REVISION_MODEL", DEFAULT_MODEL),
             host=os.environ.get("REVISION_HOST", "127.0.0.1"),
-            port=int(os.environ.get("REVISION_PORT", "8000")),
+            port=_env_int("REVISION_PORT", 8000),
+            api_token=os.environ.get("REVISION_API_TOKEN") or None,
+            rate_limit=_env_int("REVISION_RATE_LIMIT", 30),
+            rate_window=float(_env_int("REVISION_RATE_WINDOW", 60)),
+            trust_proxy=_env_bool("REVISION_TRUST_PROXY", False),
         )
