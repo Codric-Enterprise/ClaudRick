@@ -163,10 +163,14 @@ Likely next steps toward production:
 This repo ships Claude Code helpers under `.claude/`, distilled from two
 power-user cheat-sheets (see `docs/claude-playbook.md` for the full source):
 
-- **Slash commands** in `.claude/commands/` — reusable prompt shortcuts such as
-  `/think`, `/analyze`, `/challenge`, `/compare`, `/recommend`, `/summary`,
-  `/table`, `/mindmap`, `/flowchart`, `/explain`, `/optimize`, `/refactor`,
-  `/convert`, and `/workflow`. Invoke with `/name [args]`.
+- **Slash commands** in `.claude/commands/` — the full command reference as
+  reusable prompt shortcuts across six groups (focus/context, think/solve,
+  organize, code, automate, personalize): `/think`, `/analyze`, `/challenge`,
+  `/compare`, `/recommend`, `/solve`, `/summary`, `/outline`, `/table`,
+  `/mindmap`, `/flowchart`, `/explain`, `/debug`, `/optimize`, `/refactor`,
+  `/test`, `/convert`, `/workflow`, `/automate`, `/tasklist`, `/checklist`, and
+  more. Invoke with `/name [args]`. Note: `/clear`, `/memory`, and `/review`
+  collide with Claude Code built-ins, which take precedence.
 - **`claude-power-practices` skill** — auto-applied guardrails for high-stakes
   work: pick the right model, structure prompts with XML tags, use extended
   thinking, verify facts (never fabricate links/citations), and produce real

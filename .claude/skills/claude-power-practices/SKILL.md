@@ -59,9 +59,21 @@ Frame non-trivial requests with: **C**ontext, **S**pecific ask,
 
 ## Companion commands
 
-The `.claude/commands/` directory turns the cheat-sheet's most useful shortcuts
-into real slash commands — `/analyze`, `/compare`, `/pros-cons`, `/evaluate`,
-`/recommend`, `/brainstorm`, `/challenge`, `/outline`, `/summary`,
-`/key-points`, `/table`, `/mindmap`, `/flowchart`, `/explain`, `/optimize`,
-`/refactor`, `/convert`, `/workflow`, `/think`. See `docs/claude-playbook.md`
-for the full reference behind these.
+The `.claude/commands/` directory turns the full command cheat-sheet into real
+slash commands, grouped as:
+
+- **Focus & context:** `/focus`, `/context`, `/details`, `/examples`,
+  `/clarify`, `/define`, `/assumptions`, `/priorities`, `/constraints`
+- **Think & solve:** `/analyze`, `/compare`, `/pros-cons`, `/evaluate`,
+  `/recommend`, `/brainstorm`, `/solve`, `/challenge`, `/think`
+- **Organize & structure:** `/outline`, `/structure`, `/bullet`, `/numbered`,
+  `/table`, `/summary`, `/key-points`, `/mindmap`, `/flowchart`
+- **Code & tech:** `/code`, `/debug`, `/explain`, `/optimize`, `/refactor`,
+  `/test`, `/convert`, `/documentation`, `/review`
+- **Automate & integrate:** `/workflow`, `/automate`, `/api`, `/integrate`,
+  `/schedule`, `/trigger`, `/tasklist`, `/checklist`
+- **Personalize & control:** `/preferences`, `/memory`, `/tone`, `/style`,
+  `/length`, `/format`, `/reset`, `/clear`
+
+`/clear`, `/memory`, and `/review` collide with Claude Code built-ins — the
+built-in takes precedence. See `docs/claude-playbook.md` for the full reference.

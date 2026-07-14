@@ -83,10 +83,14 @@ as working tooling:
 
 ## Part 2 — Claude Command Reference
 
-Prompt-shortcut conventions from the "Claude Command — Complete Reference"
-sheet. Entries marked **[cmd]** are implemented as real slash commands in
-`.claude/commands/`; the rest are conversational conventions or map to native
-Claude Code / app features.
+Every command from the "Claude Command — Complete Reference" sheet is
+implemented as a real slash command in `.claude/commands/` — invoke as
+`/name [args]`.
+
+Three names — `/clear`, `/memory`, `/review` — collide with Claude Code's own
+built-ins. Inside Claude Code the **built-in wins** and the custom file defers
+to it (each such file documents this and points to the native behavior); the
+custom versions still serve as prompt directives in other contexts.
 
 ### Focus & Context
 | Command | Purpose |
@@ -102,67 +106,67 @@ Claude Code / app features.
 | `/constraints` | Set constraints |
 
 ### Think & Solve
-| Command | Purpose | |
-|---|---|---|
-| `/analyze` | Break it down | **[cmd]** |
-| `/compare` | Compare options | **[cmd]** |
-| `/pros-cons` | List pros & cons | **[cmd]** |
-| `/evaluate` | Evaluate ideas | **[cmd]** |
-| `/recommend` | Get a recommendation | **[cmd]** |
-| `/brainstorm` | Brainstorm ideas | **[cmd]** |
-| `/solve` | Solve the problem | (use `/think`) |
-| `/challenge` | Challenge assumptions | **[cmd]** |
-| `/think` | Reason step by step | **[cmd]** (extended thinking) |
+| Command | Purpose |
+|---|---|
+| `/analyze` | Break it down |
+| `/compare` | Compare options |
+| `/pros-cons` | List pros & cons |
+| `/evaluate` | Evaluate ideas |
+| `/recommend` | Get a recommendation |
+| `/brainstorm` | Brainstorm ideas |
+| `/solve` | Solve the problem end to end |
+| `/challenge` | Challenge assumptions (red-team) |
+| `/think` | Reason step by step (extended thinking) |
 
 ### Organize & Structure
-| Command | Purpose | |
-|---|---|---|
-| `/outline` | Create an outline | **[cmd]** |
-| `/structure` | Organize content | (use `/outline`) |
-| `/bullet` | Make bullet points | |
-| `/numbered` | Make a numbered list | |
-| `/table` | Create a table | **[cmd]** |
-| `/summary` | Summarize content | **[cmd]** |
-| `/key-points` | Extract key points | **[cmd]** |
-| `/mindmap` | Create a mind map | **[cmd]** (Mermaid) |
-| `/flowchart` | Create a flowchart | **[cmd]** (Mermaid) |
+| Command | Purpose |
+|---|---|
+| `/outline` | Create an outline |
+| `/structure` | Organize loose content |
+| `/bullet` | Make bullet points |
+| `/numbered` | Make a numbered list |
+| `/table` | Create a table |
+| `/summary` | Summarize content |
+| `/key-points` | Extract key points |
+| `/mindmap` | Create a mind map (Mermaid) |
+| `/flowchart` | Create a flowchart (Mermaid) |
 
 ### Code & Tech
-| Command | Purpose | |
-|---|---|---|
-| `/code` | Write code | (native) |
-| `/debug` | Fix issues | (native) |
-| `/explain` | Explain code | **[cmd]** |
-| `/optimize` | Improve performance | **[cmd]** |
-| `/refactor` | Refactor code | **[cmd]** |
-| `/test` | Write tests | (native) |
-| `/convert` | Convert formats | **[cmd]** |
-| `/documentation` | Write docs | (native) |
-| `/review` | Review code | use built-in `/code-review` |
+| Command | Purpose |
+|---|---|
+| `/code` | Write code |
+| `/debug` | Diagnose and fix a bug |
+| `/explain` | Explain code or a concept |
+| `/optimize` | Improve performance |
+| `/refactor` | Refactor code |
+| `/test` | Write tests |
+| `/convert` | Convert formats |
+| `/documentation` | Write docs |
+| `/review` | Review content/code — see note above; prefer built-in `/code-review` for diffs |
 
 ### Automate & Integrate
-| Command | Purpose | |
-|---|---|---|
-| `/workflow` | Create a workflow | **[cmd]** |
-| `/automate` | Automate tasks | (see `/workflow`) |
-| `/api` | Use an API | |
-| `/integrate` | Connect tools | (Connectors / MCP) |
-| `/schedule` | Set reminders | |
-| `/trigger` | Set triggers | |
-| `/tasklist` | Create a task list | |
-| `/checklist` | Create a checklist | |
+| Command | Purpose |
+|---|---|
+| `/workflow` | Create a repeatable workflow |
+| `/automate` | Automate a repetitive task |
+| `/api` | Work with an API |
+| `/integrate` | Connect / integrate tools |
+| `/schedule` | Schedule a reminder or recurring run |
+| `/trigger` | Define an event trigger |
+| `/tasklist` | Break work into an ordered task list |
+| `/checklist` | Produce a verification checklist |
 
 ### Personalize & Control
 | Command | Purpose |
 |---|---|
-| `/preferences` | Set preferences |
-| `/memory` | Manage memory |
+| `/preferences` | Record working preferences |
+| `/memory` | Remember a project fact — see note above (native `/memory` wins) |
 | `/tone` | Adjust tone |
 | `/style` | Change writing style |
 | `/length` | Change length |
-| `/format` | Change format |
-| `/reset` | Reset conversation |
-| `/clear` | Clear context (native `/clear`) |
+| `/format` | Change output format |
+| `/reset` | Reset the approach and restart |
+| `/clear` | Start a fresh topic — see note above (native `/clear` wins) |
 
 ### Power shortcuts
 - Combine commands for better results.
