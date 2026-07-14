@@ -2,79 +2,162 @@
 
 Guidance for AI assistants (and humans) working in this repository.
 
-## Current state: empty / greenfield
-
-> **This repository currently has no source code.** As of the last update to this
-> file, `Zdycomp/ClaudRick` contained no commits, no application code, no build
-> configuration, and no dependencies — only this `CLAUDE.md`.
->
-> Do **not** treat any of the sections below as descriptions of existing code.
-> They are placeholders/scaffolding. As real code lands, replace each `TODO`
-> with an accurate description of what actually exists. Never document a
-> structure, command, or convention that isn't really present — an inaccurate
-> `CLAUDE.md` is worse than none.
-
-When you add the first real code to this project, please update the sections
-below in the same change so this file stays trustworthy.
-
 ## Project overview
 
-**TODO** — Describe what this project is, who it's for, and what it does.
-(Name on the remote: `ClaudRick`. Purpose: not yet defined in the repo.)
+**ReVision** is a Claude-powered document toolkit exposed as a single-page web
+app with four tools:
+
+- **Fine Print Analyzer** — detects manipulative language and scores risk.
+- **Enhance** — rewrites drafts along tone / clarity / persuasiveness spectrums.
+- **Translate** — translates across 20+ languages, preserving legal meaning.
+- **Jargonary** — simplifies dense text and builds a jargon glossary.
+
+The UI is a static page; a small Python backend serves it and proxies AI
+requests to the Anthropic API so the API key stays server-side.
+
+## Architecture
+
+```
+browser (static/index.html)  ──POST /api/messages──►  Python server  ──►  Anthropic API
+        callClaude()                                   (injects x-api-key,
+                                                         chooses the model)
+```
+
+Key design decisions:
+
+- **Server-side key.** The browser calls the same-origin `/api/messages`
+  endpoint, never `api.anthropic.com` directly. `anthropic_client.py` adds the
+  `x-api-key` and `anthropic-version` headers server-side. **Never** move the
+  key or a direct Anthropic call into `static/index.html`.
+- **Model is server-controlled.** The model id lives in `config.py`
+  (`REVISION_MODEL`, default `claude-sonnet-5`), not in the frontend. Use a real
+  model id — the original prototype used an invalid one.
+- **Zero runtime dependencies.** The backend uses only the standard library
+  (`http.server`, `urllib`). Keep it that way unless there's a strong reason;
+  `pytest`/`ruff` are dev-only.
 
 ## Repository structure
 
-**TODO** — Document the directory layout once it exists. For example:
-
 ```
 .
-├── src/        # TODO: application source
-├── tests/      # TODO: test suite
-└── ...
+├── src/revision/
+│   ├── __init__.py            # package metadata (__version__)
+│   ├── config.py             # Config.from_env(); model/host/port/key/auth/limits
+│   ├── anthropic_client.py   # AnthropicClient.create_message() (stdlib urllib)
+│   ├── ratelimit.py          # RateLimiter: thread-safe sliding window
+│   ├── server.py             # RevisionHandler, create_server(), serve()
+│   ├── cli.py                # `revision` console entry point
+│   └── static/index.html     # the single-page UI (all four tools)
+├── tests/
+│   ├── test_config.py
+│   ├── test_anthropic_client.py   # mocks urllib.request.urlopen
+│   ├── test_ratelimit.py          # limiter unit tests (monkeypatched clock)
+│   └── test_server.py             # runs a live server on port 0, fake client
+├── .github/workflows/ci.yml  # ruff check + ruff format --check + pytest (3.11-3.13) + docker build
+├── Dockerfile                # stdlib-only image; binds 0.0.0.0:8000; HEALTHCHECK /healthz
+├── .dockerignore
+├── pyproject.toml            # hatchling build; pytest + ruff config
+├── README.md
+└── .gitignore
 ```
+
+## HTTP endpoints
+
+- `GET /` and other paths → static files from `src/revision/static/` (traversal-guarded).
+- `GET /healthz` → `{"status": "ok"}`; does not call Anthropic (used by Docker HEALTHCHECK).
+- `POST /api/messages` → `{prompt, max_tokens?}`; enforces optional bearer auth,
+  then rate limiting, then proxies to Claude. Errors are `{"error": {"message"}}`
+  with `400` (bad input), `401` (auth), `429` (rate limit, sends `Retry-After`),
+  or `502` (Anthropic error).
+
+Uses a **src layout**: importable code is under `src/`; `pyproject.toml` sets
+`pythonpath = ["src"]` so tests run without an editable install. The
+`static/` directory lives inside the package so it ships in the wheel.
 
 ## Getting started
 
-**TODO** — Fill in once tooling is chosen. Typical items to document:
-
-- Language / runtime and required version
-- How to install dependencies
-- Required environment variables / config files
-- How to run the project locally
+- **Python:** requires `>=3.11`.
+- **Install (editable, with dev tools):**
+  ```bash
+  python -m venv .venv && source .venv/bin/activate
+  pip install -e ".[dev]"
+  ```
+- **Run:** `ANTHROPIC_API_KEY=sk-ant-... revision` (serves http://127.0.0.1:8000).
 
 ## Development workflows
 
-**TODO** — Document the real commands once they exist, e.g.:
+- **Run tests:** `pytest`
+- **Lint:** `ruff check .`
+- **Format:** `ruff format .`
+- **Run the app:** `revision [--host H --port P --model M]`, or without install
+  `ANTHROPIC_API_KEY=... PYTHONPATH=src python -m revision.cli`
+- **Manual smoke test:** start the server, then
+  `curl localhost:8000/` (UI) and
+  `curl -X POST localhost:8000/api/messages -d '{"prompt":"hi"}'`
+  (returns a graceful error if no key is set).
 
-- **Install:** `TODO`
-- **Run / dev server:** `TODO`
-- **Build:** `TODO`
-- **Test:** `TODO`
-- **Lint / format:** `TODO`
-- **Type-check:** `TODO`
-
-Until these are defined, do not guess commands — inspect the repo (package
-manifest, Makefile, CI config) and document what is actually configured.
+> Note: in some environments `pytest`/`ruff` are standalone binaries, not in the
+> interpreter's site-packages. If `python -m pytest` says "No module named
+> pytest", call `pytest` / `ruff` directly.
 
 ## Conventions
 
-**TODO** — Capture coding style, naming, commit-message format, and any
-architectural rules once the project establishes them.
+- **Layout:** shippable code under `src/revision/`; tests under `tests/` mirror
+  the module they cover (`server.py` -> `test_server.py`).
+- **Style/lint:** ruff, line length 100, rules `E, F, I, UP, B, SIM`
+  (see `[tool.ruff.lint]`). Run `ruff format` before committing.
+- **Typing:** type-hint public functions.
+- **HTTP handlers:** `do_GET` / `do_POST` are the `http.server` API and carry
+  `# noqa: N802`; keep the handler bound to its client via `make_handler`.
+- **Testability:** `create_server(config, client=...)` accepts an injected
+  client so tests can run a real server against a fake Anthropic client with no
+  network. Preserve this seam.
+- **Errors to the browser:** return `{"error": {"message": ...}}` JSON with an
+  appropriate status; the frontend's `callClaude` reads `data.error.message`.
+- **Adding a dependency:** prefer not to (stdlib backend). If unavoidable, add
+  to `[project].dependencies` (runtime) or `[project.optional-dependencies].dev`.
+
+## Security notes
+
+- The API key is read only server-side; it must never reach the browser.
+- The static file server is confined to `src/revision/static/` and rejects path
+  traversal — keep that guard when touching `do_GET`.
+- Rate limiting (on by default) and optional bearer auth guard `/api/messages`;
+  see `config.py`. Before any public deployment, additionally serve over HTTPS
+  (terminate TLS at a reverse proxy) and set `REVISION_TRUST_PROXY=true` so rate
+  limiting keys off the real client IP.
+
+## Roadmap / "going mainstream" notes
+
+Done:
+
+- ✅ Per-client rate limiting and optional bearer auth on `/api/messages`.
+- ✅ Docker image with `/healthz` HEALTHCHECK.
+- ✅ CI: ruff (lint + format) and pytest on 3.11–3.13, plus a Docker build.
+
+Likely next steps toward production:
+
+- Streaming responses (SSE) for faster perceived latency.
+- Persisting the model/config and per-tool token limits.
+- Publishing the Docker image (registry) and a deploy target.
+- A proper ASGI stack (e.g. FastAPI + uvicorn) *if* concurrency needs outgrow
+  the stdlib `ThreadingHTTPServer` — this would add the first runtime deps.
+- Shared/persistent rate-limit store (e.g. Redis) if run multi-process.
 
 ## Git & branching
-
-These conventions are defined for this project independent of the code:
 
 - **Feature branch:** development happens on `claude/claude-md-docs-kvdwbk`
   (create it from the latest default branch if it doesn't exist).
 - **Push:** `git push -u origin <branch-name>`.
-- **Pull requests:** only open a PR when explicitly requested.
+- **Pull requests:** only open a PR when explicitly requested. (Open PR for this
+  work: base `main`, head `claude/claude-md-docs-kvdwbk`.)
 - A merged PR is finished — start follow-up work from a fresh branch off the
   latest default branch rather than stacking onto merged history.
 
 ## Notes for AI assistants
 
-- Verify claims against the actual repository before acting — this file is a
-  scaffold, not a source of truth about existing code.
-- Keep this file updated as the codebase evolves; treat documentation drift as
-  a bug.
+- Verify claims against the actual repository before acting.
+- Run `pytest` and `ruff check .` before committing non-trivial changes.
+- Keep this file updated as the codebase evolves; treat documentation drift as a
+  bug. When you add a top-level directory, tool, endpoint, or workflow, update
+  the relevant section here in the same change.
