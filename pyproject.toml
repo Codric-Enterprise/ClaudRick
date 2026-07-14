@@ -3,13 +3,13 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "claudrick"
+name = "revision"
 version = "0.1.0"
-description = "ClaudRick — a Python project."
+description = "ReVision — a Claude-powered document toolkit (analyze, enhance, translate, simplify)."
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }
-authors = [{ name = "ClaudRick maintainers" }]
+authors = [{ name = "ReVision maintainers" }]
 dependencies = []
 
 [project.optional-dependencies]
@@ -19,10 +19,10 @@ dev = [
 ]
 
 [project.scripts]
-claudrick = "claudrick.cli:main"
+revision = "revision.cli:main"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/claudrick"]
+packages = ["src/revision"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

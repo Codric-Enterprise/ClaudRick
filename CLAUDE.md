@@ -4,31 +4,61 @@ Guidance for AI assistants (and humans) working in this repository.
 
 ## Project overview
 
-**ClaudRick** is a Python project scaffolded with a modern `src/` layout. It
-ships a small library (`claudrick.core`) and a console entry point
-(`claudrick`) as a working starting point. Build/packaging is handled by
-Hatchling via `pyproject.toml`.
+**ReVision** is a Claude-powered document toolkit exposed as a single-page web
+app with four tools:
+
+- **Fine Print Analyzer** — detects manipulative language and scores risk.
+- **Enhance** — rewrites drafts along tone / clarity / persuasiveness spectrums.
+- **Translate** — translates across 20+ languages, preserving legal meaning.
+- **Jargonary** — simplifies dense text and builds a jargon glossary.
+
+The UI is a static page; a small Python backend serves it and proxies AI
+requests to the Anthropic API so the API key stays server-side.
+
+## Architecture
+
+```
+browser (static/index.html)  ──POST /api/messages──►  Python server  ──►  Anthropic API
+        callClaude()                                   (injects x-api-key,
+                                                         chooses the model)
+```
+
+Key design decisions:
+
+- **Server-side key.** The browser calls the same-origin `/api/messages`
+  endpoint, never `api.anthropic.com` directly. `anthropic_client.py` adds the
+  `x-api-key` and `anthropic-version` headers server-side. **Never** move the
+  key or a direct Anthropic call into `static/index.html`.
+- **Model is server-controlled.** The model id lives in `config.py`
+  (`REVISION_MODEL`, default `claude-sonnet-5`), not in the frontend. Use a real
+  model id — the original prototype used an invalid one.
+- **Zero runtime dependencies.** The backend uses only the standard library
+  (`http.server`, `urllib`). Keep it that way unless there's a strong reason;
+  `pytest`/`ruff` are dev-only.
 
 ## Repository structure
 
 ```
 .
-├── src/claudrick/       # package source (importable as `claudrick`)
-│   ├── __init__.py      # package metadata (__version__)
-│   ├── core.py          # library code (e.g. greet())
-│   └── cli.py           # argparse CLI; entry point `claudrick` -> cli:main
-├── tests/               # pytest suite (mirrors the package)
-│   ├── test_core.py
-│   └── test_cli.py
-├── pyproject.toml       # build backend, deps, and tool config (pytest, ruff)
+├── src/revision/
+│   ├── __init__.py            # package metadata (__version__)
+│   ├── config.py             # Config.from_env(); model/host/port/key
+│   ├── anthropic_client.py   # AnthropicClient.create_message() (stdlib urllib)
+│   ├── server.py             # RevisionHandler, create_server(), serve()
+│   ├── cli.py                # `revision` console entry point
+│   └── static/index.html     # the single-page UI (all four tools)
+├── tests/
+│   ├── test_config.py
+│   ├── test_anthropic_client.py   # mocks urllib.request.urlopen
+│   └── test_server.py             # runs a live server on port 0, fake client
+├── pyproject.toml            # hatchling build; pytest + ruff config
 ├── README.md
 └── .gitignore
 ```
 
-The project uses a **src layout**: importable code lives under `src/`, so tests
-run against the installed/`pythonpath`-resolved package rather than loose
-top-level modules. `pyproject.toml` sets `pythonpath = ["src"]` for pytest so
-the suite runs without an editable install.
+Uses a **src layout**: importable code is under `src/`; `pyproject.toml` sets
+`pythonpath = ["src"]` so tests run without an editable install. The
+`static/` directory lives inside the package so it ships in the wheel.
 
 ## Getting started
 
@@ -38,46 +68,74 @@ the suite runs without an editable install.
   python -m venv .venv && source .venv/bin/activate
   pip install -e ".[dev]"
   ```
+- **Run:** `ANTHROPIC_API_KEY=sk-ant-... revision` (serves http://127.0.0.1:8000).
 
 ## Development workflows
 
 - **Run tests:** `pytest`
 - **Lint:** `ruff check .`
 - **Format:** `ruff format .`
-- **Run the CLI:** `claudrick [name]` (after install) or
-  `PYTHONPATH=src python -m claudrick.cli [name]` (without install)
+- **Run the app:** `revision [--host H --port P --model M]`, or without install
+  `ANTHROPIC_API_KEY=... PYTHONPATH=src python -m revision.cli`
+- **Manual smoke test:** start the server, then
+  `curl localhost:8000/` (UI) and
+  `curl -X POST localhost:8000/api/messages -d '{"prompt":"hi"}'`
+  (returns a graceful error if no key is set).
 
-> Note: in some environments `pytest` and `ruff` are installed as standalone
-> binaries rather than into the active interpreter's site-packages. If
-> `python -m pytest` reports "No module named pytest", invoke the `pytest` /
-> `ruff` commands directly.
+> Note: in some environments `pytest`/`ruff` are standalone binaries, not in the
+> interpreter's site-packages. If `python -m pytest` says "No module named
+> pytest", call `pytest` / `ruff` directly.
 
 ## Conventions
 
-- **Layout:** all shippable code goes under `src/claudrick/`; tests under
-  `tests/` mirror the module they cover (`core.py` -> `test_core.py`).
-- **Style/lint:** ruff enforces line length 100 and the rule sets
-  `E, F, I, UP, B, SIM` (see `[tool.ruff.lint]`). Run `ruff format` before
-  committing.
-- **Typing:** prefer type hints on public functions (see `core.py` / `cli.py`).
-- **CLI:** `cli.main(argv)` takes an optional argument vector and returns an
-  int exit code, which keeps it directly unit-testable (see `tests/test_cli.py`).
-- **Adding a dependency:** add it to `[project].dependencies` (runtime) or
-  `[project.optional-dependencies].dev` (tooling) in `pyproject.toml`.
+- **Layout:** shippable code under `src/revision/`; tests under `tests/` mirror
+  the module they cover (`server.py` -> `test_server.py`).
+- **Style/lint:** ruff, line length 100, rules `E, F, I, UP, B, SIM`
+  (see `[tool.ruff.lint]`). Run `ruff format` before committing.
+- **Typing:** type-hint public functions.
+- **HTTP handlers:** `do_GET` / `do_POST` are the `http.server` API and carry
+  `# noqa: N802`; keep the handler bound to its client via `make_handler`.
+- **Testability:** `create_server(config, client=...)` accepts an injected
+  client so tests can run a real server against a fake Anthropic client with no
+  network. Preserve this seam.
+- **Errors to the browser:** return `{"error": {"message": ...}}` JSON with an
+  appropriate status; the frontend's `callClaude` reads `data.error.message`.
+- **Adding a dependency:** prefer not to (stdlib backend). If unavoidable, add
+  to `[project].dependencies` (runtime) or `[project.optional-dependencies].dev`.
+
+## Security notes
+
+- The API key is read only server-side; it must never reach the browser.
+- The static file server is confined to `src/revision/static/` and rejects path
+  traversal — keep that guard when touching `do_GET`.
+- Before any public deployment: serve over HTTPS and add rate limiting / auth on
+  `/api/messages`.
+
+## Roadmap / "going mainstream" notes
+
+Not yet implemented; likely next steps toward production:
+
+- Rate limiting and optional auth on `/api/messages`.
+- Streaming responses (SSE) for faster perceived latency.
+- Persisting the model/config and per-tool token limits.
+- A proper ASGI stack (e.g. FastAPI + uvicorn) *if* concurrency needs outgrow
+  the stdlib `ThreadingHTTPServer` — this would add the first runtime deps.
+- Packaging/deploy (Docker image, CI running `pytest` + `ruff`).
 
 ## Git & branching
 
 - **Feature branch:** development happens on `claude/claude-md-docs-kvdwbk`
   (create it from the latest default branch if it doesn't exist).
 - **Push:** `git push -u origin <branch-name>`.
-- **Pull requests:** only open a PR when explicitly requested.
+- **Pull requests:** only open a PR when explicitly requested. (Open PR for this
+  work: base `main`, head `claude/claude-md-docs-kvdwbk`.)
 - A merged PR is finished — start follow-up work from a fresh branch off the
   latest default branch rather than stacking onto merged history.
 
 ## Notes for AI assistants
 
 - Verify claims against the actual repository before acting.
-- Keep this file updated as the codebase evolves; treat documentation drift as
-  a bug. When you add a top-level directory, tool, or workflow, update the
-  relevant section here in the same change.
-- Before committing non-trivial changes, run `pytest` and `ruff check .`.
+- Run `pytest` and `ruff check .` before committing non-trivial changes.
+- Keep this file updated as the codebase evolves; treat documentation drift as a
+  bug. When you add a top-level directory, tool, endpoint, or workflow, update
+  the relevant section here in the same change.
