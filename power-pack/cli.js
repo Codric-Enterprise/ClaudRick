@@ -16,12 +16,14 @@ const uninstall = args.includes("--uninstall");
 
 if (args.includes("--help") || args.includes("-h")) {
   console.log(`
-  Usage: words-of-radiance [options]
-         npx words-of-radiance [options]
+  S.L.A.S.H. — Structured Language And System Heuristics
+
+  Usage: slash-pack [options]
+         npx slash-pack [options]
 
   Options:
     --dry-run    Preview what would be installed/removed
-    --uninstall  Remove Power Pack commands and skill
+    --uninstall  Remove S.L.A.S.H. commands and skill
     --help       Show this help
   `);
   process.exit(0);
@@ -30,7 +32,7 @@ if (args.includes("--help") || args.includes("-h")) {
 function header() {
   console.log(`
   ╔═══════════════════════════════════════╗
-  ║   Words of Radiance  v${VERSION}         ║
+  ║   S.L.A.S.H.  v${VERSION}                ║
   ║   77 Commands + Power Practices       ║
   ╚═══════════════════════════════════════╝
   `);
@@ -163,7 +165,7 @@ function doInstall() {
   // Version stamp
   if (!dryRun) {
     fs.writeFileSync(
-      path.join(CLAUDE_HOME, ".words-of-radiance-version"),
+      path.join(CLAUDE_HOME, ".slash-pack-version"),
       VERSION + "\n"
     );
   }

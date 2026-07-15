@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # ─────────────────────────────────────────────────────────────────────
-#  Words of Radiance Installer (wrapper)
+#  S.L.A.S.H. Installer (wrapper)
 #  Delegates to power-pack/install.sh — the standalone distributable.
 #  Run:  bash install-power-pack.sh [--dry-run] [--uninstall]
 # ─────────────────────────────────────────────────────────────────────

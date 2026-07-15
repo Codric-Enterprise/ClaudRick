@@ -1,16 +1,16 @@
 {
-  "name": "words-of-radiance",
+  "name": "slash-pack",
   "version": "1.0.0",
-  "description": "77 battle-tested prompt-commands for Claude — as slash commands in Claude Code or copy-paste prompts anywhere.",
+  "description": "S.L.A.S.H. — 77 battle-tested prompt-commands for Claude. Structured Language And System Heuristics.",
   "keywords": [
     "claude",
     "claude-code",
     "anthropic",
     "prompts",
     "slash-commands",
+    "slash-pack",
     "ai",
-    "productivity",
-    "words-of-radiance"
+    "productivity"
   ],
   "license": "MIT",
   "author": "ReVision Contributors",
@@ -19,7 +19,7 @@
     "url": "https://github.com/zdycomp/claudrick"
   },
   "bin": {
-    "words-of-radiance": "cli.js"
+    "slash-pack": "cli.js"
   },
   "files": [
     "cli.js",

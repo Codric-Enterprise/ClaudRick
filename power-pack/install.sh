@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # ─────────────────────────────────────────────────────────────────────
-#  Words of Radiance Installer
+#  S.L.A.S.H. Installer
 #  77 slash commands + power-practices skill → ~/.claude/
 #
 #  Usage:
@@ -27,7 +27,7 @@ for arg in "$@"; do
       echo "Usage: bash install.sh [--dry-run] [--uninstall]"
       echo ""
       echo "  --dry-run    Preview what would be installed/removed"
-      echo "  --uninstall  Remove Power Pack commands and skill"
+      echo "  --uninstall  Remove S.L.A.S.H. commands and skill"
       echo ""
       exit 0
       ;;
@@ -41,7 +41,7 @@ done
 header() {
   echo ""
   echo "  ╔═══════════════════════════════════════╗"
-  echo "  ║   Words of Radiance  v${VERSION}         ║"
+  echo "  ║   S.L.A.S.H.  v${VERSION}                ║"
   echo "  ║   77 Commands + Power Practices       ║"
   echo "  ╚═══════════════════════════════════════╝"
   echo ""
@@ -143,7 +143,7 @@ fi
 
 # Stamp version for future upgrades
 if [[ "$DRY_RUN" != true ]]; then
-  echo "$VERSION" > "$TARGET/.words-of-radiance-version"
+  echo "$VERSION" > "$TARGET/.slash-pack-version"
 fi
 
 # Summary

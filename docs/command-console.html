@@ -292,7 +292,7 @@
         <p>One command copies 77 commands + power-practices to <code>~/.claude/</code></p>
       </div>
       <span class="ib-tag">cross-platform</span>
-      <div class="ib-cmd" id="installCmd" role="button" tabindex="0" title="Click to copy">npx words-of-radiance</div>
+      <div class="ib-cmd" id="installCmd" role="button" tabindex="0" title="Click to copy">npx slash-pack</div>
     </div>
   </div>
 </div>
@@ -311,7 +311,7 @@
       <div class="way">
         <h3>Claude Code <span class="tag">any platform</span></h3>
         <p>Install once, then type <code>/think</code>, <code>/analyze</code>, etc.</p>
-        <code>npx words-of-radiance</code>
+        <code>npx slash-pack</code>
       </div>
       <div class="way">
         <h3>Per project <span class="tag">teams</span></h3>
@@ -609,9 +609,9 @@
   // install cmd copy
   var ic=document.getElementById("installCmd");
   if(ic){
-    function icClick(){doCopy("npx words-of-radiance",function(){
+    function icClick(){doCopy("npx slash-pack",function(){
       ic.classList.add("ok");ic.textContent="Copied!";toast("Install command copied");
-      setTimeout(function(){ic.classList.remove("ok");ic.textContent="npx words-of-radiance"},1500);
+      setTimeout(function(){ic.classList.remove("ok");ic.textContent="npx slash-pack"},1500);
     })}
     ic.onclick=icClick;ic.onkeydown=function(e){if(e.key==="Enter"||e.key===" "){e.preventDefault();icClick()}};
   }

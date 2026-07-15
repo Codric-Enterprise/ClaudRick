@@ -62,10 +62,10 @@ Key design decisions:
 ├── docs/claude-playbook.md   # full Claude tips + command reference (source of the above)
 ├── docs/commands-pack.md     # all 80 commands: slash form + paste-ready prompt
 ├── docs/command-console.html # interactive searchable console (shareable artifact)
-├── power-pack/               # "Words of Radiance" — standalone distributable (see below)
+├── power-pack/               # "S.L.A.S.H." — standalone distributable (see below)
 │   ├── commands/             # 77 portable commands (excludes repo-specific dev ones)
 │   ├── skills/               # power-practices skill
-│   ├── cli.js                # cross-platform Node installer (npx words-of-radiance)
+│   ├── cli.js                # cross-platform Node installer (npx slash-pack)
 │   ├── package.json          # npm-publishable package
 │   ├── install.sh            # Unix bash installer (--dry-run, --uninstall, backup)
 │   ├── index.html            # product landing page

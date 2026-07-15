@@ -1,10 +1,12 @@
-# Words of Radiance
+# S.L.A.S.H.
 
-**77 battle-tested prompt-commands for Claude** — as slash commands in Claude Code,
+**Structured Language And System Heuristics**
+
+77 battle-tested prompt-commands for Claude — as slash commands in Claude Code,
 or copy-paste prompts in any Claude chat.
 
-Think of it as a professional toolkit: each command is a carefully crafted prompt
-that turns a vague ask into a structured, high-quality result.
+Each command is a carefully crafted prompt that turns a vague ask into a
+structured, high-quality result.
 
 ## What's inside
 
@@ -30,23 +32,22 @@ prompt structure, truthfulness, and real deliverables.
 ### npx (recommended — works on macOS, Linux, Windows)
 
 ```bash
-npx words-of-radiance
+npx slash-pack
 ```
 
 One command. No clone required. Works everywhere Node.js runs.
 
 ```bash
 # Preview what would change:
-npx words-of-radiance --dry-run
+npx slash-pack --dry-run
 
 # Cleanly remove:
-npx words-of-radiance --uninstall
+npx slash-pack --uninstall
 ```
 
 ### Bash (Unix)
 
 ```bash
-# From the words-of-radiance directory:
 bash install.sh
 ```
 
