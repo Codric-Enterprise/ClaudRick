@@ -1,0 +1,33 @@
+{
+  "name": "claude-power-pack",
+  "version": "1.0.0",
+  "description": "77 battle-tested prompt-commands for Claude — as slash commands in Claude Code or copy-paste prompts anywhere.",
+  "keywords": [
+    "claude",
+    "claude-code",
+    "anthropic",
+    "prompts",
+    "slash-commands",
+    "ai",
+    "productivity"
+  ],
+  "license": "MIT",
+  "author": "ReVision Contributors",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/zdycomp/claudrick"
+  },
+  "bin": {
+    "claude-power-pack": "cli.js"
+  },
+  "files": [
+    "cli.js",
+    "commands/",
+    "skills/",
+    "LICENSE",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=16"
+  }
+}

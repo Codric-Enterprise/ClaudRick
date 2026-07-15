@@ -27,23 +27,33 @@ prompt structure, truthfulness, and real deliverables.
 
 ## Install
 
-### Claude Code (recommended)
+### npx (recommended — works on macOS, Linux, Windows)
+
+```bash
+npx claude-power-pack
+```
+
+One command. No clone required. Works everywhere Node.js runs.
+
+```bash
+# Preview what would change:
+npx claude-power-pack --dry-run
+
+# Cleanly remove:
+npx claude-power-pack --uninstall
+```
+
+### Bash (Unix)
 
 ```bash
 # From the power-pack directory:
 bash install.sh
 ```
 
-This copies everything to `~/.claude/` so commands are available globally in
-every project. Existing commands are backed up automatically.
+Same flags: `--dry-run` to preview, `--uninstall` to remove.
 
-```bash
-# Preview what would change:
-bash install.sh --dry-run
-
-# Cleanly remove:
-bash install.sh --uninstall
-```
+Both paths copy everything to `~/.claude/` so commands are available globally
+in every project. Existing commands are backed up automatically.
 
 ### Copy & paste (works everywhere)
 

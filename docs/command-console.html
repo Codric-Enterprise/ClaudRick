@@ -288,11 +288,11 @@
     </details>
     <div class="install-banner">
       <div class="ib-text">
-        <strong>Install globally for Claude Code</strong>
+        <strong>Install globally — any platform</strong>
         <p>One command copies 77 commands + power-practices to <code>~/.claude/</code></p>
       </div>
-      <span class="ib-tag">one-liner</span>
-      <div class="ib-cmd" id="installCmd" role="button" tabindex="0" title="Click to copy">bash install-power-pack.sh</div>
+      <span class="ib-tag">cross-platform</span>
+      <div class="ib-cmd" id="installCmd" role="button" tabindex="0" title="Click to copy">npx claude-power-pack</div>
     </div>
   </div>
 </div>
@@ -309,9 +309,9 @@
         <code>Works everywhere — no setup</code>
       </div>
       <div class="way">
-        <h3>Claude Code <span class="tag">power users</span></h3>
+        <h3>Claude Code <span class="tag">any platform</span></h3>
         <p>Install once, then type <code>/think</code>, <code>/analyze</code>, etc.</p>
-        <code>bash install-power-pack.sh</code>
+        <code>npx claude-power-pack</code>
       </div>
       <div class="way">
         <h3>Per project <span class="tag">teams</span></h3>
@@ -609,9 +609,9 @@
   // install cmd copy
   var ic=document.getElementById("installCmd");
   if(ic){
-    function icClick(){doCopy("bash install-power-pack.sh",function(){
+    function icClick(){doCopy("npx claude-power-pack",function(){
       ic.classList.add("ok");ic.textContent="Copied!";toast("Install command copied");
-      setTimeout(function(){ic.classList.remove("ok");ic.textContent="bash install-power-pack.sh"},1500);
+      setTimeout(function(){ic.classList.remove("ok");ic.textContent="npx claude-power-pack"},1500);
     })}
     ic.onclick=icClick;ic.onkeydown=function(e){if(e.key==="Enter"||e.key===" "){e.preventDefault();icClick()}};
   }
