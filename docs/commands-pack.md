@@ -1,4 +1,4 @@
-# Claude Commands Pack — 74 commands
+# Claude Commands Pack — 80 commands
 
 For each command: the **slash form** works in Claude Code (type `/name your input`);
 the **prompt** below it is what to paste into a normal claude.ai chat (replace
@@ -230,6 +230,32 @@ and `pros-cons`/`proscons` do the same job — keep whichever you prefer.
 
 ### /clean
 > Clean the data below: identify duplicates, inconsistent formats, missing values, and likely errors, then return the cleaned version plus a change log of what you fixed. Ask before dropping anything ambiguous — never silently discard rows. Data: {your input}
+
+---
+
+## Learn & Research
+
+### /research
+> Research the following in depth. Lay out what's known, the key perspectives or debates, and the current state of evidence. Distinguish well-established facts from contested or uncertain points, and note where a claim would need checking against a live source. Don't fabricate sources, figures, or quotes. Topic: {your input}
+
+### /learn
+> Help me learn the following. Start from what a beginner needs, build up in a logical order, and use concrete examples. Flag the common misconceptions, and end with a couple of quick questions to check understanding. Topic: {your input}
+
+### /sources
+> Suggest where to find reliable information on the following: the types of sources worth trusting and specific well-known ones. Do NOT invent URLs, titles, or citations — if unsure a source exists, say what to search for instead. Topic: {your input}
+
+### /explore
+> Explore the following broadly: the main sub-areas, adjacent ideas, open questions, and interesting angles worth pursuing. Aim to widen the map, not to conclude. End with a few threads most worth going deeper on. Topic: {your input}
+
+---
+
+## Collaborate
+
+### /email
+> Draft an email for the following. If the recipient or goal is unclear, ask first; otherwise produce a subject line and a concise, appropriately-toned message with a clear ask or next step. Offer a shorter or warmer variant if it would help. Details: {your input}
+
+### /feedback
+> Give constructive feedback on the following. Lead with what genuinely works, then the most important issues with specific, actionable fixes ranked by impact. Be candid but kind, and separate must-change from optional polish. Subject: {your input}
 
 ---
 
