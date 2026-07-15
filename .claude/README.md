@@ -10,6 +10,7 @@ every clone and every Claude Code on the web session picks it up automatically.
 | `commands/check.md` | `/check` — the CI gate: `ruff check` + `ruff format --check` + `pytest` |
 | `commands/run-app.md` | `/run-app` — start the ReVision server |
 | `commands/smoke.md` | `/smoke` — curl health / UI / messages |
+| `commands/{eli5,tldr,factcheck,proofread,keypoints,glossary,proscons}.md` | Content prompt-commands — text transforms on-theme with the ReVision toolkit (each takes text as its argument) |
 | `skills/claude-power-practices/` | Repo invariants checklist (points at `CLAUDE.md`) |
 | `hooks/session-start.sh` | `SessionStart` — installs dev deps on a cold remote container |
 | `settings.json` | permissions allowlist, `PostToolUse` auto-format hook, hidden attribution |
@@ -47,3 +48,24 @@ These are intentionally redundant, at different scopes — don't "dedupe" them:
   also skip the prompt.
 
 Removing one does not make the other redundant; keep both.
+
+## Vetting third-party Claude tools & repos
+
+Community "Claude Code" plugin/repo lists circulate widely (often via lead-gen
+posts). Before installing anything third-party into this project, confirm it's
+real, current, and reputable — names go stale and attributions are often wrong.
+Notes from a July 2026 review of one such list:
+
+- **`ruvnet/claude-flow` → renamed `ruvnet/ruflo`** (Feb 2026). Use the current
+  name if you go looking; the npm package is still `claude-flow`.
+- `obra/superpowers` and `bmad-code-org/BMAD-METHOD` are real, active
+  frameworks; `obra/superpowers` is installable from Anthropic's official plugin
+  marketplace. Vet any others (stars, recent commits, official marketplace
+  listing) before trusting them with repo access.
+- Ignore tools that remove model safety alignment ("abliteration"/decensoring);
+  they target open-weight models and are irrelevant to (and unusable with)
+  Claude's API.
+- Viral "Boris Cherny's CLAUDE.md operating system" graphics are community
+  creations, not his real config — he's said his own setup is "surprisingly
+  vanilla." Treat these principles as *ideas to adapt*, not gospel.
+
