@@ -62,7 +62,14 @@ Key design decisions:
 ├── docs/claude-playbook.md   # full Claude tips + command reference (source of the above)
 ├── docs/commands-pack.md     # all 80 commands: slash form + paste-ready prompt
 ├── docs/command-console.html # interactive searchable console (shareable artifact)
-├── install-power-pack.sh     # one-command installer → ~/.claude/ (global commands)
+├── power-pack/               # standalone distributable Power Pack (see below)
+│   ├── commands/             # 77 portable commands (excludes repo-specific dev ones)
+│   ├── skills/               # power-practices skill
+│   ├── install.sh            # hardened installer (--dry-run, --uninstall, backup)
+│   ├── index.html            # product landing page
+│   ├── README.md             # standalone product README
+│   └── LICENSE               # MIT
+├── install-power-pack.sh     # legacy installer (wraps power-pack/install.sh)
 ├── .github/workflows/ci.yml  # ruff check + ruff format --check + pytest (3.11-3.13) + docker build
 ├── Dockerfile                # stdlib-only image; binds 0.0.0.0:8000; HEALTHCHECK /healthz
 ├── .dockerignore
