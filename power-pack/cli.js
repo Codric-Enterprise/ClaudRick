@@ -16,8 +16,8 @@ const uninstall = args.includes("--uninstall");
 
 if (args.includes("--help") || args.includes("-h")) {
   console.log(`
-  Usage: claude-power-pack [options]
-         npx claude-power-pack [options]
+  Usage: words-of-radiance [options]
+         npx words-of-radiance [options]
 
   Options:
     --dry-run    Preview what would be installed/removed
@@ -30,7 +30,7 @@ if (args.includes("--help") || args.includes("-h")) {
 function header() {
   console.log(`
   ╔═══════════════════════════════════════╗
-  ║   Claude Power Pack  v${VERSION}         ║
+  ║   Words of Radiance  v${VERSION}         ║
   ║   77 Commands + Power Practices       ║
   ╚═══════════════════════════════════════╝
   `);
@@ -163,7 +163,7 @@ function doInstall() {
   // Version stamp
   if (!dryRun) {
     fs.writeFileSync(
-      path.join(CLAUDE_HOME, ".power-pack-version"),
+      path.join(CLAUDE_HOME, ".words-of-radiance-version"),
       VERSION + "\n"
     );
   }

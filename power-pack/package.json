@@ -1,5 +1,5 @@
 {
-  "name": "claude-power-pack",
+  "name": "words-of-radiance",
   "version": "1.0.0",
   "description": "77 battle-tested prompt-commands for Claude — as slash commands in Claude Code or copy-paste prompts anywhere.",
   "keywords": [
@@ -9,7 +9,8 @@
     "prompts",
     "slash-commands",
     "ai",
-    "productivity"
+    "productivity",
+    "words-of-radiance"
   ],
   "license": "MIT",
   "author": "ReVision Contributors",
@@ -18,7 +19,7 @@
     "url": "https://github.com/zdycomp/claudrick"
   },
   "bin": {
-    "claude-power-pack": "cli.js"
+    "words-of-radiance": "cli.js"
   },
   "files": [
     "cli.js",

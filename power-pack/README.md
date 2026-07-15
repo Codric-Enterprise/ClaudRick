@@ -1,4 +1,4 @@
-# Claude Power Pack
+# Words of Radiance
 
 **77 battle-tested prompt-commands for Claude** — as slash commands in Claude Code,
 or copy-paste prompts in any Claude chat.
@@ -30,23 +30,23 @@ prompt structure, truthfulness, and real deliverables.
 ### npx (recommended — works on macOS, Linux, Windows)
 
 ```bash
-npx claude-power-pack
+npx words-of-radiance
 ```
 
 One command. No clone required. Works everywhere Node.js runs.
 
 ```bash
 # Preview what would change:
-npx claude-power-pack --dry-run
+npx words-of-radiance --dry-run
 
 # Cleanly remove:
-npx claude-power-pack --uninstall
+npx words-of-radiance --uninstall
 ```
 
 ### Bash (Unix)
 
 ```bash
-# From the power-pack directory:
+# From the words-of-radiance directory:
 bash install.sh
 ```
 

@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # ─────────────────────────────────────────────────────────────────────
-#  Claude Power Pack Installer
+#  Words of Radiance Installer
 #  77 slash commands + power-practices skill → ~/.claude/
 #
 #  Usage:
@@ -41,7 +41,7 @@ done
 header() {
   echo ""
   echo "  ╔═══════════════════════════════════════╗"
-  echo "  ║   Claude Power Pack  v${VERSION}         ║"
+  echo "  ║   Words of Radiance  v${VERSION}         ║"
   echo "  ║   77 Commands + Power Practices       ║"
   echo "  ╚═══════════════════════════════════════╝"
   echo ""
@@ -143,7 +143,7 @@ fi
 
 # Stamp version for future upgrades
 if [[ "$DRY_RUN" != true ]]; then
-  echo "$VERSION" > "$TARGET/.power-pack-version"
+  echo "$VERSION" > "$TARGET/.words-of-radiance-version"
 fi
 
 # Summary

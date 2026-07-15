@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # ─────────────────────────────────────────────────────────────────────
-#  Claude Power Pack Installer (wrapper)
+#  Words of Radiance Installer (wrapper)
 #  Delegates to power-pack/install.sh — the standalone distributable.
 #  Run:  bash install-power-pack.sh [--dry-run] [--uninstall]
 # ─────────────────────────────────────────────────────────────────────
