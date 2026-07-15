@@ -53,9 +53,12 @@ Key design decisions:
 │   ├── test_anthropic_client.py   # mocks urllib.request.urlopen
 │   ├── test_ratelimit.py          # limiter unit tests (monkeypatched clock)
 │   └── test_server.py             # runs a live server on port 0, fake client
-├── .claude/
-│   ├── commands/             # custom slash commands (/analyze, /think, /workflow, …)
-│   └── skills/claude-power-practices/SKILL.md  # power-user guardrails skill
+├── .claude/                  # checked-in Claude Code tooling (see "Claude tooling" below)
+│   ├── settings.json         # permissions allowlist + hooks
+│   ├── hooks/session-start.sh     # SessionStart: installs dev deps on cold containers
+│   ├── commands/             # custom slash commands (/analyze, /think, /check, /run-app, …)
+│   ├── skills/               # claude-power-practices + dev skills (dev-check, run-app, add-tool, test-and-lint)
+│   └── README.md             # explains the whole .claude/ setup
 ├── docs/claude-playbook.md   # full Claude tips + command reference (source of the above)
 ├── .github/workflows/ci.yml  # ruff check + ruff format --check + pytest (3.11-3.13) + docker build
 ├── Dockerfile                # stdlib-only image; binds 0.0.0.0:8000; HEALTHCHECK /healthz
@@ -150,11 +153,10 @@ Likely next steps toward production:
 
 ## Git & branching
 
-- **Feature branch:** development happens on `claude/claude-md-docs-kvdwbk`
-  (create it from the latest default branch if it doesn't exist).
+- **Feature branches:** start each change on a fresh branch off the latest
+  `main` (e.g. `claude/<short-topic>`); don't develop directly on `main`.
 - **Push:** `git push -u origin <branch-name>`.
-- **Pull requests:** only open a PR when explicitly requested. (Open PR for this
-  work: base `main`, head `claude/claude-md-docs-kvdwbk`.)
+- **Pull requests:** only open a PR when explicitly requested.
 - A merged PR is finished — start follow-up work from a fresh branch off the
   latest default branch rather than stacking onto merged history.
 
@@ -171,13 +173,24 @@ power-user cheat-sheets (see `docs/claude-playbook.md` for the full source):
   `/test`, `/convert`, `/workflow`, `/automate`, `/tasklist`, `/checklist`, and
   more. Invoke with `/name [args]`. Note: `/clear`, `/memory`, and `/review`
   collide with Claude Code built-ins, which take precedence.
-- **`claude-power-practices` skill** — auto-applied guardrails for high-stakes
-  work: pick the right model, structure prompts with XML tags, use extended
-  thinking, verify facts (never fabricate links/citations), and produce real
-  deliverables. See `.claude/skills/claude-power-practices/SKILL.md`.
+- **Skills** in `.claude/skills/` —
+  - `claude-power-practices`: auto-applied guardrails for high-stakes work (pick
+    the right model, structure prompts with XML tags, use extended thinking,
+    verify facts / never fabricate links, produce real deliverables).
+  - `dev-check` / `test-and-lint`: run the CI gate locally (ruff + pytest).
+  - `run-app`: start and smoke-test the ReVision server.
+  - `add-tool`: add a new document tool (tab) to the single-page UI.
+- **`settings.json` + `hooks/`** — a `permissions.allow` list pre-authorizing
+  `ruff`/`pytest`/`python`/`revision`/`curl`, plus a `SessionStart` hook
+  (`hooks/session-start.sh`) that installs dev deps on a cold remote container so
+  tests and linters are ready. See `.claude/README.md` for the full rundown.
 
-These are prompt/workflow aids only — they don't touch the ReVision app's
-runtime code, endpoints, or the server-side-key rules above.
+> Gotcha: Claude Code only watches `.claude/` dirs that had a settings file when
+> the session **started**. Editing `settings.json` or the hooks mid-session
+> doesn't take effect until the next session (or opening `/hooks` once).
+
+The prompt/command aids don't touch the ReVision app's runtime code, endpoints,
+or the server-side-key rules above.
 
 ## Notes for AI assistants
 
