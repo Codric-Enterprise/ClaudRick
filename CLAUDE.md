@@ -60,6 +60,9 @@ Key design decisions:
 │   ├── skills/               # claude-power-practices + dev skills (dev-check, run-app, add-tool, test-and-lint)
 │   └── README.md             # explains the whole .claude/ setup
 ├── docs/claude-playbook.md   # full Claude tips + command reference (source of the above)
+├── docs/commands-pack.md     # all 80 commands: slash form + paste-ready prompt
+├── docs/command-console.html # interactive searchable console (shareable artifact)
+├── install-power-pack.sh     # one-command installer → ~/.claude/ (global commands)
 ├── .github/workflows/ci.yml  # ruff check + ruff format --check + pytest (3.11-3.13) + docker build
 ├── Dockerfile                # stdlib-only image; binds 0.0.0.0:8000; HEALTHCHECK /healthz
 ├── .dockerignore
