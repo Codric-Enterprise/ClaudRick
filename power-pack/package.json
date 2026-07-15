@@ -24,6 +24,7 @@
   "files": [
     "cli.js",
     "commands/",
+    "pro-commands/",
     "skills/",
     "LICENSE",
     "README.md"

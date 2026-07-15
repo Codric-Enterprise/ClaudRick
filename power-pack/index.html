@@ -1,6 +1,6 @@
-<title>S.L.A.S.H. — 77 Commands for Claude</title>
+<title>S.L.A.S.H. — 107 Commands for Claude</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="description" content="S.L.A.S.H. — 77 battle-tested prompt-commands that make you a Claude superuser in 30 seconds. Structured Language And System Heuristics. Free, open-source, works everywhere.">
+<meta name="description" content="S.L.A.S.H. — 107 prompt-commands that make you a Claude superuser in 30 seconds. 77 free + 30 Pro. Structured Language And System Heuristics.">
 <style>
   @font-face{font-family:'JB';font-style:normal;font-weight:400 700;font-display:swap;
     src:local('JetBrains Mono'),local('SF Mono'),local('Fira Code'),local('Menlo'),local('Consolas')}
@@ -10,6 +10,7 @@
     --accent:#B45309;--accent-strong:#92400E;--accent-soft:rgba(180,83,9,.10);
     --accent-glow:rgba(180,83,9,.06);
     --good:#166534;--good-soft:rgba(22,101,52,.08);
+    --pro:#7C3AED;--pro-soft:rgba(124,58,237,.10);--pro-strong:#6D28D9;
     --shadow:rgba(28,25,23,.08);
     --font-ui:'Inter',system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
     --font-mono:'JB',ui-monospace,"SF Mono","JetBrains Mono","Fira Code",Menlo,Consolas,monospace;
@@ -20,21 +21,27 @@
     --text:#EDE9E3;--muted:#9A948D;--faint:#6B6560;
     --accent:#F59E0B;--accent-strong:#FBBF24;--accent-soft:rgba(245,158,11,.14);
     --accent-glow:rgba(245,158,11,.06);
-    --good:#4ADE80;--good-soft:rgba(74,222,128,.10);--shadow:rgba(0,0,0,.4);
+    --good:#4ADE80;--good-soft:rgba(74,222,128,.10);
+    --pro:#A78BFA;--pro-soft:rgba(167,139,250,.12);--pro-strong:#C4B5FD;
+    --shadow:rgba(0,0,0,.4);
   }}
   :root[data-theme="light"]{
     --bg:#F7F5F1;--surface:#FFFFFF;--surface-2:#EDE9E3;--border:#D8D2C8;
     --text:#1C1917;--muted:#6B6560;--faint:#9A948D;
     --accent:#B45309;--accent-strong:#92400E;--accent-soft:rgba(180,83,9,.10);
     --accent-glow:rgba(180,83,9,.06);
-    --good:#166534;--good-soft:rgba(22,101,52,.08);--shadow:rgba(28,25,23,.08);
+    --good:#166534;--good-soft:rgba(22,101,52,.08);
+    --pro:#7C3AED;--pro-soft:rgba(124,58,237,.10);--pro-strong:#6D28D9;
+    --shadow:rgba(28,25,23,.08);
   }
   :root[data-theme="dark"]{
     --bg:#111110;--surface:#1A1918;--surface-2:#242220;--border:#353230;
     --text:#EDE9E3;--muted:#9A948D;--faint:#6B6560;
     --accent:#F59E0B;--accent-strong:#FBBF24;--accent-soft:rgba(245,158,11,.14);
     --accent-glow:rgba(245,158,11,.06);
-    --good:#4ADE80;--good-soft:rgba(74,222,128,.10);--shadow:rgba(0,0,0,.4);
+    --good:#4ADE80;--good-soft:rgba(74,222,128,.10);
+    --pro:#A78BFA;--pro-soft:rgba(167,139,250,.12);--pro-strong:#C4B5FD;
+    --shadow:rgba(0,0,0,.4);
   }
   *{box-sizing:border-box;margin:0;padding:0}
   body{background:var(--bg);color:var(--text);font-family:var(--font-ui);
@@ -52,7 +59,7 @@
     display:flex;align-items:center;gap:8px}
   .logo .dot{width:8px;height:8px;border-radius:50%;background:var(--accent);
     box-shadow:0 0 0 3px var(--accent-soft)}
-  nav .links{display:flex;gap:18px;font-size:.85rem;font-family:var(--font-mono)}
+  nav .links{display:flex;gap:18px;font-size:.85rem;font-family:var(--font-mono);align-items:center}
   nav .links a{color:var(--muted)}
   nav .links a:hover{color:var(--text);text-decoration:none}
   .theme-btn{background:none;border:1px solid var(--border);color:var(--muted);
@@ -76,6 +83,8 @@
   .btn-primary:hover{filter:brightness(1.1);transform:translateY(-1px);text-decoration:none;color:#fff}
   .btn-secondary{background:var(--surface);color:var(--text);border:1px solid var(--border)}
   .btn-secondary:hover{border-color:var(--accent);text-decoration:none}
+  .btn-pro{background:var(--pro);color:#fff;box-shadow:0 2px 12px -2px var(--pro-soft)}
+  .btn-pro:hover{filter:brightness(1.1);transform:translateY(-1px);text-decoration:none;color:#fff}
 
   /* install strip */
   .install-strip{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
@@ -133,7 +142,28 @@
     color:var(--accent-strong);text-align:center;font-weight:600}
   .groups-table td:last-child{color:var(--muted);font-family:var(--font-mono);font-size:.78rem}
   .groups-table tbody tr:hover{background:var(--accent-glow)}
+  .groups-table tbody tr.pro-row td:first-child::after{content:"PRO";font-size:.56rem;
+    background:var(--pro-soft);color:var(--pro-strong);padding:2px 6px;border-radius:4px;
+    margin-left:8px;font-weight:700;letter-spacing:.08em;vertical-align:middle}
   .groups-wrap{overflow-x:auto}
+
+  /* pricing */
+  .pricing{display:grid;gap:20px;grid-template-columns:1fr 1fr}
+  @media(max-width:640px){.pricing{grid-template-columns:1fr}}
+  .price-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+    padding:28px 24px;display:flex;flex-direction:column}
+  .price-card.featured{border-color:var(--pro);box-shadow:0 0 0 1px var(--pro),0 4px 24px -4px var(--pro-soft)}
+  .price-card .tier{font-family:var(--font-mono);font-size:.68rem;text-transform:uppercase;
+    letter-spacing:.14em;font-weight:600;margin-bottom:8px}
+  .price-card .tier.free-t{color:var(--accent-strong)}
+  .price-card .tier.pro-t{color:var(--pro-strong)}
+  .price-card .price{font-size:2.2rem;font-weight:800;letter-spacing:-.03em;margin-bottom:4px}
+  .price-card .price-note{font-size:.78rem;color:var(--faint);margin-bottom:20px}
+  .price-card ul{list-style:none;display:grid;gap:8px;margin-bottom:24px;flex:1}
+  .price-card li{font-size:.84rem;color:var(--muted);padding-left:22px;position:relative;line-height:1.4}
+  .price-card li::before{content:"";position:absolute;left:0;top:6px;width:6px;height:6px;
+    border-radius:50%;background:var(--good)}
+  .price-card.featured li::before{background:var(--pro)}
 
   /* how to use */
   .ways{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
@@ -150,7 +180,7 @@
   .security{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:24px}
   .security ul{list-style:none;display:grid;gap:8px}
   .security li{font-size:.84rem;color:var(--muted);padding-left:22px;position:relative;line-height:1.5}
-  .security li::before{content:"✓";position:absolute;left:0;color:var(--good);font-weight:700}
+  .security li::before{content:"\2713";position:absolute;left:0;color:var(--good);font-weight:700}
 
   /* footer */
   footer{border-top:1px solid var(--border);padding:28px 0 48px;text-align:center;
@@ -167,8 +197,8 @@
     <div class="logo"><span class="dot"></span> S.L.A.S.H.</div>
     <div class="links">
       <a href="#install">Install</a>
+      <a href="#pricing">Pricing</a>
       <a href="#commands">Commands</a>
-      <a href="#how">How to use</a>
       <button class="theme-btn" id="theme" aria-label="Toggle theme">&#9685;</button>
     </div>
   </div>
@@ -177,12 +207,12 @@
 <div class="wrap">
   <!-- hero -->
   <div class="hero">
-    <span class="tag">Free &amp; open source</span>
+    <span class="tag">77 Free + 30 Pro</span>
     <h1>Feel like a Claude <em>superuser</em> in 30 seconds</h1>
-    <p class="sub">77 prompt-commands that turn vague asks into structured, professional results. Works in Claude Code, claude.ai, or any Claude chat.</p>
+    <p class="sub">107 prompt-commands that turn vague asks into structured, professional results. Works in Claude Code, claude.ai, or any Claude chat.</p>
     <div class="ctas">
-      <a class="btn btn-primary" href="#install">Get S.L.A.S.H.</a>
-      <a class="btn btn-secondary" href="#demo">See the console</a>
+      <a class="btn btn-primary" href="#install">Get S.L.A.S.H. Free</a>
+      <a class="btn btn-pro" href="#pricing">Get Pro</a>
     </div>
   </div>
 
@@ -190,7 +220,7 @@
   <div class="install-strip" id="install">
     <div class="label">
       <strong>One command, any platform</strong>
-      macOS, Linux, Windows — copies 77 commands + guardrails to ~/.claude/
+      macOS, Linux, Windows — copies 77 free commands + guardrails to ~/.claude/
     </div>
     <code id="installCmd">npx slash-pack</code>
   </div>
@@ -200,7 +230,7 @@
     <h2>The difference a structured prompt makes</h2>
     <div class="comparison">
       <div class="comp-card before">
-        <div class="label"><span class="dot"></span> Without Power Pack</div>
+        <div class="label"><span class="dot"></span> Without S.L.A.S.H.</div>
         <p>"Can you analyze this problem for me?"</p>
         <div class="result">You get a generic, rambling response that touches on several things but doesn't commit to a structure or surface the unknowns.</div>
       </div>
@@ -214,7 +244,7 @@
 
   <!-- stats -->
   <div class="stats">
-    <div class="stat"><div class="n">77</div><div class="l">Commands</div></div>
+    <div class="stat"><div class="n">107</div><div class="l">Commands</div></div>
     <div class="stat"><div class="n">12</div><div class="l">Groups</div></div>
     <div class="stat"><div class="n">0</div><div class="l">Dependencies</div></div>
     <div class="stat"><div class="n">30s</div><div class="l">To install</div></div>
@@ -257,9 +287,44 @@
     </div>
   </div>
 
+  <!-- pricing -->
+  <div class="section" id="pricing">
+    <h2>Pricing</h2>
+    <div class="pricing">
+      <div class="price-card">
+        <div class="tier free-t">Free</div>
+        <div class="price">$0</div>
+        <div class="price-note">forever</div>
+        <ul>
+          <li>77 prompt-commands across 12 categories</li>
+          <li>Power-practices guardrail skill</li>
+          <li>Auto-backup of existing commands</li>
+          <li>Dry-run, uninstall, team-ready</li>
+          <li>Copy-paste or slash command — works everywhere</li>
+          <li>MIT licensed — fork and modify freely</li>
+        </ul>
+        <a class="btn btn-secondary" href="#install" style="text-align:center;justify-content:center">Install Free</a>
+      </div>
+      <div class="price-card featured">
+        <div class="tier pro-t">Pro</div>
+        <div class="price">$29</div>
+        <div class="price-note">one-time — lifetime access</div>
+        <ul>
+          <li>Everything in Free, plus:</li>
+          <li>30 professional commands for architects, founders, and leads</li>
+          <li>/architect, /security-audit, /pitch, /contract, /negotiate</li>
+          <li>/roadmap, /competitive, /growth, /monetize, /incident</li>
+          <li>/api-design, /data-model, /ci-cd, /performance + 16 more</li>
+          <li>License key activation — instant unlock</li>
+        </ul>
+        <a class="btn btn-pro" id="buyBtn" href="#pricing" style="text-align:center;justify-content:center">Get Pro — $29</a>
+      </div>
+    </div>
+  </div>
+
   <!-- commands table -->
   <div class="section" id="commands">
-    <h2>All 77 commands, 12 groups</h2>
+    <h2>All 107 commands</h2>
     <div class="groups-wrap">
       <table class="groups-table">
         <thead><tr><th>Group</th><th>#</th><th>Highlights</th></tr></thead>
@@ -275,6 +340,12 @@
           <tr><td>Learn &amp; Research</td><td>4</td><td>/research, /learn, /sources, /explore</td></tr>
           <tr><td>Collaborate</td><td>2</td><td>/email, /feedback</td></tr>
           <tr><td>Content Transforms</td><td>6</td><td>/eli5, /tldr, /factcheck, /glossary</td></tr>
+          <tr class="pro-row"><td>Architecture</td><td>6</td><td>/architect, /api-design, /data-model, /ci-cd, /performance, /migration</td></tr>
+          <tr class="pro-row"><td>Security &amp; Ops</td><td>4</td><td>/security-audit, /incident, /postmortem, /compliance</td></tr>
+          <tr class="pro-row"><td>Business</td><td>6</td><td>/pitch, /proposal, /monetize, /competitive, /growth, /estimate</td></tr>
+          <tr class="pro-row"><td>Product &amp; Design</td><td>5</td><td>/roadmap, /ux-review, /onboard, /ab-test, /landing-page</td></tr>
+          <tr class="pro-row"><td>Legal &amp; Contracts</td><td>3</td><td>/contract, /legal-draft, /negotiate</td></tr>
+          <tr class="pro-row"><td>Leadership</td><td>6</td><td>/crisis, /retrospective, /interview-prep, /brand, /teardown</td></tr>
         </tbody>
       </table>
     </div>
@@ -323,7 +394,7 @@
         <li>The installer backs up existing commands before overwriting</li>
         <li><code>--dry-run</code> lets you preview every change before it happens</li>
         <li><code>--uninstall</code> cleanly removes everything the installer added</li>
-        <li>MIT licensed — inspect, fork, and modify freely</li>
+        <li>Free tier: MIT licensed — inspect, fork, and modify freely</li>
       </ul>
     </div>
   </div>
@@ -332,10 +403,11 @@
 <footer>
   <div class="f-links">
     <a href="#install">Install</a>
+    <a href="#pricing">Pricing</a>
     <a href="#commands">Commands</a>
     <a href="https://github.com/zdycomp/claudrick">GitHub</a>
   </div>
-  <span>S.L.A.S.H. — MIT License</span>
+  <span>S.L.A.S.H. — Structured Language And System Heuristics</span>
 </footer>
 
 <script>

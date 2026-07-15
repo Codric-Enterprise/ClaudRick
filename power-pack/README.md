@@ -10,6 +10,8 @@ structured, high-quality result.
 
 ## What's inside
 
+### Free (77 commands)
+
 | Group | Commands | Examples |
 |-------|----------|----------|
 | Focus & Context | 9 | `/focus`, `/context`, `/clarify`, `/define` |
@@ -23,6 +25,17 @@ structured, high-quality result.
 | Learn & Research | 4 | `/research`, `/learn`, `/sources`, `/explore` |
 | Collaborate | 2 | `/email`, `/feedback` |
 | Content Transforms | 6 | `/eli5`, `/tldr`, `/factcheck`, `/glossary` |
+
+### Pro Pack (30 commands — requires license)
+
+| Category | Commands |
+|----------|----------|
+| Architecture & Engineering | `/architect`, `/api-design`, `/data-model`, `/ci-cd`, `/performance`, `/migration` |
+| Security & Ops | `/security-audit`, `/incident`, `/postmortem`, `/compliance` |
+| Business & Strategy | `/pitch`, `/proposal`, `/monetize`, `/competitive`, `/growth`, `/estimate` |
+| Product & Design | `/roadmap`, `/ux-review`, `/onboard`, `/ab-test`, `/landing-page` |
+| Legal & Contracts | `/contract`, `/legal-draft`, `/negotiate` |
+| Leadership & Comms | `/crisis`, `/retrospective`, `/interview-prep`, `/brand`, `/teardown` |
 
 Plus the **power-practices** skill — automatic guardrails for model selection,
 prompt structure, truthfulness, and real deliverables.
@@ -41,8 +54,20 @@ One command. No clone required. Works everywhere Node.js runs.
 # Preview what would change:
 npx slash-pack --dry-run
 
+# Check installation status:
+npx slash-pack --status
+
 # Cleanly remove:
 npx slash-pack --uninstall
+```
+
+### Activate Pro
+
+After purchasing a Pro license:
+
+```bash
+npx slash-pack --activate YOUR-LICENSE-KEY
+npx slash-pack   # re-run to install the 30 pro commands
 ```
 
 ### Bash (Unix)
@@ -91,4 +116,5 @@ guardrails for reasoning, truthfulness, and deliverable quality.
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+Free tier: MIT — see [LICENSE](LICENSE).
+Pro commands: proprietary license, single-user. See purchase terms.
