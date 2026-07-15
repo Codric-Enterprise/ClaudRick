@@ -1,4 +1,4 @@
-# Claude Commands Pack — 62 commands
+# Claude Commands Pack — 74 commands
 
 For each command: the **slash form** works in Claude Code (type `/name your input`);
 the **prompt** below it is what to paste into a normal claude.ai chat (replace
@@ -186,6 +186,50 @@ and `pros-cons`/`proscons` do the same job — keep whichever you prefer.
 
 ### /clear
 > Drop the prior topic from active focus and start fresh on the new topic below. Don't carry over assumptions from the previous thread. New topic: {your input}
+
+---
+
+## Write & Edit
+
+### /write
+> Write the following as requested. Establish the audience, purpose, and format first (ask if unclear), then produce a clean draft. Match the requested tone, keep it tight and free of filler, and don't fabricate facts. Brief: {your input}
+
+### /edit
+> Edit the text below for clarity, flow, and correctness while preserving the author's meaning and voice. Return the edited version, then a short list of the substantive changes you made. Text: {your input}
+
+### /rewrite
+> Rewrite the following to be clearer and stronger. Keep the meaning; improve structure, word choice, and rhythm. If a goal is given (shorter, friendlier, more formal), optimize for it. Don't add or drop information. Text: {your input}
+
+### /shorten
+> Shorten the following without losing substance. Cut redundancy, hedging, and filler; keep every key fact and the original meaning. Aim for the tightest version that still reads well. Text: {your input}
+
+### /expand
+> Expand the following with real substance — detail, examples, context, and reasoning — not padding. Keep the original intent and voice. Flag anything you added that should be fact-checked. Text: {your input}
+
+### /improve
+> Improve the writing below for clarity, concision, flow, and impact while preserving meaning and voice. Return the improved version, then note the top 3 changes and why. Text: {your input}
+
+### /paraphrase
+> Paraphrase the following in fresh wording while keeping the exact meaning. Don't echo the original phrasing, and don't add or drop information. If a register is specified, match it. Text: {your input}
+
+---
+
+## Data & Analysis
+
+### /insights
+> Extract the meaningful insights from the data/text below — patterns, outliers, and what they imply — not just a restatement of the numbers. Rank by importance and note your confidence. Don't invent data. Data: {your input}
+
+### /forecast
+> Produce a forecast from the following. State your method and assumptions, give the projection as a range (not false-precision single numbers), and list what would change it. Be explicit about uncertainty; don't fabricate data. Basis: {your input}
+
+### /report
+> Turn the following into a structured report: a short executive summary, then findings with supporting detail, then recommendations / next steps. Keep every claim traceable to the source and mark anything assumed. Material: {your input}
+
+### /stats
+> Summarize the key statistics for the data below: relevant totals, averages, spread/distribution, and notable comparisons. Show the calculation basis, and state any assumption about missing/ambiguous values rather than guessing silently. Data: {your input}
+
+### /clean
+> Clean the data below: identify duplicates, inconsistent formats, missing values, and likely errors, then return the cleaned version plus a change log of what you fixed. Ask before dropping anything ambiguous — never silently discard rows. Data: {your input}
 
 ---
 
