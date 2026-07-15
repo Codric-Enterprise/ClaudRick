@@ -165,6 +165,9 @@ Likely next steps toward production:
 This repo ships Claude Code helpers under `.claude/`, distilled from two
 power-user cheat-sheets (see `docs/claude-playbook.md` for the full source):
 
+- **Commands pack** — `docs/commands-pack.md` lists every command's slash form
+  alongside its paste-ready prompt (for use in a plain claude.ai chat, where
+  slash commands aren't available).
 - **Slash commands** in `.claude/commands/` — the full command reference as
   reusable prompt shortcuts across six groups (focus/context, think/solve,
   organize, code, automate, personalize): `/think`, `/analyze`, `/challenge`,
