@@ -49,6 +49,10 @@ which section to open:
 
 - `/check` — the CI gate: `ruff check .` + `ruff format --check .` + `pytest`.
 - `/run-app` — start the server; `/smoke` — curl health / UI / messages.
+- Content prompt-commands (on-theme with the toolkit; each takes text as its
+  argument): `/eli5`, `/tldr`, `/factcheck`, `/proofread`, `/keypoints`,
+  `/glossary`, `/proscons`. Handy for reasoning about docs the app processes —
+  not part of the dev/CI loop.
 - A `PostToolUse` hook auto-runs `ruff check --fix --select I` then
   `ruff format` on `.py` files, so writes don't leave import order failing the
   gate. It's a safety net, not a substitute for running `/check`.
