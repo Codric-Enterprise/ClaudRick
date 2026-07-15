@@ -53,6 +53,10 @@ Key design decisions:
 │   ├── test_anthropic_client.py   # mocks urllib.request.urlopen
 │   ├── test_ratelimit.py          # limiter unit tests (monkeypatched clock)
 │   └── test_server.py             # runs a live server on port 0, fake client
+├── .claude/
+│   ├── commands/             # custom slash commands (/analyze, /think, /workflow, …)
+│   └── skills/claude-power-practices/SKILL.md  # power-user guardrails skill
+├── docs/claude-playbook.md   # full Claude tips + command reference (source of the above)
 ├── .github/workflows/ci.yml  # ruff check + ruff format --check + pytest (3.11-3.13) + docker build
 ├── Dockerfile                # stdlib-only image; binds 0.0.0.0:8000; HEALTHCHECK /healthz
 ├── .dockerignore
@@ -153,6 +157,27 @@ Likely next steps toward production:
   work: base `main`, head `claude/claude-md-docs-kvdwbk`.)
 - A merged PR is finished — start follow-up work from a fresh branch off the
   latest default branch rather than stacking onto merged history.
+
+## Claude tooling (commands, skills, playbook)
+
+This repo ships Claude Code helpers under `.claude/`, distilled from two
+power-user cheat-sheets (see `docs/claude-playbook.md` for the full source):
+
+- **Slash commands** in `.claude/commands/` — the full command reference as
+  reusable prompt shortcuts across six groups (focus/context, think/solve,
+  organize, code, automate, personalize): `/think`, `/analyze`, `/challenge`,
+  `/compare`, `/recommend`, `/solve`, `/summary`, `/outline`, `/table`,
+  `/mindmap`, `/flowchart`, `/explain`, `/debug`, `/optimize`, `/refactor`,
+  `/test`, `/convert`, `/workflow`, `/automate`, `/tasklist`, `/checklist`, and
+  more. Invoke with `/name [args]`. Note: `/clear`, `/memory`, and `/review`
+  collide with Claude Code built-ins, which take precedence.
+- **`claude-power-practices` skill** — auto-applied guardrails for high-stakes
+  work: pick the right model, structure prompts with XML tags, use extended
+  thinking, verify facts (never fabricate links/citations), and produce real
+  deliverables. See `.claude/skills/claude-power-practices/SKILL.md`.
+
+These are prompt/workflow aids only — they don't touch the ReVision app's
+runtime code, endpoints, or the server-side-key rules above.
 
 ## Notes for AI assistants
 

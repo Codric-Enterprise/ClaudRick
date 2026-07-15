@@ -1,75 +1,79 @@
 ---
 name: claude-power-practices
-description: Repo-specific working agreements for the ReVision toolkit — the security/architecture invariants an AI assistant must respect when editing this codebase. Use when adding endpoints, touching the Anthropic proxy, wiring the frontend, adding dependencies, or before committing changes.
+description: >-
+  Power-user guardrails for getting professional-grade results from Claude —
+  distilled from the "Top 50 Game-Changing Claude Tips" cheat sheet. Use when
+  tackling a complex, multi-step, or high-stakes task (analysis, planning,
+  research, drafting deliverables, or automation) and you want maximum rigor:
+  choosing the right model, structuring prompts with XML tags, extended
+  thinking, verifying facts, avoiding fabricated links/citations, and producing
+  real deliverables. Triggers on requests to "think harder", "be thorough",
+  "no hallucinations", "double-check", "make it rigorous", or "automate this".
 ---
 
-# Claude power practices for ReVision
+# Claude Power Practices
 
-`CLAUDE.md` at the repo root is the **single source of truth** for how this
-project is built. This skill is a fast-access checklist of the load-bearing
-invariants plus the local automation that supports them — not a second copy of
-the docs. When this skill and `CLAUDE.md` disagree, `CLAUDE.md` wins; fix the
-skill in the same change (see "Keep in sync" below).
+Guardrails distilled from the "Top 50 Game-Changing Claude Tips" sheet, turned
+into operating rules. Apply the ones relevant to the task; don't recite them.
 
-## Hard invariants (break these and you break the product)
+## Thinking & reasoning
 
-Kept inline because they're safety-critical and you should see them without
-opening another file. Full rationale lives in `CLAUDE.md` → *Architecture* and
-*Security notes*.
+- **Match the model to the job.** Heaviest reasoning / tradeoff analysis →
+  Opus; balanced speed+quality → Sonnet; fast, cheap iteration → Haiku.
+- **Extended thinking for hard problems.** For scenario planning, multi-step
+  tradeoffs, or anything with hidden dependencies, reason step by step before
+  answering. (`/think` command wraps this.)
+- **Challenge assumptions.** Before committing to a plan, name the load-bearing
+  assumptions and stress-test them. (`/challenge`.)
 
-- **Server-side API key.** The browser calls same-origin `/api/messages` only,
-  never `api.anthropic.com`. The `x-api-key` / `anthropic-version` headers are
-  added in `anthropic_client.py`. Never move the key or a direct Anthropic call
-  into `static/index.html`.
-- **Model is server-controlled.** The model id lives in `config.py`
-  (`REVISION_MODEL`) — never hard-code it in the frontend, and always use a
-  real model id.
-- **Stdlib-only backend.** Runtime code uses only the standard library; add a
-  runtime dependency only with strong reason. `pytest` / `ruff` are dev-only.
-- **Static server is sandboxed.** `do_GET` serves only from
-  `src/revision/static/` with a path-traversal guard — preserve it.
-- **Preserve the test seam.** `create_server(config, client=...)` accepts an
-  injected client so tests run a real server against a fake Anthropic client
-  with no network. Keep it injectable.
+## Prompt structure (CSI + FBI)
 
-## Conventions — see `CLAUDE.md`, don't duplicate here
+Frame non-trivial requests with: **C**ontext, **S**pecific ask,
+**I**nstructions + desired **F**ormat, **B**lueprint/example, **I**dentity
+(who it's for). Wrap distinct pieces in **XML tags**
+(`<context>…</context>`, `<instructions>…</instructions>`,
+`<format>…</format>`) so requirements don't bleed together.
 
-These live in `CLAUDE.md` and are the authority; this is just a map so you know
-which section to open:
+## Truthfulness guardrails
 
-- **Layout & structure** → *Repository structure* (src layout; `tests/` mirror
-  their module; `static/` ships inside the package).
-- **Error contract** → *HTTP endpoints* (`{"error": {"message": ...}}` with
-  400 / 401 / 429+`Retry-After` / 502; `callClaude` reads `data.error.message`).
-- **Handler style & lint rules** → *Conventions* (`do_GET`/`do_POST` `# noqa:
-  N802` via `make_handler`; ruff line length 100, rules `E,F,I,UP,B,SIM`;
-  type-hint public functions).
+- **Don't guess — verify.** Distinguish what you know from what you're
+  inferring. For anything past the model's knowledge cutoff, use web search
+  rather than asserting.
+- **No fabricated links or citations.** Never present a URL, file, citation, or
+  "I sent it" claim you can't stand behind. If you can't verify it, say so.
+- **Compare runs for consistency** on high-stakes numbers or claims; flag
+  discrepancies instead of smoothing over them.
 
-## Local automation (this repo's `.claude/`)
+## Real deliverables & automation
 
-- `/check` — the CI gate: `ruff check .` + `ruff format --check .` + `pytest`.
-- `/run-app` — start the server; `/smoke` — curl health / UI / messages.
-- Content prompt-commands (on-theme with the toolkit; each takes text as its
-  argument): `/eli5`, `/tldr`, `/factcheck`, `/proofread`, `/keypoints`,
-  `/glossary`, `/proscons`. Handy for reasoning about docs the app processes —
-  not part of the dev/CI loop.
-- A `PostToolUse` hook auto-runs `ruff check --fix --select I` then
-  `ruff format` on `.py` files, so writes don't leave import order failing the
-  gate. It's a safety net, not a substitute for running `/check`.
-- The `SessionStart` hook installs `pip install -e ".[dev]"` on a cold remote
-  container. See `.claude/README.md` for how these load (and the mid-session
-  watcher caveat).
+- **Produce the artifact, not just talk about it.** When the ask implies a file
+  or app (spreadsheet, doc, dashboard, prototype), create/edit it directly
+  rather than describing it. Artifacts for shareable prototypes.
+- **Systematize repeatable work.** For anything done more than once, define a
+  workflow (steps → I/O → checks) and note what a script, Claude Code, or CI
+  could automate. (`/workflow`.)
+- **Data → analysis → deliverable.** Structure analytical tasks in that order,
+  and state the materiality threshold and time window up front.
+- **Cite your sources** in analysis so claims are traceable, and keep a short
+  "work log" of what changed when the task is multi-step.
 
-## Before you commit
+## Companion commands
 
-- Run `/check` (or `ruff check .`, `ruff format --check .`, `pytest`). If
-  `python -m pytest` can't find the module, call the `pytest` / `ruff` binaries
-  directly.
-- Verify claims against the actual repo before asserting them.
-- Only open a PR when explicitly asked.
+The `.claude/commands/` directory turns the full command cheat-sheet into real
+slash commands, grouped as:
 
-## Keep in sync
+- **Focus & context:** `/focus`, `/context`, `/details`, `/examples`,
+  `/clarify`, `/define`, `/assumptions`, `/priorities`, `/constraints`
+- **Think & solve:** `/analyze`, `/compare`, `/pros-cons`, `/evaluate`,
+  `/recommend`, `/brainstorm`, `/solve`, `/challenge`, `/think`
+- **Organize & structure:** `/outline`, `/structure`, `/bullet`, `/numbered`,
+  `/table`, `/summary`, `/key-points`, `/mindmap`, `/flowchart`
+- **Code & tech:** `/code`, `/debug`, `/explain`, `/optimize`, `/refactor`,
+  `/test`, `/convert`, `/documentation`, `/review`
+- **Automate & integrate:** `/workflow`, `/automate`, `/api`, `/integrate`,
+  `/schedule`, `/trigger`, `/tasklist`, `/checklist`
+- **Personalize & control:** `/preferences`, `/memory`, `/tone`, `/style`,
+  `/length`, `/format`, `/reset`, `/clear`
 
-When you change a rule this skill mentions, update `CLAUDE.md` (the source of
-truth) **and** this skill in the same change. Documentation drift is a bug —
-`CLAUDE.md` says so, and a checklist that lies is worse than none.
+`/clear`, `/memory`, and `/review` collide with Claude Code built-ins — the
+built-in takes precedence. See `docs/claude-playbook.md` for the full reference.
