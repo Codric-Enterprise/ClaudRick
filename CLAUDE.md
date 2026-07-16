@@ -62,8 +62,6 @@ Key design decisions:
 ├── docs/claude-playbook.md   # full Claude tips + command reference (source of the above)
 ├── docs/commands-pack.md     # all 80 commands: slash form + paste-ready prompt
 ├── docs/command-console.html # interactive searchable console (shareable artifact)
-├── docs/claude-2026-cheatsheet.md   # "How To Actually Use Claude" 2026 sheet, transcribed + annotated
-├── docs/claude-2026-cheatsheet.html # interactive version of that sheet (shareable artifact)
 ├── power-pack/               # "S.L.A.S.H." — standalone distributable (see below)
 │   ├── commands/             # 77 portable commands (excludes repo-specific dev ones)
 │   ├── skills/               # power-practices skill
@@ -183,11 +181,6 @@ power-user cheat-sheets (see `docs/claude-playbook.md` for the full source):
 - **Commands pack** — `docs/commands-pack.md` lists every command's slash form
   alongside its paste-ready prompt (for use in a plain claude.ai chat, where
   slash commands aren't available).
-- **2026 cheat sheet** — `docs/claude-2026-cheatsheet.md` transcribes and
-  annotates the *How To Actually Use Claude* ten-panel sheet (model stack, the 5
-  surfaces, the 4 core `.md` files, the prompt template, the first-30-minutes
-  timeline), with a column mapping each panel to this repo's tooling.
-  `docs/claude-2026-cheatsheet.html` is the interactive, shareable version.
 - **Slash commands** in `.claude/commands/` — the full command reference as
   reusable prompt shortcuts across six groups (focus/context, think/solve,
   organize, code, automate, personalize): `/think`, `/analyze`, `/challenge`,
@@ -214,6 +207,56 @@ power-user cheat-sheets (see `docs/claude-playbook.md` for the full source):
 
 The prompt/command aids don't touch the ReVision app's runtime code, endpoints,
 or the server-side-key rules above.
+
+## Working practices — the 2026 loop
+
+Integrated from the ten-panel *How To Actually Use Claude* cheat sheet
+(2026 edition, framework by Denis Panjuta). These are standing instructions for
+every session in this repo, alongside the playbook and skills above.
+
+**The core loop** — apply it to every non-trivial task:
+
+`give context → attach/read the files → set a clear success target → pick the
+right model → review & refine → save the winning process as a skill`
+
+When a process wins twice, turn it into a skill under `.claude/skills/` (that's
+how `dev-check`, `run-app`, and `add-tool` got here).
+
+**Model choice** (session-level; the *app's* model stays server-controlled in
+`config.py` — verify current ids before hard-coding any):
+
+| Model | Reach for it when… |
+| --- | --- |
+| Fable 5 | Hardest coding, long-horizon tasks, ambitious projects |
+| Opus 4.8 | Top-tier reasoning, writing, strategy, deep analysis |
+| Sonnet 5 | Default balance of speed, quality, and cost |
+| Haiku 4.5 | Bulk tasks, triage, classification, simple transforms |
+
+Start with Sonnet; upgrade to Fable or Opus when quality matters.
+
+**The prompt template** — a good brief defines the finish line before work
+starts. Expect (and when briefing sub-tasks, provide) these fields:
+
+- **Task** — what to do · **Context** — background it needs
+- **Inputs/files** — material to work from · **Constraints** — what to respect
+- **Success criteria** — how "done" is judged · **Output format** — shape of
+  the deliverable
+- Ask a clarifying question if anything is unclear; start only when aligned.
+
+**Standing rules** (every response):
+
+- Read this file and the relevant repo/uploaded files *before* acting.
+- Check the active project folder / branch before assuming state.
+- Ask clarifying questions when the brief is ambiguous — don't guess.
+- Be concise, accurate, and source-aware; never present unverified links or
+  claims as fact (see `claude-power-practices`).
+
+**Lean into / avoid:**
+
+- ✅ Writing in the user's voice · long-context analysis · project planning ·
+  research synthesis · file-based work · connected-app workflows.
+- ⛔ Photo/image editing · web-search results used without checking sources ·
+  vague one-line briefs · sensitive work shipped without review.
 
 ## Notes for AI assistants
 

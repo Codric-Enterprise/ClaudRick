@@ -9,11 +9,6 @@ as working tooling:
 - The **Command Reference** is operationalized as real slash commands in
   [`.claude/commands/`](../.claude/commands/) (the high-value subset).
 
-> Companion sheet: [`claude-2026-cheatsheet.md`](./claude-2026-cheatsheet.md)
-> ([interactive version](./claude-2026-cheatsheet.html)) captures the 2026
-> *How To Actually Use Claude* workflow — the 5 surfaces, model stack, core
-> `.md` files, prompt template, and first-30-minutes timeline.
-
 > Note on scope: some sheet entries are product features of the Claude apps
 > (Chrome extension, Excel add-in, keyboard shortcuts, Memory, Connectors) or
 > conversational conventions rather than things this repository can implement.
