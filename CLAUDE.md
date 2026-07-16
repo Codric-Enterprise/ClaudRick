@@ -62,6 +62,8 @@ Key design decisions:
 ├── docs/claude-playbook.md   # full Claude tips + command reference (source of the above)
 ├── docs/commands-pack.md     # all 80 commands: slash form + paste-ready prompt
 ├── docs/command-console.html # interactive searchable console (shareable artifact)
+├── docs/claude-2026-cheatsheet.md   # "How To Actually Use Claude" 2026 sheet, transcribed + annotated
+├── docs/claude-2026-cheatsheet.html # interactive version of that sheet (shareable artifact)
 ├── power-pack/               # "S.L.A.S.H." — standalone distributable (see below)
 │   ├── commands/             # 77 portable commands (excludes repo-specific dev ones)
 │   ├── skills/               # power-practices skill
@@ -181,6 +183,11 @@ power-user cheat-sheets (see `docs/claude-playbook.md` for the full source):
 - **Commands pack** — `docs/commands-pack.md` lists every command's slash form
   alongside its paste-ready prompt (for use in a plain claude.ai chat, where
   slash commands aren't available).
+- **2026 cheat sheet** — `docs/claude-2026-cheatsheet.md` transcribes and
+  annotates the *How To Actually Use Claude* ten-panel sheet (model stack, the 5
+  surfaces, the 4 core `.md` files, the prompt template, the first-30-minutes
+  timeline), with a column mapping each panel to this repo's tooling.
+  `docs/claude-2026-cheatsheet.html` is the interactive, shareable version.
 - **Slash commands** in `.claude/commands/` — the full command reference as
   reusable prompt shortcuts across six groups (focus/context, think/solve,
   organize, code, automate, personalize): `/think`, `/analyze`, `/challenge`,
