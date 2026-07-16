@@ -723,21 +723,72 @@
 
         // Shared API helper — talks to the ReVision backend proxy (never the
         // Anthropic API directly), so the API key stays server-side. The model
-        // is chosen by the server via configuration.
-        async function callClaude(prompt, maxTokens = 3000) {
+        // is chosen by the server via configuration. Requests are streamed
+        // (SSE) for lower perceived latency; pass onChunk to observe the
+        // response as it accumulates. The full text is still returned/thrown
+        // only once the stream completes, so callers that need a whole
+        // response (e.g. to JSON.parse it) don't have to change.
+        async function callClaude(prompt, maxTokens = 3000, onChunk = null) {
             const response = await fetch('/api/messages', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ prompt, max_tokens: maxTokens })
+                body: JSON.stringify({ prompt, max_tokens: maxTokens, stream: true })
             });
-            const data = await response.json();
-            if (data.error) {
-                throw new Error((data.error && data.error.message) || 'API error');
+
+            const contentType = response.headers.get('content-type') || '';
+            if (!contentType.includes('text/event-stream')) {
+                // Non-streaming path: server-side errors (and any other
+                // non-SSE reply) come back as plain JSON.
+                const data = await response.json();
+                if (data.error) {
+                    throw new Error((data.error && data.error.message) || 'API error');
+                }
+                return data.content
+                    .filter(item => item.type === 'text')
+                    .map(item => item.text)
+                    .join('\n');
             }
-            return data.content
-                .filter(item => item.type === 'text')
-                .map(item => item.text)
-                .join('\n');
+
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let buffer = '';
+            let text = '';
+            let streamError = null;
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                buffer += decoder.decode(value, { stream: true });
+                const events = buffer.split('\n\n');
+                buffer = events.pop();
+                for (const event of events) {
+                    const dataLine = event.split('\n').find(line => line.startsWith('data:'));
+                    if (!dataLine) continue;
+                    let payload;
+                    try {
+                        payload = JSON.parse(dataLine.slice(5).trim());
+                    } catch {
+                        continue;
+                    }
+                    if (payload.type === 'content_block_delta' && payload.delta?.type === 'text_delta') {
+                        text += payload.delta.text;
+                        if (onChunk) onChunk(text);
+                    } else if (payload.type === 'error') {
+                        streamError = (payload.error && payload.error.message) || 'API error';
+                    }
+                }
+            }
+
+            if (streamError) throw new Error(streamError);
+            return text;
+        }
+
+        // Updates a loading button's label with a live progress readout as a
+        // streamed response accumulates, so the wait doesn't feel static.
+        function streamProgress(btn, label) {
+            return text => {
+                btn.innerHTML = `<span class="loading"><span class="spinner"></span>${label} (${text.length.toLocaleString()} chars)</span>`;
+            };
         }
 
         function escapeHtml(str) {
@@ -832,7 +883,7 @@ Return this exact JSON structure:
     ]
   },
   "synthesis": "1-2 sentence summary of the overall manipulation profile and recommendations"
-}`, 2000);
+}`, 2000, streamProgress(analyzeBtn, 'Analyzing'));
 
                 const analysis = JSON.parse(raw.replace(/```json\n?|\n?```/g, '').trim());
                 displayAnalysisResults(analysis);
@@ -927,7 +978,7 @@ ${custom ? `ADDITIONAL INSTRUCTION: ${custom}` : ''}
 ORIGINAL DOCUMENT:
 ${text}
 
-Provide ONLY the enhanced document text, no explanations or meta-commentary. Maintain the original structure and intent while applying the requested enhancements.`);
+Provide ONLY the enhanced document text, no explanations or meta-commentary. Maintain the original structure and intent while applying the requested enhancements.`, 3000, streamProgress(enhanceBtn, 'Enhancing'));
 
                 const clipKey = storeForClipboard(enhanced);
                 revisionResults.innerHTML = `
@@ -1006,7 +1057,7 @@ Return ONLY valid JSON (no markdown fences):
 }
 
 TEXT TO TRANSLATE:
-${text}`);
+${text}`, 3000, streamProgress(translateBtn, 'Translating'));
 
                 const result = JSON.parse(raw.replace(/```json\n?|\n?```/g, '').trim());
                 const clipKey = storeForClipboard(result.translation);
@@ -1083,7 +1134,7 @@ Return ONLY valid JSON (no markdown fences):
 Include EVERY jargon term, legalism, acronym, or technical phrase in the glossary. Do not skip any obligations, deadlines, dollar amounts, or conditions in the simplified text.
 
 TEXT TO DECODE:
-${text}`, 4000);
+${text}`, 4000, streamProgress(jargonaryBtn, 'Decoding'));
 
                 const result = JSON.parse(raw.replace(/```json\n?|\n?```/g, '').trim());
                 const clipKey = storeForClipboard(result.simplified_text);

@@ -85,10 +85,15 @@ Key design decisions:
 
 - `GET /` and other paths → static files from `src/revision/static/` (traversal-guarded).
 - `GET /healthz` → `{"status": "ok"}`; does not call Anthropic (used by Docker HEALTHCHECK).
-- `POST /api/messages` → `{prompt, max_tokens?}`; enforces optional bearer auth,
-  then rate limiting, then proxies to Claude. Errors are `{"error": {"message"}}`
-  with `400` (bad input), `401` (auth), `429` (rate limit, sends `Retry-After`),
-  or `502` (Anthropic error).
+- `POST /api/messages` → `{prompt, max_tokens?, stream?}`; enforces optional
+  bearer auth, then rate limiting, then proxies to Claude. When `stream` is
+  true, the response is `text/event-stream` — the upstream Anthropic SSE
+  payload forwarded through byte-for-byte (see `AnthropicClient.open_message_stream`
+  / `RevisionHandler._handle_stream`); otherwise it's the full JSON message.
+  Errors are `{"error": {"message"}}` with `400` (bad input), `401` (auth),
+  `429` (rate limit, sends `Retry-After`), or `502` (Anthropic error) — the
+  same shape whether or not streaming was requested, since stream errors
+  surface before any SSE bytes are written.
 
 Uses a **src layout**: importable code is under `src/`; `pyproject.toml` sets
 `pythonpath = ["src"]` so tests run without an editable install. The
@@ -154,10 +159,13 @@ Done:
 - ✅ Per-client rate limiting and optional bearer auth on `/api/messages`.
 - ✅ Docker image with `/healthz` HEALTHCHECK.
 - ✅ CI: ruff (lint + format) and pytest on 3.11–3.13, plus a Docker build.
+- ✅ Streaming responses (SSE) — `/api/messages` accepts `stream: true` and
+  proxies Anthropic's SSE stream straight through; the frontend's `callClaude`
+  reads it incrementally and reports live progress on each tool's button
+  while still returning/parsing the full text once the stream ends.
 
 Likely next steps toward production:
 
-- Streaming responses (SSE) for faster perceived latency.
 - Persisting the model/config and per-tool token limits.
 - Publishing the Docker image (registry) and a deploy target.
 - A proper ASGI stack (e.g. FastAPI + uvicorn) *if* concurrency needs outgrow

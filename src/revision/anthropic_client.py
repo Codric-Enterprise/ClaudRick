@@ -33,6 +33,29 @@ class AnthropicClient:
         self.api_url = api_url
         self.timeout = timeout
 
+    def _build_request(
+        self, prompt: str, max_tokens: int, *, stream: bool
+    ) -> urllib.request.Request:
+        payload = json.dumps(
+            {
+                "model": self.model,
+                "max_tokens": max_tokens,
+                "messages": [{"role": "user", "content": prompt}],
+                "stream": stream,
+            }
+        ).encode("utf-8")
+
+        return urllib.request.Request(
+            self.api_url,
+            data=payload,
+            method="POST",
+            headers={
+                "content-type": "application/json",
+                "x-api-key": self.api_key,
+                "anthropic-version": ANTHROPIC_VERSION,
+            },
+        )
+
     def create_message(self, prompt: str, max_tokens: int = 3000) -> dict:
         """Send ``prompt`` to Claude and return the parsed Anthropic response.
 
@@ -45,30 +68,41 @@ class AnthropicClient:
                 "Set it in the environment before starting ReVision."
             )
 
-        payload = json.dumps(
-            {
-                "model": self.model,
-                "max_tokens": max_tokens,
-                "messages": [{"role": "user", "content": prompt}],
-            }
-        ).encode("utf-8")
-
-        request = urllib.request.Request(
-            self.api_url,
-            data=payload,
-            method="POST",
-            headers={
-                "content-type": "application/json",
-                "x-api-key": self.api_key,
-                "anthropic-version": ANTHROPIC_VERSION,
-            },
-        )
+        request = self._build_request(prompt, max_tokens, stream=False)
 
         try:
             with urllib.request.urlopen(
                 request, timeout=self.timeout, context=ssl.create_default_context()
             ) as response:
                 return json.loads(response.read().decode("utf-8"))
+        except urllib.error.HTTPError as exc:
+            raise AnthropicError(
+                f"Anthropic API error ({exc.code}): {_extract_error(exc)}"
+            ) from exc
+        except urllib.error.URLError as exc:
+            raise AnthropicError(f"Could not reach the Anthropic API: {exc.reason}") from exc
+
+    def open_message_stream(self, prompt: str, max_tokens: int = 3000):
+        """Open a streaming connection to Claude and return the raw response.
+
+        The returned object yields one line of the upstream SSE payload per
+        iteration and must be closed by the caller when done. Auth and
+        connection failures raise :class:`AnthropicError` immediately, before
+        any bytes are read, so callers can send an error response instead of
+        starting the stream.
+        """
+        if not self.api_key:
+            raise AnthropicError(
+                "ANTHROPIC_API_KEY is not set on the server. "
+                "Set it in the environment before starting ReVision."
+            )
+
+        request = self._build_request(prompt, max_tokens, stream=True)
+
+        try:
+            return urllib.request.urlopen(
+                request, timeout=self.timeout, context=ssl.create_default_context()
+            )
         except urllib.error.HTTPError as exc:
             raise AnthropicError(
                 f"Anthropic API error ({exc.code}): {_extract_error(exc)}"
