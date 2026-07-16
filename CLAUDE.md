@@ -60,8 +60,10 @@ Key design decisions:
 │   ├── skills/               # claude-power-practices + dev skills (dev-check, run-app, add-tool, test-and-lint)
 │   └── README.md             # explains the whole .claude/ setup
 ├── docs/claude-playbook.md   # full Claude tips + command reference (source of the above)
-├── docs/commands-pack.md     # all 80 commands: slash form + paste-ready prompt
+├── docs/claude-2026-cheatsheet.md # 2026 sheets: 5 surfaces, model stack, core files, app workflow
+├── docs/commands-pack.md     # all 82 commands: slash form + paste-ready prompt
 ├── docs/command-console.html # interactive searchable console (shareable artifact)
+├── mastery-system/index.html # "Mastery Protocol" — standalone 6-levels tool (model tree, prompt formula)
 ├── power-pack/               # "S.L.A.S.H." — standalone distributable (see below)
 │   ├── commands/             # 77 portable commands (excludes repo-specific dev ones)
 │   ├── skills/               # power-practices skill
@@ -175,8 +177,10 @@ Likely next steps toward production:
 
 ## Claude tooling (commands, skills, playbook)
 
-This repo ships Claude Code helpers under `.claude/`, distilled from two
-power-user cheat-sheets (see `docs/claude-playbook.md` for the full source):
+This repo ships Claude Code helpers under `.claude/`, distilled from power-user
+cheat-sheets (see `docs/claude-playbook.md` for the original source, and
+`docs/claude-2026-cheatsheet.md` for the 2026 update — the 5 surfaces, the
+model stack, the core-files framework, and the Claude Code app workflow):
 
 - **Commands pack** — `docs/commands-pack.md` lists every command's slash form
   alongside its paste-ready prompt (for use in a plain claude.ai chat, where
@@ -186,9 +190,10 @@ power-user cheat-sheets (see `docs/claude-playbook.md` for the full source):
   organize, code, automate, personalize): `/think`, `/analyze`, `/challenge`,
   `/compare`, `/recommend`, `/solve`, `/summary`, `/outline`, `/table`,
   `/mindmap`, `/flowchart`, `/explain`, `/debug`, `/optimize`, `/refactor`,
-  `/test`, `/convert`, `/workflow`, `/automate`, `/tasklist`, `/checklist`, and
-  more. Invoke with `/name [args]`. Note: `/clear`, `/memory`, and `/review`
-  collide with Claude Code built-ins, which take precedence.
+  `/test`, `/convert`, `/workflow`, `/automate`, `/tasklist`, `/checklist`,
+  `/brief`, `/about-me`, and more. Invoke with `/name [args]`. Note: `/clear`,
+  `/memory`, and `/review` collide with Claude Code built-ins, which take
+  precedence.
 - **Skills** in `.claude/skills/` —
   - `claude-power-practices`: auto-applied guardrails for high-stakes work (pick
     the right model, structure prompts with XML tags, use extended thinking,
