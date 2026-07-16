@@ -184,6 +184,10 @@ A fast index from what you want to do to the surface that does it:
 | Organize | Obsidian Vault |
 | Brief | About-Me file |
 
+> Source note: the original sheet paired "Speed" with *Sonnet 4.6*; it's
+> normalized here to **Sonnet 5** to match the 2026 model stack in §2. The verb
+> map is about the surface, not the exact version.
+
 ---
 
 ## 9 — Prompt patterns by role (Prompt Master)
