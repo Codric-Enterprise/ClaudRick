@@ -129,6 +129,10 @@ class RevisionHandler(BaseHTTPRequestHandler):
         if not isinstance(max_tokens, int) or max_tokens <= 0:
             max_tokens = 3000
 
+        if data.get("stream") is True:
+            self._stream_messages(prompt, max_tokens)
+            return
+
         try:
             result = self.client.create_message(prompt, max_tokens=max_tokens)
         except AnthropicError as exc:
@@ -136,6 +140,43 @@ class RevisionHandler(BaseHTTPRequestHandler):
             return
 
         self._send_json(200, result)
+
+    def _stream_messages(self, prompt: str, max_tokens: int) -> None:
+        """Relay Claude's streaming response as SSE ``data:`` events.
+
+        Emits ``{"delta": <text>}`` per chunk and terminates with
+        ``data: [DONE]``. Errors before the first chunk still return a plain
+        502 JSON body (headers are not yet sent); errors mid-stream are
+        emitted as an ``{"error": ...}`` event since the 200 is already out.
+        """
+        try:
+            chunks = self.client.stream_message(prompt, max_tokens=max_tokens)
+            first = next(chunks, None)
+        except AnthropicError as exc:
+            self._send_json(502, {"error": {"message": str(exc)}})
+            return
+
+        self.send_response(200)
+        self.send_header("content-type", "text/event-stream; charset=utf-8")
+        self.send_header("cache-control", "no-cache")
+        self.end_headers()
+
+        def emit(obj: dict) -> None:
+            self.wfile.write(f"data: {json.dumps(obj)}\n\n".encode())
+            self.wfile.flush()
+
+        try:
+            try:
+                if first is not None:
+                    emit({"delta": first})
+                for chunk in chunks:
+                    emit({"delta": chunk})
+            except AnthropicError as exc:
+                emit({"error": {"message": str(exc)}})
+            self.wfile.write(b"data: [DONE]\n\n")
+            self.wfile.flush()
+        except (BrokenPipeError, ConnectionResetError):
+            pass  # client disconnected mid-stream; nothing to clean up
 
     def log_message(self, *args) -> None:  # noqa: A002 (silence default stderr logging)
         """Suppress the default per-request stderr logging."""

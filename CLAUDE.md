@@ -85,10 +85,17 @@ Key design decisions:
 
 - `GET /` and other paths → static files from `src/revision/static/` (traversal-guarded).
 - `GET /healthz` → `{"status": "ok"}`; does not call Anthropic (used by Docker HEALTHCHECK).
-- `POST /api/messages` → `{prompt, max_tokens?}`; enforces optional bearer auth,
-  then rate limiting, then proxies to Claude. Errors are `{"error": {"message"}}`
-  with `400` (bad input), `401` (auth), `429` (rate limit, sends `Retry-After`),
-  or `502` (Anthropic error).
+- `POST /api/messages` → `{prompt, max_tokens?, stream?}`; enforces optional
+  bearer auth, then rate limiting, then proxies to Claude. Errors are
+  `{"error": {"message"}}` with `400` (bad input), `401` (auth), `429` (rate
+  limit, sends `Retry-After`), or `502` (Anthropic error).
+- With `"stream": true`, the response is `text/event-stream`: one
+  `data: {"delta": <text>}` event per chunk, terminated by `data: [DONE]`.
+  Errors before the first chunk still return 502 JSON; mid-stream errors are
+  emitted as a `data: {"error": ...}` event. The frontend's
+  `callClaudeStream()` consumes this (used by Enhance, which renders live);
+  tools that parse strict JSON output (Analyzer, Translate, Jargonary) keep
+  the buffered path.
 
 Uses a **src layout**: importable code is under `src/`; `pyproject.toml` sets
 `pythonpath = ["src"]` so tests run without an editable install. The
@@ -154,10 +161,11 @@ Done:
 - ✅ Per-client rate limiting and optional bearer auth on `/api/messages`.
 - ✅ Docker image with `/healthz` HEALTHCHECK.
 - ✅ CI: ruff (lint + format) and pytest on 3.11–3.13, plus a Docker build.
+- ✅ Streaming responses (SSE) on `/api/messages` (`stream: true`); Enhance
+  renders live.
 
 Likely next steps toward production:
 
-- Streaming responses (SSE) for faster perceived latency.
 - Persisting the model/config and per-tool token limits.
 - Publishing the Docker image (registry) and a deploy target.
 - A proper ASGI stack (e.g. FastAPI + uvicorn) *if* concurrency needs outgrow

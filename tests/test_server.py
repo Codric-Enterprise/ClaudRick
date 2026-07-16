@@ -26,6 +26,24 @@ class _FakeClient:
         return self.result
 
 
+class _FakeStreamingClient(_FakeClient):
+    """Fake client whose stream_message yields chunks, then optionally raises."""
+
+    def __init__(self, chunks=None, stream_error=None, error=None):
+        super().__init__(error=error)
+        self.chunks = chunks or []
+        self.stream_error = stream_error
+        self.stream_calls = []
+
+    def stream_message(self, prompt, max_tokens=3000):
+        self.stream_calls.append((prompt, max_tokens))
+        if self.error:
+            raise self.error
+        yield from self.chunks
+        if self.stream_error:
+            raise self.stream_error
+
+
 @contextmanager
 def running_server(client, **config_kwargs):
     kwargs = {
@@ -58,6 +76,20 @@ def _post(url, payload, headers=None):
             return resp.status, json.loads(resp.read()), dict(resp.headers)
     except urllib.error.HTTPError as exc:
         return exc.code, json.loads(exc.read()), dict(exc.headers)
+
+
+def _post_sse(url, payload):
+    """POST and return (status, parsed SSE data payloads, headers)."""
+    data = json.dumps(payload).encode()
+    req = urllib.request.Request(
+        url, data=data, method="POST", headers={"content-type": "application/json"}
+    )
+    with urllib.request.urlopen(req) as resp:
+        body = resp.read().decode()
+        events = [
+            line[len("data:") :].strip() for line in body.split("\n\n") if line.startswith("data:")
+        ]
+        return resp.status, events, dict(resp.headers)
 
 
 def test_get_index_served():
@@ -144,3 +176,36 @@ def test_rate_limit_returns_429_with_retry_after():
     assert int(headers["Retry-After"]) >= 1
     # Only the two allowed requests reached the client.
     assert client.calls == [("a", 3000), ("b", 3000)]
+
+
+def test_api_messages_streams_sse():
+    client = _FakeStreamingClient(chunks=["Hel", "lo", "!"])
+    with running_server(client) as base:
+        status, events, headers = _post_sse(
+            base + "/api/messages", {"prompt": "hi", "stream": True}
+        )
+    assert status == 200
+    assert headers["content-type"].startswith("text/event-stream")
+    assert events[-1] == "[DONE]"
+    assert [json.loads(e)["delta"] for e in events[:-1]] == ["Hel", "lo", "!"]
+    assert client.stream_calls == [("hi", 3000)]
+    # The buffered path was never used.
+    assert client.calls == []
+
+
+def test_stream_error_before_first_chunk_returns_502():
+    client = _FakeStreamingClient(error=AnthropicError("no key"))
+    with running_server(client) as base:
+        status, data, _ = _post(base + "/api/messages", {"prompt": "hi", "stream": True})
+    assert status == 502
+    assert data["error"]["message"] == "no key"
+
+
+def test_stream_error_mid_stream_emits_error_event():
+    client = _FakeStreamingClient(chunks=["partial"], stream_error=AnthropicError("upstream died"))
+    with running_server(client) as base:
+        status, events, _ = _post_sse(base + "/api/messages", {"prompt": "hi", "stream": True})
+    assert status == 200
+    assert json.loads(events[0])["delta"] == "partial"
+    assert json.loads(events[1])["error"]["message"] == "upstream died"
+    assert events[-1] == "[DONE]"

@@ -740,6 +740,49 @@
                 .join('\n');
         }
 
+        // Streaming variant of callClaude: same endpoint with stream: true.
+        // The server relays Claude's text deltas as SSE "data:" events ending
+        // with "data: [DONE]". onDelta receives the accumulated text so the
+        // caller can render progressively. Only useful for free-text outputs —
+        // tools that parse strict JSON must use the buffered callClaude.
+        async function callClaudeStream(prompt, maxTokens = 3000, onDelta = null) {
+            const response = await fetch('/api/messages', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ prompt, max_tokens: maxTokens, stream: true })
+            });
+            if (!response.ok || !response.body) {
+                const data = await response.json();
+                throw new Error((data.error && data.error.message) || 'API error');
+            }
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let buffer = '';
+            let text = '';
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                buffer += decoder.decode(value, { stream: true });
+                const events = buffer.split('\n\n');
+                buffer = events.pop();
+                for (const event of events) {
+                    const line = event.trim();
+                    if (!line.startsWith('data:')) continue;
+                    const payload = line.slice(5).trim();
+                    if (payload === '[DONE]') return text;
+                    const parsed = JSON.parse(payload);
+                    if (parsed.error) {
+                        throw new Error(parsed.error.message || 'API error');
+                    }
+                    if (parsed.delta) {
+                        text += parsed.delta;
+                        if (onDelta) onDelta(text);
+                    }
+                }
+            }
+            return text;
+        }
+
         function escapeHtml(str) {
             const div = document.createElement('div');
             div.textContent = str;
@@ -913,7 +956,24 @@ Return this exact JSON structure:
             noRevisionResults.style.display = 'none';
 
             try {
-                const enhanced = await callClaude(`You are a professional document enhancement specialist. Enhance this ${docType.replace(/_/g, ' ')} document based on these specifications:
+                // Render the result skeleton up front and stream the enhanced
+                // text into it as Claude generates — no more blank spinner wait.
+                revisionResults.innerHTML = `
+                    <div class="synthesis">
+                        <div class="synthesis-title">✨ Enhanced Document</div>
+                    </div>
+                    <div class="comparison-box">
+                        <div class="comparison-label">📝 Original</div>
+                        <div class="comparison-text">${escapeHtml(text)}</div>
+                    </div>
+                    <div class="comparison-box">
+                        <div class="comparison-label">✨ Enhanced Version</div>
+                        <div class="comparison-text" id="enhancedLive"></div>
+                    </div>
+                `;
+                const liveBox = document.getElementById('enhancedLive');
+
+                const enhanced = await callClaudeStream(`You are a professional document enhancement specialist. Enhance this ${docType.replace(/_/g, ' ')} document based on these specifications:
 
 TONE (0=Conversational, 100=Formal): ${tone}
 - Target: ${tone < 40 ? 'conversational' : tone > 60 ? 'formal & authoritative' : 'balanced'}
@@ -927,25 +987,17 @@ ${custom ? `ADDITIONAL INSTRUCTION: ${custom}` : ''}
 ORIGINAL DOCUMENT:
 ${text}
 
-Provide ONLY the enhanced document text, no explanations or meta-commentary. Maintain the original structure and intent while applying the requested enhancements.`);
+Provide ONLY the enhanced document text, no explanations or meta-commentary. Maintain the original structure and intent while applying the requested enhancements.`,
+                    3000,
+                    (soFar) => { liveBox.textContent = soFar; });
 
+                liveBox.textContent = enhanced;
                 const clipKey = storeForClipboard(enhanced);
-                revisionResults.innerHTML = `
-                    <div class="synthesis">
-                        <div class="synthesis-title">✨ Enhanced Document</div>
-                    </div>
-                    <div class="comparison-box">
-                        <div class="comparison-label">📝 Original</div>
-                        <div class="comparison-text">${escapeHtml(text)}</div>
-                    </div>
-                    <div class="comparison-box">
-                        <div class="comparison-label">✨ Enhanced Version</div>
-                        <div class="comparison-text">${escapeHtml(enhanced)}</div>
-                    </div>
+                revisionResults.insertAdjacentHTML('beforeend', `
                     <div class="button-group">
                         <button class="copy-btn" onclick="copyStored('${clipKey}')">📋 Copy Enhanced</button>
                     </div>
-                `;
+                `);
             } catch (error) {
                 revisionResults.innerHTML = `<div class="error">Error: ${escapeHtml(error.message)}</div>`;
             } finally {
