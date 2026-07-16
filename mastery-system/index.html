@@ -1,4 +1,4 @@
-<title>S.L.A.S.H. Mastery System — 6 Levels to Claude Power User</title>
+<title>Mastery Protocol — 6 Levels to Claude Power User</title>
 <style>
   @font-face{font-family:'JB';font-style:normal;font-weight:400 700;font-display:swap;
     src:local('JetBrains Mono'),local('SF Mono'),local('Fira Code'),local('Menlo'),local('Consolas')}
@@ -49,6 +49,17 @@
   .hero h1 em{font-style:normal;background:linear-gradient(135deg,var(--l1),var(--l3),var(--l4),var(--l5),var(--l6));
     -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
   .hero .sub{color:var(--muted);font-size:.92rem;max-width:50ch;margin:0 auto;line-height:1.5}
+  .score-pill{display:inline-block;margin-top:16px;font-family:var(--font-mono);font-size:.7rem;
+    font-weight:700;letter-spacing:.04em;color:var(--accent);background:var(--accent-soft);
+    border:1px solid var(--border);border-radius:20px;padding:6px 14px}
+
+  /* filter */
+  .filter-wrap{margin:22px 0 8px}
+  .filter-input{width:100%;background:var(--surface-2);border:1px solid var(--border);
+    color:var(--text);border-radius:8px;padding:10px 14px;font-size:.84rem;font-family:var(--font-ui)}
+  .filter-input::placeholder{color:var(--faint)}
+  .filter-input:focus{outline:none;border-color:var(--accent)}
+  .filter-hide{display:none!important}
 
   /* progress bar */
   .progress-bar{display:flex;gap:4px;margin:32px 0 40px;padding:0 4px}
@@ -182,9 +193,14 @@
 
 <div class="wrap">
   <div class="hero">
-    <div class="brand">S.L.A.S.H. Mastery System</div>
+    <div class="brand">Mastery Protocol</div>
     <h1>6 Levels from First Install to <em>Claude Power&nbsp;User</em></h1>
-    <p class="sub">Every technique, config, and shortcut — distilled from the best Claude workflows into one interactive guide. Click any level to expand.</p>
+    <p class="sub">Every technique, config, and shortcut — distilled from real Claude workflows into one interactive tool. Click any level to expand.</p>
+    <div class="score-pill" id="scorePill">0 / 18 mastered — 0%</div>
+  </div>
+
+  <div class="filter-wrap">
+    <input type="text" id="filterInput" class="filter-input" placeholder="Filter techniques, tips, agents… (e.g. &quot;subagent&quot;, &quot;token&quot;, &quot;model&quot;)" oninput="applyFilter(this.value)">
   </div>
 
   <div class="progress-bar">
@@ -220,9 +236,16 @@
         <div class="codeblock" onclick="copyBlock(this)">git add -A && git commit -m "checkpoint before claude"<span class="copy-hint">click to copy</span></div>
       </div>
       <div class="tech">
-        <h4><span class="num">4</span> Install S.L.A.S.H. commands</h4>
-        <p>77 battle-tested prompts, globally available. Type /think, /analyze, /debug in any project.</p>
-        <div class="codeblock" onclick="copyBlock(this)">npx slash-pack<span class="copy-hint">click to copy</span></div>
+        <h4><span class="num">4</span> Build a personal command library</h4>
+        <p>Save your best prompts as reusable slash commands once, in <code style="font-family:var(--font-mono);font-size:.78rem">~/.claude/commands/</code>, and they're one word away in every project forever.</p>
+        <div class="codeblock" onclick="copyBlock(this)">mkdir -p ~/.claude/commands
+cat > ~/.claude/commands/think.md << 'EOF'
+---
+description: Reason step by step before answering
+---
+Think through $ARGUMENTS step by step: restate the problem,
+weigh the options, check your reasoning, then conclude.
+EOF<span class="copy-hint">click to copy</span></div>
       </div>
     </div>
   </div>
@@ -336,7 +359,7 @@ EOF<span class="copy-hint">click to copy</span></div>
       </div>
       <div class="tech">
         <h4><span class="num">2</span> Slash commands</h4>
-        <p>Fire a whole workflow from any session. S.L.A.S.H. gives you 107 — /think, /analyze, /debug, /pitch, /architect.</p>
+        <p>Fire a whole workflow from any session. A well-stocked command library gives you dozens — /think, /analyze, /debug, /pitch, /architect.</p>
         <div class="codeblock" onclick="copyBlock(this)">/think What's the most elegant way to handle auth in this app?
 /debug This endpoint returns 500 on large payloads
 /architect Design a notification system for 1M users<span class="copy-hint">click to copy</span></div>
@@ -549,24 +572,24 @@ EOF<span class="copy-hint">click to copy</span></div>
   <div class="sh" style="color:var(--l6)">Your Mastery Checklist</div>
   <p style="font-size:.84rem;color:var(--muted);margin-bottom:12px">Click each item to mark it done. Track your progress from beginner to power user.</p>
   <ul class="mastery-checklist" id="checklist">
-    <li onclick="this.classList.toggle('done')"><strong>Level 1:</strong> Installed Claude Code</li>
-    <li onclick="this.classList.toggle('done')"><strong>Level 1:</strong> Ran /init on a project</li>
-    <li onclick="this.classList.toggle('done')"><strong>Level 1:</strong> Installed S.L.A.S.H. commands</li>
-    <li onclick="this.classList.toggle('done')"><strong>Level 2:</strong> Created a CLAUDE.md with rules and voice</li>
-    <li onclick="this.classList.toggle('done')"><strong>Level 2:</strong> Taught Claude a preference it remembers</li>
-    <li onclick="this.classList.toggle('done')"><strong>Level 2:</strong> Defined "done" before starting a task</li>
-    <li onclick="this.classList.toggle('done')"><strong>Level 3:</strong> Used /plan before building something</li>
-    <li onclick="this.classList.toggle('done')"><strong>Level 3:</strong> Worked in a feature branch</li>
-    <li onclick="this.classList.toggle('done')"><strong>Level 3:</strong> Fed a stack trace back to Claude</li>
-    <li onclick="this.classList.toggle('done')"><strong>Level 4:</strong> Built a custom skill</li>
-    <li onclick="this.classList.toggle('done')"><strong>Level 4:</strong> Used a slash command to solve a real problem</li>
-    <li onclick="this.classList.toggle('done')"><strong>Level 4:</strong> Switched models mid-task for the right one</li>
-    <li onclick="this.classList.toggle('done')"><strong>Level 5:</strong> Used subagents to parallelize work</li>
-    <li onclick="this.classList.toggle('done')"><strong>Level 5:</strong> Created an agent specialist in .claude/agents/</li>
-    <li onclick="this.classList.toggle('done')"><strong>Level 5:</strong> Ran a QA agent on Claude's output</li>
-    <li onclick="this.classList.toggle('done')"><strong>Level 6:</strong> Set up a recurring routine with /loop</li>
-    <li onclick="this.classList.toggle('done')"><strong>Level 6:</strong> Connected an MCP server (Slack, Notion, etc.)</li>
-    <li onclick="this.classList.toggle('done')"><strong>Level 6:</strong> Ran an end-to-end agent pipeline</li>
+    <li data-key="ck1" onclick="toggleCheck(this)"><strong>Level 1:</strong> Installed Claude Code</li>
+    <li data-key="ck2" onclick="toggleCheck(this)"><strong>Level 1:</strong> Ran /init on a project</li>
+    <li data-key="ck3" onclick="toggleCheck(this)"><strong>Level 1:</strong> Built a personal command library</li>
+    <li data-key="ck4" onclick="toggleCheck(this)"><strong>Level 2:</strong> Created a CLAUDE.md with rules and voice</li>
+    <li data-key="ck5" onclick="toggleCheck(this)"><strong>Level 2:</strong> Taught Claude a preference it remembers</li>
+    <li data-key="ck6" onclick="toggleCheck(this)"><strong>Level 2:</strong> Defined "done" before starting a task</li>
+    <li data-key="ck7" onclick="toggleCheck(this)"><strong>Level 3:</strong> Used /plan before building something</li>
+    <li data-key="ck8" onclick="toggleCheck(this)"><strong>Level 3:</strong> Worked in a feature branch</li>
+    <li data-key="ck9" onclick="toggleCheck(this)"><strong>Level 3:</strong> Fed a stack trace back to Claude</li>
+    <li data-key="ck10" onclick="toggleCheck(this)"><strong>Level 4:</strong> Built a custom skill</li>
+    <li data-key="ck11" onclick="toggleCheck(this)"><strong>Level 4:</strong> Used a slash command to solve a real problem</li>
+    <li data-key="ck12" onclick="toggleCheck(this)"><strong>Level 4:</strong> Switched models mid-task for the right one</li>
+    <li data-key="ck13" onclick="toggleCheck(this)"><strong>Level 5:</strong> Used subagents to parallelize work</li>
+    <li data-key="ck14" onclick="toggleCheck(this)"><strong>Level 5:</strong> Created an agent specialist in .claude/agents/</li>
+    <li data-key="ck15" onclick="toggleCheck(this)"><strong>Level 5:</strong> Ran a QA agent on Claude's output</li>
+    <li data-key="ck16" onclick="toggleCheck(this)"><strong>Level 6:</strong> Set up a recurring routine with /loop</li>
+    <li data-key="ck17" onclick="toggleCheck(this)"><strong>Level 6:</strong> Connected an MCP server (Slack, Notion, etc.)</li>
+    <li data-key="ck18" onclick="toggleCheck(this)"><strong>Level 6:</strong> Ran an end-to-end agent pipeline</li>
   </ul>
 
   <!-- ═══════════════════════════════════════ THE CHAIN ═══ -->
@@ -667,9 +690,53 @@ function copyAgent(chip,name,desc){
     navigator.clipboard.writeText(t).then(function(){chip.classList.add('copied');setTimeout(function(){chip.classList.remove('copied')},1200)});
   }else{fbCopy(t);chip.classList.add('copied');setTimeout(function(){chip.classList.remove('copied')},1200)}
 }
+function store(k,v){try{localStorage.setItem('mp:'+k,v)}catch(e){}}
+function retrieve(k){try{return localStorage.getItem('mp:'+k)}catch(e){return null}}
+
+function toggleCheck(li){
+  li.classList.toggle('done');
+  store(li.dataset.key,li.classList.contains('done')?'1':'0');
+  updateScore();
+}
+function updateScore(){
+  var items=document.querySelectorAll('#checklist li');
+  var done=document.querySelectorAll('#checklist li.done').length;
+  var pct=Math.round(done/items.length*100);
+  document.getElementById('scorePill').textContent=done+' / '+items.length+' mastered — '+pct+'%';
+}
+function restoreChecklist(){
+  document.querySelectorAll('#checklist li[data-key]').forEach(function(li){
+    if(retrieve(li.dataset.key)==='1')li.classList.add('done');
+  });
+  updateScore();
+}
+
 document.getElementById('themeBtn').onclick=function(){
   var r=document.documentElement,c=r.getAttribute('data-theme');
   if(!c)c='dark';
-  r.setAttribute('data-theme',c==='dark'?'light':'dark');
+  var next=c==='dark'?'light':'dark';
+  r.setAttribute('data-theme',next);
+  store('theme',next);
 };
+(function(){
+  var saved=retrieve('theme');
+  if(saved)document.documentElement.setAttribute('data-theme',saved);
+})();
+restoreChecklist();
+
+function applyFilter(q){
+  q=q.trim().toLowerCase();
+  var targets=document.querySelectorAll('.tech, .chain-stage, .tip-card, .agent-chip, .model-card');
+  targets.forEach(function(el){
+    var match=!q||el.textContent.toLowerCase().indexOf(q)!==-1;
+    el.classList.toggle('filter-hide',!match);
+  });
+  document.querySelectorAll('.level').forEach(function(lvl){
+    if(!q){lvl.classList.remove('filter-hide');return}
+    var anyVisible=lvl.querySelectorAll('.tech:not(.filter-hide)').length>0;
+    lvl.classList.toggle('filter-hide',!anyVisible);
+    if(anyVisible)lvl.classList.add('open');
+  });
+  updateProgress();
+}
 </script>
