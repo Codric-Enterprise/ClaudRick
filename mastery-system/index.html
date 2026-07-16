@@ -198,6 +198,33 @@
     align-items:center;justify-content:space-between;gap:8px}
   .chain-master .label .hint{font-weight:600;color:var(--faint);text-transform:none;letter-spacing:0}
 
+  /* cowork setup track */
+  .cowork-intro{font-size:.84rem;color:var(--muted);line-height:1.55;margin:0 0 18px}
+  .cowork-intro strong{color:var(--text)}
+  .cw-grid{display:grid;gap:12px;grid-template-columns:1fr 1fr}
+  @media(max-width:600px){.cw-grid{grid-template-columns:1fr}}
+  .cw-step{background:var(--surface);border:1px solid var(--border);border-radius:10px;
+    padding:16px 18px 16px 16px;position:relative;transition:.15s}
+  .cw-step:hover{border-color:var(--faint)}
+  .cw-step .cw-num{position:absolute;top:14px;right:14px;font-family:var(--font-mono);
+    font-size:1.4rem;font-weight:800;color:var(--surface-3);line-height:1;letter-spacing:-.05em}
+  .cw-step h4{font-size:.9rem;font-weight:700;margin-bottom:6px;padding-right:28px;line-height:1.25}
+  .cw-step h4 .eyebrow{display:block;font-family:var(--font-mono);font-size:.56rem;font-weight:700;
+    text-transform:uppercase;letter-spacing:.12em;color:var(--accent);margin-bottom:3px}
+  .cw-step ul{list-style:none;margin:0;padding:0}
+  .cw-step li{font-size:.79rem;color:var(--muted);line-height:1.45;padding:3px 0 3px 18px;position:relative}
+  .cw-step li::before{content:"\2713";position:absolute;left:0;color:var(--good);font-weight:700;font-size:.78rem}
+  .cw-step code{font-family:var(--font-mono);font-size:.74rem;color:var(--text);
+    background:var(--surface-3);padding:1px 5px;border-radius:4px}
+  .cw-stat{display:inline-flex;align-items:center;gap:8px;margin-top:8px;font-family:var(--font-mono);
+    font-size:.7rem;color:var(--muted);background:var(--surface-2);border:1px solid var(--border);
+    border-radius:6px;padding:5px 10px}
+  .cw-stat b{color:var(--good);font-weight:700}
+  .cw-protip{grid-column:1/-1;background:var(--accent-soft);border:1px solid var(--border);
+    border-radius:10px;padding:14px 16px;font-size:.82rem;color:var(--text);line-height:1.5}
+  .cw-protip .lbl{font-family:var(--font-mono);font-size:.6rem;font-weight:800;text-transform:uppercase;
+    letter-spacing:.12em;color:var(--accent);margin-right:8px}
+
   :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   @media(prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
@@ -214,6 +241,7 @@
   <a href="#tokens" data-target="tokens">Tokens</a>
   <a href="#agents" data-target="agents">Agents</a>
   <a href="#checklist-h" data-target="checklist-h">Checklist</a>
+  <a href="#cowork" data-target="cowork">Cowork</a>
   <a href="#chain" data-target="chain">Chain</a>
   <button class="theme-btn" id="themeBtn" aria-label="Toggle theme">&#9685;</button>
 </nav>
@@ -619,6 +647,77 @@ EOF<span class="copy-hint">click to copy</span></div>
     <li data-key="ck18" onclick="toggleCheck(this)"><strong>Level 6:</strong> Ran an end-to-end agent pipeline</li>
   </ul>
 
+  <!-- ═══════════════════════════════════════ COWORK SETUP ═══ -->
+  <div class="sh" id="cowork" style="color:var(--l2);margin-top:56px">Build Your AI Workspace — Cowork in 20 Minutes</div>
+  <p class="cowork-intro">The 6 levels above are for <strong>Claude Code</strong> (the terminal/IDE agent). This track is the
+    <strong>desktop side</strong> — Claude Desktop + <strong>Cowork</strong>, a structured workspace that reads your goals,
+    voice, and business context so every task starts from what Claude already knows about you. Seven steps, about twenty minutes.</p>
+  <div class="cw-grid">
+    <div class="cw-step">
+      <span class="cw-num">1</span>
+      <h4><span class="eyebrow">Step 1</span>Install Claude Desktop</h4>
+      <ul>
+        <li>Download the desktop app and enable Cowork.</li>
+        <li>Use <code>Opus</code> for deep work, <code>Sonnet</code> for faster tasks.</li>
+      </ul>
+    </div>
+    <div class="cw-step">
+      <span class="cw-num">2</span>
+      <h4><span class="eyebrow">Step 2</span>Build 3 folders</h4>
+      <ul>
+        <li>One Cowork folder holding <code>ABOUT ME</code>, <code>OUTPUTS</code>, and <code>TEMPLATES</code>.</li>
+        <li>ABOUT ME = who you are · OUTPUTS = finished work · TEMPLATES = reusable formats.</li>
+      </ul>
+    </div>
+    <div class="cw-step">
+      <span class="cw-num">3</span>
+      <h4><span class="eyebrow">Step 3</span>Create core files</h4>
+      <ul>
+        <li><code>about-me.md</code> — your role, goals, context.</li>
+        <li><code>anti-ai-writing-style.md</code> — how you do <em>not</em> want it to sound.</li>
+        <li><code>my-company.md</code> — brand, product, audience.</li>
+      </ul>
+    </div>
+    <div class="cw-step">
+      <span class="cw-num">4</span>
+      <h4><span class="eyebrow">Step 4</span>Set instructions once</h4>
+      <ul>
+        <li>Read <code>ABOUT ME</code> before every task.</li>
+        <li>Never touch OUTPUTS / TEMPLATES unless told.</li>
+        <li>Ask clarifying questions when anything is unclear.</li>
+      </ul>
+    </div>
+    <div class="cw-step">
+      <span class="cw-num">5</span>
+      <h4><span class="eyebrow">Step 5</span>Use voice input</h4>
+      <ul>
+        <li>Install a dictation tool (e.g. Wispr Flow); speak tasks naturally.</li>
+        <li>Talking beats typing on throughput.</li>
+      </ul>
+      <span class="cw-stat">Typing <b>60 wpm</b> &nbsp;vs&nbsp; Speaking <b>150 wpm</b></span>
+    </div>
+    <div class="cw-step">
+      <span class="cw-num">6</span>
+      <h4><span class="eyebrow">Step 6</span>Run your first task</h4>
+      <ul>
+        <li>Ask Claude to read your workspace.</li>
+        <li>Let it answer its own questions, then do a real project you need this week.</li>
+      </ul>
+    </div>
+    <div class="cw-step">
+      <span class="cw-num">7</span>
+      <h4><span class="eyebrow">Step 7</span>Protect your credits</h4>
+      <ul>
+        <li>Keep files under ~6,000 tokens; batch related tasks.</li>
+        <li>Start fresh sessions regularly; use Sonnet for lighter work.</li>
+      </ul>
+    </div>
+    <div class="cw-protip">
+      <span class="lbl">Pro tip</span>Keep your workspace files under <b>6,000 tokens total</b>. When they bloat,
+      Cowork summarizes them loosely instead of reading carefully — so a tight workspace is a smarter one.
+    </div>
+  </div>
+
   <!-- ═══════════════════════════════════════ THE CHAIN ═══ -->
   <div class="sh" id="chain" style="color:var(--accent);margin-top:56px">The Chain — One Pipeline, Any Task</div>
   <div class="chain-section">
@@ -777,7 +876,7 @@ document.querySelectorAll('.quicknav a').forEach(function(a){
 
 function applyFilter(q){
   q=q.trim().toLowerCase();
-  var targets=document.querySelectorAll('.tech, .chain-stage, .tip-card, .agent-chip, .model-card');
+  var targets=document.querySelectorAll('.tech, .chain-stage, .tip-card, .agent-chip, .model-card, .cw-step');
   targets.forEach(function(el){
     var match=!q||el.textContent.toLowerCase().indexOf(q)!==-1;
     el.classList.toggle('filter-hide',!match);
