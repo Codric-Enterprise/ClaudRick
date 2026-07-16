@@ -34,8 +34,20 @@
     line-height:1.6;-webkit-font-smoothing:antialiased}
   .wrap{max-width:800px;margin:0 auto;padding:0 20px 80px}
 
+  /* quick nav */
+  body{padding-top:48px}
+  .quicknav{position:fixed;top:0;left:0;right:0;z-index:30;display:flex;align-items:center;gap:5px;
+    padding:8px 10px;background:var(--bg);border-bottom:1px solid var(--border);
+    overflow-x:auto;scrollbar-width:thin}
+  .quicknav::-webkit-scrollbar{height:3px}
+  .quicknav a{flex-shrink:0;font-family:var(--font-mono);font-size:.62rem;font-weight:700;
+    text-transform:uppercase;letter-spacing:.05em;color:var(--muted);text-decoration:none;
+    padding:6px 9px;border-radius:6px;border:1px solid transparent;white-space:nowrap;transition:.15s}
+  .quicknav a:hover{color:var(--text);border-color:var(--border)}
+  .quicknav a.active{color:#fff;background:var(--accent);border-color:var(--accent)}
+
   /* theme toggle */
-  .theme-btn{position:fixed;top:14px;right:14px;z-index:20;background:var(--surface-2);
+  .theme-btn{flex-shrink:0;margin-left:auto;background:var(--surface-2);
     border:1px solid var(--border);color:var(--muted);border-radius:7px;padding:5px 8px;
     cursor:pointer;font-size:.9rem;line-height:1}
   .theme-btn:hover{color:var(--text);border-color:var(--faint)}
@@ -74,7 +86,8 @@
 
   /* level cards */
   .level{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
-    margin:14px 0;overflow:hidden;transition:.2s}
+    margin:14px 0;overflow:hidden;transition:.2s;scroll-margin-top:60px}
+  .sh{scroll-margin-top:60px}
   .level:hover{border-color:var(--faint)}
   .level-head{display:flex;align-items:center;gap:14px;padding:16px 20px;cursor:pointer;user-select:none}
   .level-badge{font-family:var(--font-mono);font-size:.58rem;font-weight:800;text-transform:uppercase;
@@ -189,7 +202,21 @@
   @media(prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 
-<button class="theme-btn" id="themeBtn" aria-label="Toggle theme">&#9685;</button>
+<nav class="quicknav" id="quicknav" aria-label="Section navigation">
+  <a href="#L1" data-target="L1">1 Start</a>
+  <a href="#L2" data-target="L2">2 Brief</a>
+  <a href="#L3" data-target="L3">3 Plan</a>
+  <a href="#L4" data-target="L4">4 Shortcuts</a>
+  <a href="#L5" data-target="L5">5 Delegate</a>
+  <a href="#L6" data-target="L6">6 Automate</a>
+  <a href="#models" data-target="models">Models</a>
+  <a href="#formula" data-target="formula">Formula</a>
+  <a href="#tokens" data-target="tokens">Tokens</a>
+  <a href="#agents" data-target="agents">Agents</a>
+  <a href="#checklist-h" data-target="checklist-h">Checklist</a>
+  <a href="#chain" data-target="chain">Chain</a>
+  <button class="theme-btn" id="themeBtn" aria-label="Toggle theme">&#9685;</button>
+</nav>
 
 <div class="wrap">
   <div class="hero">
@@ -467,7 +494,7 @@ EOF<span class="copy-hint">click to copy</span></div>
   </div>
 
   <!-- ═══════════════════════════════════════ MODEL TREE ═══ -->
-  <div class="sh" style="color:var(--l1)">Pick the Right Model Every Time</div>
+  <div class="sh" id="models" style="color:var(--l1)">Pick the Right Model Every Time</div>
   <p style="font-size:.84rem;color:var(--muted);margin-bottom:16px">Don't pay for brains you don't need. Match the model to the task.</p>
   <div class="model-grid">
     <div class="model-card mc-haiku">
@@ -493,7 +520,7 @@ EOF<span class="copy-hint">click to copy</span></div>
   </div>
 
   <!-- ═══════════════════════════════════════ PROMPT FORMULA ═══ -->
-  <div class="sh" style="color:var(--l2)">The 5-Part Prompt Formula</div>
+  <div class="sh" id="formula" style="color:var(--l2)">The 5-Part Prompt Formula</div>
   <p style="font-size:.84rem;color:var(--muted);margin-bottom:12px">Structure every complex prompt with these 5 elements. Works with any model, any task.</p>
   <div class="prompt-tmpl">
     <div class="label" style="color:var(--l1)">The Full Prompt Template</div>
@@ -506,7 +533,7 @@ EOF<span class="copy-hint">click to copy</span></div>
   <div class="codeblock" onclick="copyBlock(this)">"I'm working on [X] for [who]. Goal: [outcome]. Here's what I know: [context]. Before you start, ask me what you need. Do the simplest thing that works, pause only on irreversible actions. Report only what you can prove, outcome first."<span class="copy-hint">click to copy</span></div>
 
   <!-- ═══════════════════════════════════════ TOKEN TIPS ═══ -->
-  <div class="sh" style="color:var(--l4)">Stop Burning Tokens</div>
+  <div class="sh" id="tokens" style="color:var(--l4)">Stop Burning Tokens</div>
   <div class="tip-grid">
     <div class="tip-card">
       <h4>Start fresh chats</h4>
@@ -541,7 +568,7 @@ EOF<span class="copy-hint">click to copy</span></div>
   </div>
 
   <!-- ═══════════════════════════════════════ AGENT TEMPLATES ═══ -->
-  <div class="sh" style="color:var(--l5)">Agent Templates — Build Your Team</div>
+  <div class="sh" id="agents" style="color:var(--l5)">Agent Templates — Build Your Team</div>
   <p style="font-size:.84rem;color:var(--muted);margin-bottom:16px">Click any role to copy the agent file scaffold. Save to <code style="font-family:var(--font-mono);font-size:.78rem">.claude/agents/</code></p>
 
   <div style="font-family:var(--font-mono);font-size:.66rem;text-transform:uppercase;letter-spacing:.1em;color:var(--faint);margin:16px 0 8px;font-weight:600">Engineering</div>
@@ -569,7 +596,7 @@ EOF<span class="copy-hint">click to copy</span></div>
   </div>
 
   <!-- ═══════════════════════════════════════ MASTERY CHECKLIST ═══ -->
-  <div class="sh" style="color:var(--l6)">Your Mastery Checklist</div>
+  <div class="sh" id="checklist-h" style="color:var(--l6)">Your Mastery Checklist</div>
   <p style="font-size:.84rem;color:var(--muted);margin-bottom:12px">Click each item to mark it done. Track your progress from beginner to power user.</p>
   <ul class="mastery-checklist" id="checklist">
     <li data-key="ck1" onclick="toggleCheck(this)"><strong>Level 1:</strong> Installed Claude Code</li>
@@ -593,7 +620,7 @@ EOF<span class="copy-hint">click to copy</span></div>
   </ul>
 
   <!-- ═══════════════════════════════════════ THE CHAIN ═══ -->
-  <div class="sh" style="color:var(--accent);margin-top:56px">The Chain — One Pipeline, Any Task</div>
+  <div class="sh" id="chain" style="color:var(--accent);margin-top:56px">The Chain — One Pipeline, Any Task</div>
   <div class="chain-section">
     <p class="chain-intro">Six single-purpose commands, run in sequence, turn into one compounding
       instrument: rigor sets the ground rules, brainstorm opens the field, evaluate narrows it,
@@ -723,6 +750,30 @@ document.getElementById('themeBtn').onclick=function(){
   if(saved)document.documentElement.setAttribute('data-theme',saved);
 })();
 restoreChecklist();
+
+document.querySelectorAll('.quicknav a').forEach(function(a){
+  a.addEventListener('click',function(e){
+    e.preventDefault();
+    var id=a.dataset.target,el=document.getElementById(id);
+    if(!el)return;
+    if(el.classList.contains('level'))el.classList.add('open');
+    el.scrollIntoView({behavior:'smooth',block:'start'});
+    history.replaceState(null,'','#'+id);
+  });
+});
+(function(){
+  var navLinks=document.querySelectorAll('.quicknav a');
+  var targets=Array.prototype.map.call(navLinks,function(a){return document.getElementById(a.dataset.target)}).filter(Boolean);
+  if(!('IntersectionObserver' in window))return;
+  var io=new IntersectionObserver(function(entries){
+    entries.forEach(function(entry){
+      if(!entry.isIntersecting)return;
+      var id=entry.target.id;
+      navLinks.forEach(function(a){a.classList.toggle('active',a.dataset.target===id)});
+    });
+  },{rootMargin:'-50px 0px -70% 0px',threshold:0});
+  targets.forEach(function(t){io.observe(t)});
+})();
 
 function applyFilter(q){
   q=q.trim().toLowerCase();
