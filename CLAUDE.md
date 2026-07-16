@@ -55,7 +55,7 @@ Key design decisions:
 │   └── test_server.py             # runs a live server on port 0, fake client
 ├── .claude/                  # checked-in Claude Code tooling (see "Claude tooling" below)
 │   ├── settings.json         # permissions allowlist + hooks
-│   ├── hooks/session-start.sh     # SessionStart: installs dev deps on cold containers
+│   ├── hooks/session-start.sh     # SessionStart: loads .env if present, installs dev deps on cold containers
 │   ├── commands/             # custom slash commands (/analyze, /think, /check, /run-app, …)
 │   ├── skills/               # claude-power-practices + dev skills (dev-check, run-app, add-tool, test-and-lint)
 │   └── README.md             # explains the whole .claude/ setup
@@ -76,6 +76,7 @@ Key design decisions:
 ├── Dockerfile                # stdlib-only image; binds 0.0.0.0:8000; HEALTHCHECK /healthz
 ├── .dockerignore
 ├── pyproject.toml            # hatchling build; pytest + ruff config
+├── .env.example              # local env template (ANTHROPIC_API_KEY, GITHUB_TOKEN, …); copy to gitignored .env
 ├── README.md
 └── .gitignore
 ```

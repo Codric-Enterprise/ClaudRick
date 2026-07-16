@@ -13,6 +13,11 @@ dist/
 venv/
 env/
 
+# Local environment / secrets (keep .env.example tracked)
+.env
+.env.*
+!.env.example
+
 # Testing / coverage
 .pytest_cache/
 .ruff_cache/

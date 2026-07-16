@@ -35,6 +35,16 @@ pip install -e ".[dev]"
 export ANTHROPIC_API_KEY=sk-ant-...
 ```
 
+Prefer a local env file? Copy the template and fill it in — `.env` is
+gitignored, so real secrets never get committed:
+
+```bash
+cp .env.example .env          # then edit .env
+set -a; . ./.env; set +a      # load it into your shell
+```
+
+The Claude Code session-start hook also auto-loads `.env` when it's present.
+
 ## Run
 
 ```bash
@@ -65,6 +75,7 @@ All settings come from the environment (CLI flags override where provided):
 | `REVISION_RATE_LIMIT`  | `30`               | Max `/api/messages` requests per window per client (0 = off). |
 | `REVISION_RATE_WINDOW` | `60`               | Rate-limit window, in seconds.                                 |
 | `REVISION_TRUST_PROXY` | `false`            | Trust `X-Forwarded-For` for client IP (enable only behind a proxy). |
+| `GITHUB_TOKEN`         | *(unset)*          | GitHub token for local GitHub API / git operations (not used by the server). |
 
 ### Auth & rate limiting
 
