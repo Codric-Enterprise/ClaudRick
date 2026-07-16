@@ -187,7 +187,8 @@ power-user cheat-sheets (see `docs/claude-playbook.md` for the full source):
   `/compare`, `/recommend`, `/solve`, `/summary`, `/outline`, `/table`,
   `/mindmap`, `/flowchart`, `/explain`, `/debug`, `/optimize`, `/refactor`,
   `/test`, `/convert`, `/workflow`, `/automate`, `/tasklist`, `/checklist`, and
-  more. Invoke with `/name [args]`. Note: `/clear`, `/memory`, and `/review`
+  more — plus `/ultracode`, the six-stage chain described under "Working
+  practices" below. Invoke with `/name [args]`. Note: `/clear`, `/memory`, and `/review`
   collide with Claude Code built-ins, which take precedence.
 - **Skills** in `.claude/skills/` —
   - `claude-power-practices`: auto-applied guardrails for high-stakes work (pick
@@ -257,6 +258,15 @@ starts. Expect (and when briefing sub-tasks, provide) these fields:
   research synthesis · file-based work · connected-app workflows.
 - ⛔ Photo/image editing · web-search results used without checking sources ·
   vague one-line briefs · sensitive work shipped without review.
+
+**The Ultracode** — for high-stakes tasks, run the whole loop as one six-stage
+chain via [`/ultracode`](.claude/commands/ultracode.md):
+
+`rigor → brainstorm → evaluate → detail → edit → verify`
+
+Ground rules first, go wide, score the shortlist against stated criteria,
+make the winner concrete, tighten the prose, and gate on evidence before
+calling it done. Deliver the result first; then one line per stage.
 
 ## Notes for AI assistants
 
