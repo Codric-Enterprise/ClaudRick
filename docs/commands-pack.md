@@ -1,4 +1,4 @@
-# Claude Commands Pack — 82 commands
+# Claude Commands Pack — 83 commands
 
 For each command: the **slash form** works in Claude Code (type `/name your input`);
 the **prompt** below it is what to paste into a normal claude.ai chat (replace
@@ -288,6 +288,9 @@ came from.
 
 ### /about-me
 > Help me build an about-me.md core file — the profile Claude reads before acting, covering my role & context, goals, voice (and what to avoid), priorities, and default formats/tone/units. If my details are thin, ask up to 6 high-signal questions first; then output a concise, copy-paste-ready about-me.md with clear headings and a one-line note on where to put it. Details: {your input}
+
+### /model-picker
+> Recommend which Claude model fits the task below, matching capability to the job: Haiku 4.5 for bulk/simple triage and transforms; Sonnet 5 as the everyday default; Opus 4.8 for deep reasoning, writing, and strategy; Fable 5 for the hardest long-horizon work; Mythos 5 only for approved organizations' high-security workflows. Give the recommended model, the signals that drove the choice, what would escalate it a tier, and a per-phase split if the task has phases. Task: {your input}
 
 ---
 

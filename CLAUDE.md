@@ -61,11 +61,11 @@ Key design decisions:
 │   └── README.md             # explains the whole .claude/ setup
 ├── docs/claude-playbook.md   # full Claude tips + command reference (source of the above)
 ├── docs/claude-2026-cheatsheet.md # 2026 sheets: 5 surfaces, model stack, core files, app workflow
-├── docs/commands-pack.md     # all 82 commands: slash form + paste-ready prompt
+├── docs/commands-pack.md     # all 83 commands: slash form + paste-ready prompt
 ├── docs/command-console.html # interactive searchable console (shareable artifact)
-├── mastery-system/index.html # "Mastery Protocol" — standalone 6-levels tool (model tree, prompt formula)
+├── mastery-system/index.html # "Mastery Protocol" — standalone 6-levels tool (model tree, prompt formula, core files)
 ├── power-pack/               # "S.L.A.S.H." — standalone distributable (see below)
-│   ├── commands/             # 79 portable commands (excludes repo-specific dev ones)
+│   ├── commands/             # 80 portable commands (excludes repo-specific dev ones)
 │   ├── skills/               # power-practices skill
 │   ├── cli.js                # cross-platform Node installer (npx slash-pack)
 │   ├── package.json          # npm-publishable package
@@ -201,7 +201,7 @@ model stack, the core-files framework, and the Claude Code app workflow):
   `/compare`, `/recommend`, `/solve`, `/summary`, `/outline`, `/table`,
   `/mindmap`, `/flowchart`, `/explain`, `/debug`, `/optimize`, `/refactor`,
   `/test`, `/convert`, `/workflow`, `/automate`, `/tasklist`, `/checklist`,
-  `/brief`, `/about-me`, and more. Invoke with `/name [args]`. Note: `/clear`,
+  `/brief`, `/about-me`, `/model-picker`, and more. Invoke with `/name [args]`. Note: `/clear`,
   `/memory`, and `/review` collide with Claude Code built-ins, which take
   precedence.
 - **Skills** in `.claude/skills/` —

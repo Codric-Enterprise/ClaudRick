@@ -242,7 +242,7 @@
 
 <header>
   <div class="bar">
-    <div class="brand"><span class="dot"></span>slashboard <small id="brandsub">82 commands</small></div>
+    <div class="brand"><span class="dot"></span>slashboard <small id="brandsub">83 commands</small></div>
     <div class="mode-toggle" id="modeToggle">
       <button class="active" data-mode="start" type="button">Start here</button>
       <button data-mode="power" type="button">All 80</button>
@@ -264,7 +264,7 @@
     <p>Pick what you're working on. You'll get the exact prompt to copy — paste it into any Claude chat and go.</p>
     <div class="tiles" id="tiles"></div>
     <div class="start-footer">
-      <button class="sf-link" id="showAll" type="button">See all 82 commands &#8594;</button>
+      <button class="sf-link" id="showAll" type="button">See all 83 commands &#8594;</button>
       <span class="sf-count">12 groups · works in Claude Code, claude.ai, or any chat</span>
     </div>
   </div>
@@ -274,8 +274,8 @@
 <div class="wrap hidden" id="powerHero">
   <div class="hero">
     <h1>Every Claude command, <em>one console.</em></h1>
-    <p>82 prompt-commands — searchable, grouped, one-click copy. In Claude Code they run as <code>/slash</code> commands; anywhere else, paste the prompt.</p>
-    <div class="meta"><span><b id="mTotal">82</b> commands</span><span><b>12</b> groups</span><span><b id="mShown">82</b> shown</span></div>
+    <p>83 prompt-commands — searchable, grouped, one-click copy. In Claude Code they run as <code>/slash</code> commands; anywhere else, paste the prompt.</p>
+    <div class="meta"><span><b id="mTotal">83</b> commands</span><span><b>12</b> groups</span><span><b id="mShown">83</b> shown</span></div>
     <details class="rules">
       <summary><span class="tri">&#9656;</span> Operating rules — the guardrails baked in</summary>
       <ul>
@@ -289,7 +289,7 @@
     <div class="install-banner">
       <div class="ib-text">
         <strong>Install globally — any platform</strong>
-        <p>One command copies 79 commands + power-practices to <code>~/.claude/</code></p>
+        <p>One command copies 80 commands + power-practices to <code>~/.claude/</code></p>
       </div>
       <span class="ib-tag">cross-platform</span>
       <div class="ib-cmd" id="installCmd" role="button" tabindex="0" title="Click to copy">npx slash-pack</div>
@@ -367,6 +367,7 @@
 ["/recommend","think","Give one clear call","Give a single clear recommendation for the following, not a survey. Lead with the recommendation, then the top 2–3 reasons, then the main trade-off you are accepting. State your confidence. Question: {your input}"],
 ["/brainstorm","think","Go wide on ideas","Brainstorm ideas for the following. Go wide first (include a few unconventional options), then cluster them into themes, then flag the 3 most promising with a one-line reason each. Goal: {your input}"],
 ["/solve","think","Solve end to end","Solve the following. Restate the problem, choose an approach (and say why), work to a concrete answer, then verify the answer against the original constraints. Show the key steps, not every keystroke. Problem: {your input}"],
+["/model-picker","think","Pick the right model","Recommend which Claude model fits the task below, matching capability to the job: Haiku 4.5 for bulk/simple triage and transforms; Sonnet 5 as the everyday default; Opus 4.8 for deep reasoning, writing, and strategy; Fable 5 for the hardest long-horizon work; Mythos 5 only for approved organizations' high-security workflows. Give the recommended model, the signals that drove the choice, what would escalate it a tier, and a per-phase split if the task has phases. Task: {your input}"],
 ["/challenge","think","Red-team it","Red-team the following. List the load-bearing assumptions, then attack each: where could it fail, what evidence is missing, what's the strongest counter-argument? Finish with the single biggest risk. Target: {your input}"],
 ["/outline","organize","Build an outline","Create a clear hierarchical outline for the following — main sections with nested sub-points, ordered logically. Keep each line short. Subject: {your input}"],
 ["/structure","organize","Impose structure","Organize the following into a clear structure: group related items, order the groups logically, and add headings. Don't drop or invent content — just impose order. Content: {your input}"],

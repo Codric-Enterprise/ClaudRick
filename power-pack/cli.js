@@ -31,7 +31,7 @@ if (args.includes("--help") || args.includes("-h")) {
     --status         Show installation and license status
     --help           Show this help
 
-  Free:  79 commands + power-practices skill
+  Free:  80 commands + power-practices skill
   Pro:   30 additional professional commands (requires license)
   `);
   process.exit(0);
@@ -102,7 +102,7 @@ function header() {
   console.log(`
   ╔═══════════════════════════════════════╗
   ║   S.L.A.S.H.  v${VERSION}                ║
-  ║   79 Commands + Power Practices       ║
+  ║   80 Commands + Power Practices       ║
   ╚═══════════════════════════════════════╝
   `);
 }
@@ -274,11 +274,11 @@ function doInstall() {
   const proActive = isProActivated();
   console.log(`
   ┌─────────────────────────────────────────┐
-  │  Done. ${proActive ? "109" : " 79"} commands ready.               │
+  │  Done. ${proActive ? "110" : " 80"} commands ready.               │
   │                                         │
   │  Start a new Claude Code session        │
   │  and type /think, /analyze, /brainstorm │
-  │  or any of the ${proActive ? "109" : " 79"} commands.             │
+  │  or any of the ${proActive ? "110" : " 80"} commands.             │
   │                                         │
   │  They work in every project, globally.  │
   └─────────────────────────────────────────┘

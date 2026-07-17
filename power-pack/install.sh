@@ -3,7 +3,7 @@ set -euo pipefail
 
 # ─────────────────────────────────────────────────────────────────────
 #  S.L.A.S.H. Installer
-#  79 slash commands + power-practices skill → ~/.claude/
+#  80 slash commands + power-practices skill → ~/.claude/
 #
 #  Usage:
 #    bash install.sh              # install to ~/.claude/
@@ -42,7 +42,7 @@ header() {
   echo ""
   echo "  ╔═══════════════════════════════════════╗"
   echo "  ║   S.L.A.S.H.  v${VERSION}                ║"
-  echo "  ║   79 Commands + Power Practices       ║"
+  echo "  ║   80 Commands + Power Practices       ║"
   echo "  ╚═══════════════════════════════════════╝"
   echo ""
 }
@@ -151,7 +151,7 @@ echo ""
 echo "  ┌─────────────────────────────────────────┐"
 echo "  │  Done. Start a new Claude Code session   │"
 echo "  │  and type /think, /analyze, /brainstorm  │"
-echo "  │  or any of the 79 commands.              │"
+echo "  │  or any of the 80 commands.              │"
 echo "  │                                          │"
 echo "  │  They work in every project, globally.   │"
 echo "  └─────────────────────────────────────────┘"

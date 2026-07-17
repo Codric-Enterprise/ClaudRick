@@ -132,6 +132,10 @@
   .mc-opus{border-top:3px solid var(--l4)}
   .mc-fable{border-top:3px solid var(--l1)}
   .mc-mythos{border-top:3px solid var(--l6)}
+  .fc-about{border-top:3px solid var(--l1)}
+  .fc-anti{border-top:3px solid var(--l2)}
+  .fc-brief{border-top:3px solid var(--l4)}
+  .fc-rules{border-top:3px solid var(--l5)}
 
   /* prompt template */
   .prompt-tmpl{background:var(--surface-2);border:1px solid var(--border);border-radius:8px;
@@ -212,6 +216,7 @@
   <a href="#L6" data-target="L6">6 Automate</a>
   <a href="#models" data-target="models">Models</a>
   <a href="#formula" data-target="formula">Formula</a>
+  <a href="#corefiles" data-target="corefiles">Files</a>
   <a href="#tokens" data-target="tokens">Tokens</a>
   <a href="#agents" data-target="agents">Agents</a>
   <a href="#checklist-h" data-target="checklist-h">Checklist</a>
@@ -537,6 +542,32 @@ EOF<span class="copy-hint">click to copy</span></div>
     <div class="step"><div class="n" style="background:var(--l5s);color:var(--l5)">5</div><div class="t"><strong>The Proof</strong> — kills the fake "all done!" "Only report work you can point to evidence for. Lead with the outcome."</div></div>
   </div>
   <div class="codeblock" onclick="copyBlock(this)">"I'm working on [X] for [who]. Goal: [outcome]. Here's what I know: [context]. Before you start, ask me what you need. Do the simplest thing that works, pause only on irreversible actions. Report only what you can prove, outcome first."<span class="copy-hint">click to copy</span></div>
+
+  <!-- ═══════════════════════════════════════ CORE FILES ═══ -->
+  <div class="sh" id="corefiles" style="color:var(--l3)">Write Your Core Files</div>
+  <p style="font-size:.84rem;color:var(--muted);margin-bottom:16px">A few strong <code>.md</code> files beat dozens of random prompts. Write them once, point Claude at them everywhere — global instructions, Projects, or a working folder.</p>
+  <div class="model-grid">
+    <div class="model-card fc-about">
+      <div class="name">about-me.md</div>
+      <div class="desc">Role, goals, voice, priorities. Who you are and what you value in an answer.</div>
+      <div class="use">read me first</div>
+    </div>
+    <div class="model-card fc-anti">
+      <div class="name">anti-style.md</div>
+      <div class="desc">Phrases, tones, and patterns to avoid. What "off-brand" looks like.</div>
+      <div class="use">never do this</div>
+    </div>
+    <div class="model-card fc-brief">
+      <div class="name">project-brief.md</div>
+      <div class="desc">Objective, audience, inputs, constraints. The context every task shares.</div>
+      <div class="use">per project</div>
+    </div>
+    <div class="model-card fc-rules">
+      <div class="name">output-rules.md</div>
+      <div class="desc">Format, length, quality bar, done criteria. What finished actually means.</div>
+      <div class="use">the finish line</div>
+    </div>
+  </div>
 
   <!-- ═══════════════════════════════════════ TOKEN TIPS ═══ -->
   <div class="sh" id="tokens" style="color:var(--l4)">Stop Burning Tokens</div>
