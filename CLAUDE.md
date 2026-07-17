@@ -64,24 +64,39 @@ Key design decisions:
 ├── docs/commands-pack.md     # all 82 commands: slash form + paste-ready prompt
 ├── docs/command-console.html # interactive searchable console (shareable artifact)
 ├── mastery-system/index.html # "Mastery Protocol" — standalone 6-levels tool (model tree, prompt formula)
+│                              # deployed to GitHub Pages by .github/workflows/deploy-pages.yml
 ├── power-pack/               # "S.L.A.S.H." — standalone distributable (see below)
-│   ├── commands/             # 77 portable commands (excludes repo-specific dev ones)
-│   ├── skills/               # power-practices skill
-│   ├── cli.js                # cross-platform Node installer (npx slash-pack)
-│   ├── package.json          # npm-publishable package
-│   ├── install.sh            # Unix bash installer (--dry-run, --uninstall, backup)
-│   ├── index.html            # product landing page
-│   ├── README.md             # standalone product README
-│   └── LICENSE               # MIT
+│   ├── commands/              # 77 free portable commands (excludes repo-specific dev ones)
+│   ├── pro-commands/          # 30 Pro Pack commands (licensed tier: /architect, /security-audit, …)
+│   ├── skills/                # power-practices skill
+│   ├── cli.js                 # cross-platform Node installer (npx slash-pack)
+│   ├── package.json           # npm-publishable package (name: slash-pack)
+│   ├── install.sh              # Unix bash installer (--dry-run, --uninstall, backup)
+│   ├── index.html              # product landing page
+│   ├── README.md               # standalone product README
+│   └── LICENSE                 # MIT
 ├── install-power-pack.sh     # legacy installer (wraps power-pack/install.sh)
-├── .github/workflows/ci.yml  # ruff check + ruff format --check + pytest (3.11-3.13) + docker build
-├── Dockerfile                # stdlib-only image; binds 0.0.0.0:8000; HEALTHCHECK /healthz
+├── sample.js                 # standalone GitHub Models (Azure AI Inference) demo script — not
+│                              # part of the ReVision app; see "GitHub Models sample" note below
+├── package.json / package-lock.json  # Node deps (@azure-rest/ai-inference, …) for sample.js only
+├── .devcontainer/devcontainer.json   # generic universal devcontainer (no ReVision-specific setup)
+├── .github/workflows/
+│   ├── ci.yml                 # ruff check + ruff format --check + pytest (3.11-3.13) + docker build
+│   └── deploy-pages.yml       # deploys mastery-system/ to GitHub Pages on push to main
+├── Dockerfile                 # stdlib-only image; binds 0.0.0.0:8000; HEALTHCHECK /healthz
 ├── .dockerignore
 ├── pyproject.toml            # hatchling build; pytest + ruff config
 ├── .env.example              # local env template (ANTHROPIC_API_KEY, GITHUB_TOKEN, …); copy to gitignored .env
 ├── README.md
 └── .gitignore
 ```
+
+> **GitHub Models sample.** `sample.js` (with the top-level `package.json` /
+> `package-lock.json`) is a standalone demo of calling a GitHub Models-hosted
+> LLM via the Azure AI Inference SDK, using `GITHUB_TOKEN`. It is unrelated to
+> the ReVision app and does **not** change the "zero runtime dependencies"
+> rule for the Python backend under `src/revision/` — don't wire it into the
+> server or blur the two.
 
 ## HTTP endpoints
 
