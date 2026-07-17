@@ -173,7 +173,9 @@ model stack, the core-files framework, and the Claude Code app workflow):
 
 - **Commands pack** — `docs/commands-pack.md` lists every command's slash form
   alongside its paste-ready prompt (for use in a plain claude.ai chat, where
-  slash commands aren't available).
+  slash commands aren't available). `tests/test_commands_pack.py` fails CI if
+  this pack and `.claude/commands/` drift out of sync (dev-only `/check`,
+  `/run-app`, `/smoke` are excluded).
 - **Slash commands** in `.claude/commands/` — reusable prompt shortcuts across
   six groups (focus/context, think/solve, organize, code, automate,
   personalize); run `ls .claude/commands/` or see `docs/commands-pack.md` for
