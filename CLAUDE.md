@@ -48,11 +48,7 @@ Key design decisions:
 │   ├── server.py             # RevisionHandler, create_server(), serve()
 │   ├── cli.py                # `revision` console entry point
 │   └── static/index.html     # the single-page UI (all four tools)
-├── tests/
-│   ├── test_config.py
-│   ├── test_anthropic_client.py   # mocks urllib.request.urlopen
-│   ├── test_ratelimit.py          # limiter unit tests (monkeypatched clock)
-│   └── test_server.py             # runs a live server on port 0, fake client
+├── tests/                    # mirror each module (test_server.py ↔ server.py)
 ├── .claude/                  # checked-in Claude Code tooling (see "Claude tooling" below)
 │   ├── settings.json         # permissions allowlist + hooks
 │   ├── hooks/session-start.sh     # SessionStart: loads .env if present, installs dev deps on cold containers
@@ -64,15 +60,8 @@ Key design decisions:
 ├── docs/commands-pack.md     # all 82 commands: slash form + paste-ready prompt
 ├── docs/command-console.html # interactive searchable console (shareable artifact)
 ├── mastery-system/index.html # "Mastery Protocol" — standalone 6-levels tool (model tree, prompt formula)
-├── power-pack/               # "S.L.A.S.H." — standalone distributable (see below)
-│   ├── commands/             # 77 portable commands (excludes repo-specific dev ones)
-│   ├── skills/               # power-practices skill
-│   ├── cli.js                # cross-platform Node installer (npx slash-pack)
-│   ├── package.json          # npm-publishable package
-│   ├── install.sh            # Unix bash installer (--dry-run, --uninstall, backup)
-│   ├── index.html            # product landing page
-│   ├── README.md             # standalone product README
-│   └── LICENSE               # MIT
+├── power-pack/               # "S.L.A.S.H." standalone distributable: 77 portable
+│                             #   commands + installer (npx slash-pack / install.sh)
 ├── install-power-pack.sh     # legacy installer (wraps power-pack/install.sh)
 ├── .github/workflows/ci.yml  # ruff check + ruff format --check + pytest (3.11-3.13) + docker build
 ├── Dockerfile                # stdlib-only image; binds 0.0.0.0:8000; HEALTHCHECK /healthz
@@ -126,8 +115,8 @@ Uses a **src layout**: importable code is under `src/`; `pyproject.toml` sets
 
 - **Layout:** shippable code under `src/revision/`; tests under `tests/` mirror
   the module they cover (`server.py` -> `test_server.py`).
-- **Style/lint:** ruff, line length 100, rules `E, F, I, UP, B, SIM`
-  (see `[tool.ruff.lint]`). Run `ruff format` before committing.
+- **Style/lint:** ruff (config in `[tool.ruff.lint]`). Run `ruff format` before
+  committing.
 - **Typing:** type-hint public functions.
 - **HTTP handlers:** `do_GET` / `do_POST` are the `http.server` API and carry
   `# noqa: N802`; keep the handler bound to its client via `make_handler`.
@@ -185,15 +174,11 @@ model stack, the core-files framework, and the Claude Code app workflow):
 - **Commands pack** — `docs/commands-pack.md` lists every command's slash form
   alongside its paste-ready prompt (for use in a plain claude.ai chat, where
   slash commands aren't available).
-- **Slash commands** in `.claude/commands/` — the full command reference as
-  reusable prompt shortcuts across six groups (focus/context, think/solve,
-  organize, code, automate, personalize): `/think`, `/analyze`, `/challenge`,
-  `/compare`, `/recommend`, `/solve`, `/summary`, `/outline`, `/table`,
-  `/mindmap`, `/flowchart`, `/explain`, `/debug`, `/optimize`, `/refactor`,
-  `/test`, `/convert`, `/workflow`, `/automate`, `/tasklist`, `/checklist`,
-  `/brief`, `/about-me`, and more. Invoke with `/name [args]`. Note: `/clear`,
-  `/memory`, and `/review` collide with Claude Code built-ins, which take
-  precedence.
+- **Slash commands** in `.claude/commands/` — reusable prompt shortcuts across
+  six groups (focus/context, think/solve, organize, code, automate,
+  personalize); run `ls .claude/commands/` or see `docs/commands-pack.md` for
+  the full list. Invoke with `/name [args]`. Note: `/clear`, `/memory`, and
+  `/review` collide with Claude Code built-ins, which take precedence.
 - **Skills** in `.claude/skills/` —
   - `claude-power-practices`: auto-applied guardrails for high-stakes work (pick
     the right model, structure prompts with XML tags, use extended thinking,
