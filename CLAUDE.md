@@ -65,7 +65,7 @@ Key design decisions:
 ├── docs/command-console.html # interactive searchable console (shareable artifact)
 ├── mastery-system/index.html # "Mastery Protocol" — standalone 6-levels tool (model tree, prompt formula)
 ├── power-pack/               # "S.L.A.S.H." — standalone distributable (see below)
-│   ├── commands/             # 77 portable commands (excludes repo-specific dev ones)
+│   ├── commands/             # 79 portable commands (excludes repo-specific dev ones)
 │   ├── skills/               # power-practices skill
 │   ├── cli.js                # cross-platform Node installer (npx slash-pack)
 │   ├── package.json          # npm-publishable package

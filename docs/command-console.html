@@ -242,7 +242,7 @@
 
 <header>
   <div class="bar">
-    <div class="brand"><span class="dot"></span>slashboard <small id="brandsub">80 commands</small></div>
+    <div class="brand"><span class="dot"></span>slashboard <small id="brandsub">82 commands</small></div>
     <div class="mode-toggle" id="modeToggle">
       <button class="active" data-mode="start" type="button">Start here</button>
       <button data-mode="power" type="button">All 80</button>
@@ -264,7 +264,7 @@
     <p>Pick what you're working on. You'll get the exact prompt to copy — paste it into any Claude chat and go.</p>
     <div class="tiles" id="tiles"></div>
     <div class="start-footer">
-      <button class="sf-link" id="showAll" type="button">See all 80 commands &#8594;</button>
+      <button class="sf-link" id="showAll" type="button">See all 82 commands &#8594;</button>
       <span class="sf-count">12 groups · works in Claude Code, claude.ai, or any chat</span>
     </div>
   </div>
@@ -274,8 +274,8 @@
 <div class="wrap hidden" id="powerHero">
   <div class="hero">
     <h1>Every Claude command, <em>one console.</em></h1>
-    <p>80 prompt-commands — searchable, grouped, one-click copy. In Claude Code they run as <code>/slash</code> commands; anywhere else, paste the prompt.</p>
-    <div class="meta"><span><b id="mTotal">80</b> commands</span><span><b>12</b> groups</span><span><b id="mShown">80</b> shown</span></div>
+    <p>82 prompt-commands — searchable, grouped, one-click copy. In Claude Code they run as <code>/slash</code> commands; anywhere else, paste the prompt.</p>
+    <div class="meta"><span><b id="mTotal">82</b> commands</span><span><b>12</b> groups</span><span><b id="mShown">82</b> shown</span></div>
     <details class="rules">
       <summary><span class="tri">&#9656;</span> Operating rules — the guardrails baked in</summary>
       <ul>
@@ -289,7 +289,7 @@
     <div class="install-banner">
       <div class="ib-text">
         <strong>Install globally — any platform</strong>
-        <p>One command copies 77 commands + power-practices to <code>~/.claude/</code></p>
+        <p>One command copies 79 commands + power-practices to <code>~/.claude/</code></p>
       </div>
       <span class="ib-tag">cross-platform</span>
       <div class="ib-cmd" id="installCmd" role="button" tabindex="0" title="Click to copy">npx slash-pack</div>
@@ -357,6 +357,7 @@
 ["/assumptions","focus","Surface the assumptions","Surface the assumptions behind the following — both stated and unstated. Mark each as safe, uncertain, or risky, and note which ones the outcome depends on most. Subject: {your input}"],
 ["/priorities","focus","Rank by priority","Rank the following by priority. State the ranking criterion (impact, urgency, effort, dependency), order the items, and explain the top choice. Flag anything that's a prerequisite for the rest. Items: {your input}"],
 ["/constraints","focus","Set hard constraints","Take the following as hard constraints for the task. Restate them as a checklist, note any that conflict with each other, and keep every proposed solution inside them — call out explicitly if a good option would require breaking one. Constraints: {your input}"],
+["/brief","focus","Scaffold a structured brief","Turn the following into a structured brief before doing any work. Fill in: Task (the single outcome), Context (background that changes the approach), Inputs/files (what's provided vs. missing), Constraints (scope/tone/tech/length/deadlines), Success criteria (how \"done\" is judged), and Output format (exact shape of the deliverable). Then list any clarifying questions and only start once the brief is settled. Request: {your input}"],
 ["/think","think","Reason step by step","Think hard about the following before answering. Work through it step by step: restate the problem, lay out the options and their trade-offs, check your reasoning for errors, then give the conclusion with your confidence and what would change it. Problem: {your input}"],
 ["/analyze","think","Break it down","Break the following down into its component parts: sub-problems, dependencies, unknowns, and the key decision points. Surface anything ambiguous before concluding. Target: {your input}"],
 ["/compare","think","Compare options","Compare the options below across the dimensions that matter for the decision (cost, effort, risk, maintainability, speed, and any domain-specific ones). Present a compact table, then name the situations where each option wins. Options: {your input}"],
@@ -394,6 +395,7 @@
 ["/tasklist","automate","Make a task list","Break the following into an ordered task list. Each task should be a concrete, single-outcome action, sequenced by dependency, with blockers marked. Keep it actionable — no vague \"figure out\" items. End with the first task to start. Goal: {your input}"],
 ["/checklist","automate","Make a checklist","Produce a checklist for the following as checkboxes — the things to verify or do, in order, each independently checkable. Cover the easy-to-forget steps. Subject: {your input}"],
 ["/preferences","personalize","Set working preferences","Take the following as my working preferences and apply them to your responses from here on: restate them back as a short list so we're aligned, then follow them. Ask before overriding one when a task would benefit from doing so. Preferences: {your input}"],
+["/about-me","personalize","Draft an about-me core file","Help me build an about-me.md core file — the profile Claude reads before acting, covering my role & context, goals, voice (and what to avoid), priorities, and default formats/tone/units. If my details are thin, ask up to 6 high-signal questions first; then output a concise, copy-paste-ready about-me.md with clear headings and a one-line note on where to put it. Details: {your input}"],
 ["/memory","personalize","Remember a fact","Remember the following and apply it going forward. If it's a durable fact or convention, propose where to record it so it persists. To remember: {your input}"],
 ["/tone","personalize","Adjust tone","Adjust the tone as requested below (e.g. formal, friendly, direct, diplomatic). Change only the tone — keep the facts, meaning, and structure intact. Request: {your input}"],
 ["/style","personalize","Change writing style","Rewrite in the requested style below (e.g. plain English, technical, executive summary, marketing). Preserve the underlying meaning and any specifics; change voice, vocabulary, and rhythm to fit. Request: {your input}"],
