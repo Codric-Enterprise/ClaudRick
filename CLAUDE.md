@@ -74,14 +74,24 @@ Key design decisions:
 │   ├── README.md             # standalone product README
 │   └── LICENSE               # MIT
 ├── install-power-pack.sh     # legacy installer (wraps power-pack/install.sh)
-├── .github/workflows/ci.yml  # ruff check + ruff format --check + pytest (3.11-3.13) + docker build
+├── .github/workflows/ci.yml           # ruff check + ruff format --check + pytest (3.11-3.13) + docker build
+├── .github/workflows/deploy-pages.yml # publishes mastery-system/ to GitHub Pages on push to main
+├── .devcontainer/devcontainer.json    # generic universal devcontainer (no repo-specific setup)
 ├── Dockerfile                # stdlib-only image; binds 0.0.0.0:8000; HEALTHCHECK /healthz
 ├── .dockerignore
 ├── pyproject.toml            # hatchling build; pytest + ruff config
 ├── .env.example              # local env template (ANTHROPIC_API_KEY, GITHUB_TOKEN, …); copy to gitignored .env
+├── package.json, package-lock.json, sample.js  # unrelated GitHub Models/Azure AI
+│                              # inference sample (see note below) — not part of the ReVision app
 ├── README.md
 └── .gitignore
 ```
+
+> `package.json` / `sample.js` at the repo root are a standalone GitHub Models
+> demo script (`@azure-rest/ai-inference` calling `models.github.ai`), not a
+> ReVision runtime dependency — the "zero runtime dependencies" rule above
+> applies to the `src/revision` Python backend only. Don't wire this into the
+> app or treat its presence as license to add Node deps to ReVision itself.
 
 ## HTTP endpoints
 
