@@ -65,9 +65,10 @@ Key design decisions:
 ├── docs/command-console.html # interactive searchable console (shareable artifact)
 ├── mastery-system/index.html # "Mastery Protocol" — standalone 6-levels tool (model tree, prompt formula, core files)
 ├── power-pack/               # "S.L.A.S.H." — standalone distributable (see below)
-│   ├── commands/             # 80 portable commands (excludes repo-specific dev ones)
+│   ├── commands/             # 80 free, portable commands (excludes repo-specific dev ones)
+│   ├── pro-commands/         # 30 licensed "Pro Pack" commands (unlocked via cli.js --activate KEY)
 │   ├── skills/               # power-practices skill
-│   ├── cli.js                # cross-platform Node installer (npx slash-pack)
+│   ├── cli.js                # cross-platform Node installer (npx slash-pack); install/uninstall/status/--activate
 │   ├── package.json          # npm-publishable package
 │   ├── install.sh            # Unix bash installer (--dry-run, --uninstall, backup)
 │   ├── index.html            # product landing page
@@ -76,6 +77,7 @@ Key design decisions:
 ├── install-power-pack.sh     # legacy installer (wraps power-pack/install.sh)
 ├── .github/workflows/ci.yml           # ruff check + ruff format --check + pytest (3.11-3.13) + docker build
 ├── .github/workflows/deploy-pages.yml # publishes mastery-system/ to GitHub Pages on push to main
+├── .github/workflows/security.yml     # pip-audit + npm audit --audit-level=high; push/PR + weekly Mon 06:00 UTC cron
 ├── .devcontainer/devcontainer.json    # generic universal devcontainer (no repo-specific setup)
 ├── Dockerfile                # stdlib-only image; binds 0.0.0.0:8000; HEALTHCHECK /healthz
 ├── .dockerignore
@@ -110,6 +112,18 @@ Key design decisions:
 Uses a **src layout**: importable code is under `src/`; `pyproject.toml` sets
 `pythonpath = ["src"]` so tests run without an editable install. The
 `static/` directory lives inside the package so it ships in the wheel.
+
+> **Known bug (as of this writing):** in `server.py`, `RevisionHandler.do_POST`
+> calls `self.client.create_message(...)` and sends the JSON response itself
+> for the non-streaming path, then `_extract_message_params` returns
+> `(prompt, max_tokens)` back to `do_POST`, which calls `create_message` and
+> sends a *second* response on the same connection. Every non-streaming
+> `/api/messages` request currently double-calls the Anthropic API and writes
+> two HTTP responses. `pytest tests/test_server.py` reproduces this today (3
+> failing assertions on `client.calls`). Fix by having `_extract_message_params`
+> only validate/return `(prompt, max_tokens)` — or `None` after handling
+> streaming/errors itself — and let `do_POST` own the single non-streaming
+> `create_message` + `_send_json` call.
 
 ## Getting started
 
@@ -175,6 +189,8 @@ Done:
   proxies Anthropic's SSE stream straight through; the frontend's `callClaude`
   reads it incrementally and reports live progress on each tool's button
   while still returning/parsing the full text once the stream ends.
+- ✅ Dependency auditing — `.github/workflows/security.yml` runs `pip-audit`
+  and `npm audit --audit-level=high` on push/PR plus a weekly cron.
 
 Likely next steps toward production:
 
