@@ -42,41 +42,42 @@ prompt structure, truthfulness, and real deliverables.
 
 ## Install
 
-### npx (recommended — works on macOS, Linux, Windows)
+### Bash (Unix) — works today
+
+```bash
+git clone https://github.com/Codric-Enterprise/ClaudRick.git
+cd ClaudRick/power-pack
+bash install.sh
+```
+
+```bash
+# Preview what would change:
+bash install.sh --dry-run
+
+# Cleanly remove:
+bash install.sh --uninstall
+```
+
+### npx (coming soon)
 
 ```bash
 npx slash-pack
 ```
 
-One command. No clone required. Works everywhere Node.js runs.
-
-```bash
-# Preview what would change:
-npx slash-pack --dry-run
-
-# Check installation status:
-npx slash-pack --status
-
-# Cleanly remove:
-npx slash-pack --uninstall
-```
+This is the target one-command install once `slash-pack` is published to npm
+— it isn't yet, so this won't work today. Use the Bash install above until
+then; `cli.js` behind it is the same installer either way (`--dry-run`,
+`--status`, `--uninstall`, `--activate KEY` all work identically once live).
 
 ### Activate Pro
 
 After purchasing a Pro license:
 
 ```bash
-npx slash-pack --activate YOUR-LICENSE-KEY
-npx slash-pack   # re-run to install the 30 pro commands
+bash install.sh   # or: npx slash-pack, once published
+node cli.js --activate YOUR-LICENSE-KEY
+bash install.sh   # re-run to install the 30 pro commands
 ```
-
-### Bash (Unix)
-
-```bash
-bash install.sh
-```
-
-Same flags: `--dry-run` to preview, `--uninstall` to remove.
 
 Both paths copy everything to `~/.claude/` so commands are available globally
 in every project. Existing commands are backed up automatically.
