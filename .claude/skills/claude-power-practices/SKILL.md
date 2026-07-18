@@ -57,15 +57,15 @@ Frame non-trivial requests with: **C**ontext, **S**pecific ask,
 - **Cite your sources** in analysis so claims are traceable, and keep a short
   "work log" of what changed when the task is multi-step.
 
-## Companion commands (80 total)
+## Companion commands (83 total)
 
 The `.claude/commands/` directory turns the full command cheat-sheet into real
 slash commands, grouped as:
 
 - **Focus & context:** `/focus`, `/context`, `/details`, `/examples`,
-  `/clarify`, `/define`, `/assumptions`, `/priorities`, `/constraints`
+  `/clarify`, `/define`, `/assumptions`, `/priorities`, `/constraints`, `/brief`
 - **Think & solve:** `/think`, `/analyze`, `/compare`, `/pros-cons`,
-  `/proscons`, `/evaluate`, `/recommend`, `/brainstorm`, `/solve`, `/challenge`
+  `/proscons`, `/evaluate`, `/recommend`, `/brainstorm`, `/solve`, `/challenge`, `/model-picker`
 - **Organize & structure:** `/outline`, `/structure`, `/bullet`, `/numbered`,
   `/table`, `/summary`, `/key-points`, `/mindmap`, `/flowchart`
 - **Code & tech:** `/code`, `/debug`, `/explain`, `/optimize`, `/refactor`,
@@ -73,7 +73,7 @@ slash commands, grouped as:
 - **Automate & integrate:** `/workflow`, `/automate`, `/api`, `/integrate`,
   `/schedule`, `/trigger`, `/tasklist`, `/checklist`
 - **Personalize & control:** `/preferences`, `/memory`, `/tone`, `/style`,
-  `/length`, `/format`, `/reset`, `/clear`
+  `/length`, `/format`, `/reset`, `/clear`, `/about-me`
 - **Write & edit:** `/write`, `/edit`, `/rewrite`, `/shorten`, `/expand`,
   `/improve`, `/paraphrase`
 - **Data & analysis:** `/insights`, `/forecast`, `/report`, `/stats`, `/clean`

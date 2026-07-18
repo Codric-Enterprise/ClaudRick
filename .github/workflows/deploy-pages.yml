@@ -6,7 +6,7 @@ on:
     paths: ["mastery-system/**"]
   workflow_dispatch:
 
-permissions:
+permissions: allow
   contents: read
   pages: write
   id-token: write
