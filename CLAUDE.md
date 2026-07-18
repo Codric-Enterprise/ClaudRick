@@ -72,13 +72,14 @@ Key design decisions:
 ├── power-pack/               # "S.L.A.S.H." — standalone distributable (see below)
 │   ├── commands/             # 80 free, portable commands (excludes repo-specific dev ones)
 │   ├── pro-commands/         # 30 licensed "Pro Pack" commands (unlocked via cli.js --activate KEY)
+│   │   └── LICENSE           # proprietary, single-user — NOT MIT, carved out of the root LICENSE
 │   ├── skills/               # power-practices skill
 │   ├── cli.js                # cross-platform Node installer (npx slash-pack); install/uninstall/status/--activate
-│   ├── package.json          # npm-publishable package
+│   ├── package.json          # npm-publishable package; license: "SEE LICENSE IN LICENSE" (mixed, not blanket MIT)
 │   ├── install.sh            # Unix bash installer (--dry-run, --uninstall, backup)
 │   ├── index.html            # product landing page
 │   ├── README.md             # standalone product README
-│   └── LICENSE               # MIT
+│   └── LICENSE               # MIT — everything except pro-commands/ (see notice at top of file)
 ├── install-power-pack.sh     # legacy installer (wraps power-pack/install.sh)
 ├── .github/workflows/ci.yml           # ruff check + ruff format --check + pytest (3.11-3.13) + docker build
 ├── .github/workflows/deploy-pages.yml # publishes mastery-system/ to GitHub Pages on push to main
