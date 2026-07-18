@@ -80,26 +80,24 @@ Key design decisions:
 │   ├── index.html            # product landing page
 │   ├── README.md             # standalone product README
 │   └── LICENSE               # MIT — everything except pro-commands/ (see notice at top of file)
-├── install-power-pack.sh     # legacy installer (wraps power-pack/install.sh)
 ├── .github/workflows/ci.yml           # ruff check + ruff format --check + pytest (3.11-3.13) + docker build
 ├── .github/workflows/deploy-pages.yml # publishes mastery-system/ to GitHub Pages on push to main
-├── .github/workflows/security.yml     # pip-audit + npm audit --audit-level=high; push/PR + weekly Mon 06:00 UTC cron
+├── .github/workflows/security.yml     # pip-audit (root) + npm audit (power-pack/); push/PR + weekly Mon 06:00 UTC cron
 ├── .devcontainer/devcontainer.json    # generic universal devcontainer (no repo-specific setup)
 ├── Dockerfile                # stdlib-only image; binds 0.0.0.0:8000; HEALTHCHECK /healthz
 ├── .dockerignore
 ├── pyproject.toml            # hatchling build; pytest + ruff config
 ├── .env.example              # local env template (ANTHROPIC_API_KEY, GITHUB_TOKEN, …); copy to gitignored .env
-├── package.json, package-lock.json, sample.js  # unrelated GitHub Models/Azure AI
-│                              # inference sample (see note below) — not part of the ReVision app
 ├── README.md
 └── .gitignore
 ```
 
-> `package.json` / `sample.js` at the repo root are a standalone GitHub Models
-> demo script (`@azure-rest/ai-inference` calling `models.github.ai`), not a
-> ReVision runtime dependency — the "zero runtime dependencies" rule above
-> applies to the `src/revision` Python backend only. Don't wire this into the
-> app or treat its presence as license to add Node deps to ReVision itself.
+> The "zero runtime dependencies" rule above applies to the `src/revision`
+> Python backend. An unrelated GitHub Models/Azure AI demo script
+> (`package.json` / `sample.js`) previously sat at the repo root; it was
+> removed as catalogue cleanup — it had no relationship to ReVision or the
+> Claude tooling here, and `security.yml`'s npm audit was auditing it by
+> accident instead of the thing that actually ships (`power-pack/`).
 
 ## HTTP endpoints
 
@@ -184,7 +182,8 @@ Done:
   reads it incrementally and reports live progress on each tool's button
   while still returning/parsing the full text once the stream ends.
 - ✅ Dependency auditing — `.github/workflows/security.yml` runs `pip-audit`
-  and `npm audit --audit-level=high` on push/PR plus a weekly cron.
+  (root Python deps) and `npm audit --audit-level=high` (`power-pack/`) on
+  push/PR plus a weekly cron.
 
 Likely next steps toward production:
 
