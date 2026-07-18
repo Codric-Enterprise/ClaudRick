@@ -68,6 +68,7 @@ Key design decisions:
 ├── docs/prompt-library.md    # saved prompts that worked well, maintained by the prompt-library skill
 ├── docs/command-console.html # interactive searchable console (shareable artifact)
 ├── mastery-system/index.html # "Mastery Protocol" — standalone 6-levels tool (model tree, prompt formula, core files)
+├── claude-md-generator/index.html # guided-form CLAUDE.md builder — static, client-side only, no network calls
 ├── power-pack/               # "S.L.A.S.H." — standalone distributable (see below)
 │   ├── commands/             # 80 free, portable commands (excludes repo-specific dev ones)
 │   ├── pro-commands/         # 30 licensed "Pro Pack" commands (unlocked via cli.js --activate KEY)
