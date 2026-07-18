@@ -54,14 +54,18 @@ Key design decisions:
 │   ├── test_ratelimit.py          # limiter unit tests (monkeypatched clock)
 │   └── test_server.py             # runs a live server on port 0, fake client
 ├── .claude/                  # checked-in Claude Code tooling (see "Claude tooling" below)
-│   ├── settings.json         # permissions allowlist + hooks
+│   ├── settings.json         # permissions allowlist + PreToolUse/PostToolUse/SessionStart hooks
 │   ├── hooks/session-start.sh     # SessionStart: loads .env if present, installs dev deps on cold containers
-│   ├── commands/             # custom slash commands (/analyze, /think, /check, /run-app, …)
-│   ├── skills/               # claude-power-practices + dev skills (dev-check, run-app, add-tool, test-and-lint)
+│   ├── hooks/git-safety-guard.sh  # PreToolUse (Bash): blocks force-push/reset --hard/clean -f/--no-verify/…
+│   ├── hooks/secret-scan-precommit.sh # PreToolUse (Bash): blocks `git commit` on a likely-secret staged diff
+│   ├── commands/             # custom slash commands (/analyze, /think, /check, /run-app, /prd, …)
+│   ├── skills/               # claude-power-practices + dev skills (dev-check, run-app, add-tool, test-and-lint, prompt-library)
+│   ├── agents/                # standalone subagents: code-reviewer, test-writer, security-auditor (each read-only/single-purpose)
 │   └── README.md             # explains the whole .claude/ setup
 ├── docs/claude-playbook.md   # full Claude tips + command reference (source of the above)
 ├── docs/claude-2026-cheatsheet.md # 2026 sheets: 5 surfaces, model stack, core files, app workflow
 ├── docs/commands-pack.md     # all 83 commands: slash form + paste-ready prompt
+├── docs/prompt-library.md    # saved prompts that worked well, maintained by the prompt-library skill
 ├── docs/command-console.html # interactive searchable console (shareable artifact)
 ├── mastery-system/index.html # "Mastery Protocol" — standalone 6-levels tool (model tree, prompt formula, core files)
 ├── power-pack/               # "S.L.A.S.H." — standalone distributable (see below)
@@ -112,18 +116,6 @@ Key design decisions:
 Uses a **src layout**: importable code is under `src/`; `pyproject.toml` sets
 `pythonpath = ["src"]` so tests run without an editable install. The
 `static/` directory lives inside the package so it ships in the wheel.
-
-> **Known bug (as of this writing):** in `server.py`, `RevisionHandler.do_POST`
-> calls `self.client.create_message(...)` and sends the JSON response itself
-> for the non-streaming path, then `_extract_message_params` returns
-> `(prompt, max_tokens)` back to `do_POST`, which calls `create_message` and
-> sends a *second* response on the same connection. Every non-streaming
-> `/api/messages` request currently double-calls the Anthropic API and writes
-> two HTTP responses. `pytest tests/test_server.py` reproduces this today (3
-> failing assertions on `client.calls`). Fix by having `_extract_message_params`
-> only validate/return `(prompt, max_tokens)` — or `None` after handling
-> streaming/errors itself — and let `do_POST` own the single non-streaming
-> `create_message` + `_send_json` call.
 
 ## Getting started
 
@@ -235,10 +227,27 @@ model stack, the core-files framework, and the Claude Code app workflow):
   - `dev-check` / `test-and-lint`: run the CI gate locally (ruff + pytest).
   - `run-app`: start and smoke-test the ReVision server.
   - `add-tool`: add a new document tool (tab) to the single-page UI.
+  - `prompt-library`: save/retrieve prompts that worked well, backed by
+    `docs/prompt-library.md` — a library of wins, not a full transcript log.
+- **Subagents** in `.claude/agents/` — each one standalone and single-purpose
+  (not bundled): `code-reviewer` (read-only diff review against this file's
+  invariants), `test-writer` (adds pytest coverage mirroring existing
+  conventions), `security-auditor` (read-only audit against the Security
+  notes checklist below).
 - **`settings.json` + `hooks/`** — a `permissions.allow` list pre-authorizing
-  `ruff`/`pytest`/`python`/`revision`/`curl`, plus a `SessionStart` hook
-  (`hooks/session-start.sh`) that installs dev deps on a cold remote container so
-  tests and linters are ready. See `.claude/README.md` for the full rundown.
+  `ruff`/`pytest`/`python`/`revision`/`curl`; a `SessionStart` hook
+  (`hooks/session-start.sh`) that installs dev deps on a cold remote container;
+  and two `PreToolUse` hooks matched on `Bash` calls — `git-safety-guard.sh`
+  (hard-blocks force-push without `--force-with-lease`, `reset --hard`,
+  `clean -f`, `branch -D`, discard-all `checkout`/`restore .`, and
+  `--no-verify`/`--no-gpg-sign`) and `secret-scan-precommit.sh` (blocks
+  `git commit` when the staged diff matches an Anthropic/AWS/GitHub/Slack key
+  or a PEM private-key block). Both are backstops, not a substitute for
+  judgment, and both are line-based text scanners (each check requires the
+  dangerous pattern and an actual `git <verb>` on the same physical line) —
+  precise enough to ignore prose that merely *mentions* a flag, but a
+  contrived one-liner could still evade or false-positive it. See
+  `.claude/README.md` for the full rundown.
 
 > Gotcha: Claude Code only watches `.claude/` dirs that had a settings file when
 > the session **started**. Editing `settings.json` or the hooks mid-session

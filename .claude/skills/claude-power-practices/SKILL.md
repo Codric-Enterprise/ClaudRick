@@ -81,7 +81,7 @@ slash commands, grouped as:
 - **Collaborate:** `/email`, `/feedback`
 - **Content transforms:** `/eli5`, `/tldr`, `/factcheck`, `/proofread`,
   `/glossary`, `/keypoints`
-- **Repo dev (project-specific):** `/check`, `/run-app`, `/smoke`
+- **Repo dev (project-specific):** `/check`, `/run-app`, `/smoke`, `/prd`
 
 `/clear`, `/memory`, and `/review` collide with Claude Code built-ins — the
 built-in takes precedence. See `docs/commands-pack.md` for the paste-ready
