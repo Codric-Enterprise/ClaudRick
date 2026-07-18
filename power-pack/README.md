@@ -117,4 +117,5 @@ guardrails for reasoning, truthfulness, and deliverable quality.
 ## License
 
 Free tier: MIT — see [LICENSE](LICENSE).
-Pro commands: proprietary license, single-user. See purchase terms.
+Pro commands: proprietary, single-user, non-transferable — see
+[pro-commands/LICENSE](pro-commands/LICENSE). No redistribution or resale.

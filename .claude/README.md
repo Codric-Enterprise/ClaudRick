@@ -10,10 +10,17 @@ every clone and every Claude Code on the web session picks it up automatically.
 | `commands/check.md` | `/check` — the CI gate: `ruff check` + `ruff format --check` + `pytest` |
 | `commands/run-app.md` | `/run-app` — start the ReVision server |
 | `commands/smoke.md` | `/smoke` — curl health / UI / messages |
+| `commands/prd.md` | `/prd` — write a short Product Requirements Doc before building a feature |
 | `commands/{eli5,tldr,factcheck,proofread,keypoints,glossary,proscons}.md` | Content prompt-commands — text transforms on-theme with the ReVision toolkit (each takes text as its argument) |
 | `skills/claude-power-practices/` | Repo invariants checklist (points at `CLAUDE.md`) |
+| `skills/prompt-library/` | Save/retrieve prompts that worked well, backed by `docs/prompt-library.md` |
+| `agents/code-reviewer.md` | Read-only subagent: reviews a diff against `CLAUDE.md`'s invariants |
+| `agents/test-writer.md` | Subagent: adds pytest coverage mirroring the existing test conventions |
+| `agents/security-auditor.md` | Read-only subagent: audits against the Security notes checklist |
 | `hooks/session-start.sh` | `SessionStart` — installs dev deps on a cold remote container |
-| `settings.json` | permissions allowlist, `PostToolUse` auto-format hook, hidden attribution |
+| `hooks/git-safety-guard.sh` | `PreToolUse` (Bash) — hard-blocks destructive git commands (force-push, `reset --hard`, `clean -f`, `--no-verify`, …) |
+| `hooks/secret-scan-precommit.sh` | `PreToolUse` (Bash) — blocks `git commit` when the staged diff matches a likely-secret pattern |
+| `settings.json` | permissions allowlist, `PreToolUse` guard hooks, `PostToolUse` auto-format hook, hidden attribution |
 
 ## Durable install: project `.claude/`, not `~/.claude/`
 

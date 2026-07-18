@@ -29,6 +29,9 @@ jobs:
 
   npm-audit:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: power-pack
     steps:
       - uses: actions/checkout@v4
 
@@ -37,7 +40,7 @@ jobs:
         with:
           node-version: "20"
 
-      - name: Install root Node deps
+      - name: Install power-pack Node deps
         run: npm ci
 
       - name: Audit Node dependencies
