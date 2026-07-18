@@ -16,7 +16,7 @@
   "author": "ReVision Contributors",
   "repository": {
     "type": "git",
-    "url": "https://github.com/zdycomp/claudrick"
+    "url": "https://github.com/Codric-Enterprise/ClaudRick"
   },
   "bin": {
     "slash-pack": "cli.js"
