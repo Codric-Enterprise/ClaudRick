@@ -119,7 +119,11 @@ class RevisionHandler(BaseHTTPRequestHandler):
         params = self._extract_message_params(data)
         if params is None:
             return
-        prompt, max_tokens = params
+        prompt, max_tokens, stream = params
+
+        if stream:
+            self._handle_stream(prompt, max_tokens)
+            return
 
         try:
             result = self.client.create_message(prompt, max_tokens=max_tokens)
@@ -139,7 +143,7 @@ class RevisionHandler(BaseHTTPRequestHandler):
             self._send_json(400, {"error": {"message": "Request body is not valid JSON."}})
             return None
 
-    def _extract_message_params(self, data: dict) -> tuple[str, int] | None:
+    def _extract_message_params(self, data: dict) -> tuple[str, int, bool] | None:
         """Validate the prompt/max_tokens fields; sends a 400 and returns None if invalid."""
         prompt = data.get("prompt")
         if not isinstance(prompt, str) or not prompt.strip():
@@ -150,18 +154,7 @@ class RevisionHandler(BaseHTTPRequestHandler):
         if not isinstance(max_tokens, int) or max_tokens <= 0:
             max_tokens = 3000
 
-        if data.get("stream"):
-            self._handle_stream(prompt, max_tokens)
-            return
-
-        try:
-            result = self.client.create_message(prompt, max_tokens=max_tokens)
-        except AnthropicError as exc:
-            self._send_json(502, {"error": {"message": str(exc)}})
-            return
-
-        self._send_json(200, result)
-        return prompt, max_tokens
+        return prompt, max_tokens, bool(data.get("stream"))
 
     def _handle_stream(self, prompt: str, max_tokens: int) -> None:
         """Proxy an Anthropic SSE stream straight through to the browser."""
