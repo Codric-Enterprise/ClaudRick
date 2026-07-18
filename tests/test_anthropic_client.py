@@ -70,3 +70,55 @@ def test_url_error_is_wrapped(monkeypatch):
     client = AnthropicClient(api_key="sk-test", model="claude-sonnet-5")
     with pytest.raises(AnthropicError, match="Could not reach"):
         client.create_message("hello")
+
+
+class _FakeStreamResponse:
+    def __init__(self, lines):
+        self._lines = lines
+        self.closed = False
+
+    def __iter__(self):
+        return iter(self._lines)
+
+    def close(self):
+        self.closed = True
+
+
+def test_open_message_stream_success(monkeypatch):
+    captured = {}
+    lines = [
+        b"event: content_block_delta\n",
+        b'data: {"type":"content_block_delta","delta":{"type":"text_delta","text":"Hi"}}\n',
+        b"\n",
+    ]
+
+    def fake_urlopen(request, timeout=None, context=None):
+        captured["body"] = json.loads(request.data)
+        return _FakeStreamResponse(lines)
+
+    monkeypatch.setattr("urllib.request.urlopen", fake_urlopen)
+
+    client = AnthropicClient(api_key="sk-test", model="claude-sonnet-5")
+    stream = client.open_message_stream("hello", max_tokens=222)
+
+    assert captured["body"]["stream"] is True
+    assert captured["body"]["max_tokens"] == 222
+    assert list(stream) == lines
+
+
+def test_open_message_stream_missing_key_raises():
+    client = AnthropicClient(api_key=None, model="claude-sonnet-5")
+    with pytest.raises(AnthropicError, match="ANTHROPIC_API_KEY"):
+        client.open_message_stream("hello")
+
+
+def test_open_message_stream_http_error_is_wrapped(monkeypatch):
+    def fake_urlopen(request, timeout=None, context=None):
+        body = io.BytesIO(json.dumps({"error": {"message": "bad key"}}).encode())
+        raise urllib.error.HTTPError(request.full_url, 401, "Unauthorized", {}, body)
+
+    monkeypatch.setattr("urllib.request.urlopen", fake_urlopen)
+
+    client = AnthropicClient(api_key="sk-test", model="claude-sonnet-5")
+    with pytest.raises(AnthropicError, match="401.*bad key"):
+        client.open_message_stream("hello")
