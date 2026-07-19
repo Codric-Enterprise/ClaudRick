@@ -1,0 +1,93 @@
+{
+  "tool": "translate",
+  "output": "json",
+  "rubric": [
+    "valid_json",
+    "translation_non_empty",
+    "detected_language_correct",
+    "preserves_must_keep",
+    "sentence_count_parity",
+    "translation_differs_from_source"
+  ],
+  "inputs": [
+    {
+      "id": "T1",
+      "sourceLang": "auto",
+      "targetLang": "Spanish",
+      "style": "professional",
+      "text": "The tenant shall pay a security deposit of $1,500 before occupancy. The deposit is refundable within 30 days of move-out.",
+      "expect_detected": "English",
+      "must_keep": [
+        "$1,500",
+        "30"
+      ],
+      "sentences": 2
+    },
+    {
+      "id": "T2",
+      "sourceLang": "auto",
+      "targetLang": "English",
+      "style": "natural",
+      "text": "Le patient doit prendre 2 comprimés par jour pendant 10 jours. Ne pas dépasser la dose recommandée.",
+      "expect_detected": "French",
+      "must_keep": [
+        "2",
+        "10"
+      ],
+      "sentences": 2
+    },
+    {
+      "id": "T3",
+      "sourceLang": "auto",
+      "targetLang": "German",
+      "style": "literal",
+      "text": "Please submit the report by Friday. The meeting is scheduled for 3 PM in Room 204.",
+      "expect_detected": "English",
+      "must_keep": [
+        "3",
+        "204"
+      ],
+      "sentences": 2
+    },
+    {
+      "id": "T4",
+      "sourceLang": "auto",
+      "targetLang": "English",
+      "style": "professional",
+      "text": "El contrato se renueva automáticamente cada 12 meses salvo notificación por escrito con 60 días de antelación.",
+      "expect_detected": "Spanish",
+      "must_keep": [
+        "12",
+        "60"
+      ],
+      "sentences": 1
+    },
+    {
+      "id": "T5",
+      "sourceLang": "auto",
+      "targetLang": "Japanese",
+      "style": "natural",
+      "text": "Your order of 3 items has shipped. It should arrive within 5 business days.",
+      "expect_detected": "English",
+      "must_keep": [
+        "3",
+        "5"
+      ],
+      "sentences": 2
+    },
+    {
+      "id": "T6",
+      "sourceLang": "auto",
+      "targetLang": "English",
+      "style": "natural",
+      "text": "Der Vertrag endet am 31. Dezember 2026. Eine Kündigung ist bis zum 30. September möglich.",
+      "expect_detected": "German",
+      "must_keep": [
+        "31",
+        "2026",
+        "30"
+      ],
+      "sentences": 2
+    }
+  ]
+}
