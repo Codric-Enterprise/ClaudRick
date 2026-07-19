@@ -869,7 +869,7 @@ By responding you agree to enrollment in our partner marketing program and a rec
             noAnalyzerResults.style.display = 'none';
 
             try {
-                const raw = await callClaude(`Analyze this text for manipulative language patterns. Return ONLY valid JSON (no markdown, no explanations).
+                const raw = await callClaude(`Analyze this text for manipulative language and hidden or predatory terms. Return ONLY valid JSON (no markdown, no explanations).
 
 Text to analyze:
 ${text}
@@ -901,6 +901,12 @@ Return this exact JSON structure:
       { "type": "time_pressure|scarcity_claim|now_or_never|limited_quantity", "phrase": "exact phrase", "explanation": "the urgency tactic", "severity": "critical|high|medium|low" }
     ]
   },
+  "hidden_terms_and_costs": {
+    "severity": "critical|high|medium|low",
+    "detections": [
+      { "type": "hidden_fee|auto_renewal|forced_continuity|cancellation_obstruction|buried_limitation", "phrase": "exact phrase", "explanation": "what cost or obligation is buried or hard to escape", "severity": "critical|high|medium|low" }
+    ]
+  },
   "synthesis": "1-2 sentence summary of the overall manipulation profile and recommendations"
 }`, 2000, streamProgress(analyzeBtn, 'Analyzing'));
 
@@ -930,7 +936,8 @@ Return this exact JSON structure:
                 { key: 'deceptive_language', title: '🚩 Deceptive Language' },
                 { key: 'tone_manipulation', title: '😠 Tone Manipulation' },
                 { key: 'scare_tactics', title: '😨 Scare Tactics' },
-                { key: 'artificial_urgency', title: '⏰ Artificial Urgency' }
+                { key: 'artificial_urgency', title: '⏰ Artificial Urgency' },
+                { key: 'hidden_terms_and_costs', title: '💸 Hidden Terms & Costs' }
             ];
 
             sections.forEach(section => {
