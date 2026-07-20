@@ -139,6 +139,10 @@ class RevisionHandler(BaseHTTPRequestHandler):
             return
         prompt, max_tokens = params
 
+        if data.get("stream"):
+            self._handle_stream(prompt, max_tokens)
+            return
+
         try:
             result = self.client.create_message(prompt, max_tokens=max_tokens)
         except AnthropicError as exc:
@@ -168,17 +172,6 @@ class RevisionHandler(BaseHTTPRequestHandler):
         if not isinstance(max_tokens, int) or max_tokens <= 0:
             max_tokens = 3000
 
-        if data.get("stream"):
-            self._handle_stream(prompt, max_tokens)
-            return
-
-        try:
-            result = self.client.create_message(prompt, max_tokens=max_tokens)
-        except AnthropicError as exc:
-            self._send_json(502, {"error": {"message": str(exc)}})
-            return
-
-        self._send_json(200, result)
         return prompt, max_tokens
 
     def _handle_stream(self, prompt: str, max_tokens: int) -> None:
