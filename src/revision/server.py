@@ -28,6 +28,10 @@ _CONTENT_TYPES = {
 }
 
 
+#: Fixed key the global rate limiter tracks hits under (there's only one bucket).
+_GLOBAL_LIMITER_KEY = "*"
+
+
 class RevisionHandler(BaseHTTPRequestHandler):
     """Request handler bound to config/client/limiter via :func:`make_handler`."""
 
@@ -35,6 +39,7 @@ class RevisionHandler(BaseHTTPRequestHandler):
     static_dir: Path
     config: Config
     limiter: RateLimiter
+    global_limiter: RateLimiter
 
     server_version = "ReVision"
 
@@ -103,6 +108,19 @@ class RevisionHandler(BaseHTTPRequestHandler):
             self._send_json(401, {"error": {"message": "Unauthorized."}})
             return
 
+        allowed, retry_after = self.global_limiter.check(_GLOBAL_LIMITER_KEY)
+        if not allowed:
+            self._send_json(
+                429,
+                {
+                    "error": {
+                        "message": "ReVision has hit its shared request budget. Retry shortly."
+                    }
+                },
+                extra_headers={"Retry-After": str(retry_after)},
+            )
+            return
+
         allowed, retry_after = self.limiter.check(self._client_key())
         if not allowed:
             self._send_json(
@@ -167,7 +185,11 @@ class RevisionHandler(BaseHTTPRequestHandler):
 
 
 def make_handler(
-    client: AnthropicClient, static_dir: Path, config: Config, limiter: RateLimiter
+    client: AnthropicClient,
+    static_dir: Path,
+    config: Config,
+    limiter: RateLimiter,
+    global_limiter: RateLimiter,
 ) -> type[RevisionHandler]:
     """Return a handler subclass bound to its dependencies."""
     return type(
@@ -178,6 +200,7 @@ def make_handler(
             "static_dir": static_dir,
             "config": config,
             "limiter": limiter,
+            "global_limiter": global_limiter,
         },
     )
 
@@ -189,7 +212,8 @@ def create_server(
     config = config or Config.from_env()
     client = client or AnthropicClient(config.api_key, config.model)
     limiter = RateLimiter(config.rate_limit, config.rate_window)
-    handler = make_handler(client, STATIC_DIR, config, limiter)
+    global_limiter = RateLimiter(config.global_rate_limit, config.global_rate_window)
+    handler = make_handler(client, STATIC_DIR, config, limiter, global_limiter)
     return ThreadingHTTPServer((config.host, config.port), handler)
 
 
@@ -205,6 +229,11 @@ def serve(config: Config | None = None) -> None:
         print("Auth: bearer token required on /api/messages.")
     if config.rate_limit > 0:
         print(f"Rate limit: {config.rate_limit} requests / {config.rate_window:g}s per client.")
+    if config.global_rate_limit > 0:
+        print(
+            f"Global request budget: {config.global_rate_limit} requests / "
+            f"{config.global_rate_window:g}s across all clients."
+        )
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:

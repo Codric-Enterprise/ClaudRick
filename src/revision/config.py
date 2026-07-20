@@ -55,6 +55,13 @@ class Config:
     rate_window: float = 60.0
     #: Trust ``X-Forwarded-For`` for the client IP (enable only behind a proxy).
     trust_proxy: bool = False
+    #: Max ``/api/messages`` requests across *all* clients combined within
+    #: ``global_rate_window`` (0 = off). A hard ceiling on total Anthropic API
+    #: spend, independent of how many distinct clients are involved — set this
+    #: before exposing the server publicly on a shared API key.
+    global_rate_limit: int = 0
+    #: Global rate-limit sliding window in seconds.
+    global_rate_window: float = 3600.0
 
     @classmethod
     def from_env(cls) -> "Config":
@@ -68,4 +75,6 @@ class Config:
             rate_limit=_env_int("REVISION_RATE_LIMIT", 30),
             rate_window=float(_env_int("REVISION_RATE_WINDOW", 60)),
             trust_proxy=_env_bool("REVISION_TRUST_PROXY", False),
+            global_rate_limit=_env_int("REVISION_GLOBAL_RATE_LIMIT", 0),
+            global_rate_window=float(_env_int("REVISION_GLOBAL_RATE_WINDOW", 3600)),
         )

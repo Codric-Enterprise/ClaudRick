@@ -147,10 +147,12 @@ Uses a **src layout**: importable code is under `src/`; `pyproject.toml` sets
 - The API key is read only server-side; it must never reach the browser.
 - The static file server is confined to `src/revision/static/` and rejects path
   traversal — keep that guard when touching `do_GET`.
-- Rate limiting (on by default) and optional bearer auth guard `/api/messages`;
-  see `config.py`. Before any public deployment, additionally serve over HTTPS
-  (terminate TLS at a reverse proxy) and set `REVISION_TRUST_PROXY=true` so rate
-  limiting keys off the real client IP.
+- Rate limiting (on by default, per-client) and optional bearer auth guard
+  `/api/messages`; see `config.py`. Before any public deployment, additionally
+  serve over HTTPS (terminate TLS at a reverse proxy), set
+  `REVISION_TRUST_PROXY=true` so rate limiting keys off the real client IP, and
+  set `REVISION_GLOBAL_RATE_LIMIT` — per-client limiting alone doesn't bound
+  total Anthropic API spend against someone rotating IPs.
 
 ## Roadmap / "going mainstream" notes
 
@@ -163,6 +165,11 @@ Done:
   proxies Anthropic's SSE stream straight through; the frontend's `callClaude`
   reads it incrementally and reports live progress on each tool's button
   while still returning/parsing the full text once the stream ends.
+- ✅ Global request budget — `REVISION_GLOBAL_RATE_LIMIT` /
+  `REVISION_GLOBAL_RATE_WINDOW` cap total `/api/messages` requests across all
+  clients combined (checked before the per-client limit), so total Anthropic
+  API spend has a hard ceiling independent of how many distinct IPs hit the
+  server. Off by default; set it before any public deployment on a shared key.
 
 Likely next steps toward production:
 

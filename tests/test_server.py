@@ -191,6 +191,21 @@ def test_api_messages_stream_error_returns_502_json():
     assert data["error"]["message"] == "boom"
 
 
+def test_global_rate_limit_returns_429_with_retry_after():
+    client = _FakeClient(result={"content": []})
+    # Global budget is tighter than the per-client limit, so it's the one that trips.
+    with running_server(
+        client, rate_limit=30, global_rate_limit=2, global_rate_window=60.0
+    ) as base:
+        assert _post(base + "/api/messages", {"prompt": "a"})[0] == 200
+        assert _post(base + "/api/messages", {"prompt": "b"})[0] == 200
+        status, data, headers = _post(base + "/api/messages", {"prompt": "c"})
+    assert status == 429
+    assert "budget" in data["error"]["message"].lower()
+    assert int(headers["Retry-After"]) >= 1
+    assert client.calls == [("a", 3000), ("b", 3000)]
+
+
 def test_rate_limit_returns_429_with_retry_after():
     client = _FakeClient(result={"content": []})
     with running_server(client, rate_limit=2, rate_window=60.0) as base:

@@ -74,6 +74,8 @@ All settings come from the environment (CLI flags override where provided):
 | `REVISION_API_TOKEN`   | *(unset)*          | If set, `/api/messages` requires `Authorization: Bearer <token>`. |
 | `REVISION_RATE_LIMIT`  | `30`               | Max `/api/messages` requests per window per client (0 = off). |
 | `REVISION_RATE_WINDOW` | `60`               | Rate-limit window, in seconds.                                 |
+| `REVISION_GLOBAL_RATE_LIMIT` | `0` (off)    | Max `/api/messages` requests per window across **all** clients combined — a hard ceiling on total Anthropic API spend. |
+| `REVISION_GLOBAL_RATE_WINDOW` | `3600`     | Global rate-limit window, in seconds.                          |
 | `REVISION_TRUST_PROXY` | `false`            | Trust `X-Forwarded-For` for client IP (enable only behind a proxy). |
 | `GITHUB_TOKEN`         | *(unset)*          | GitHub token for local GitHub API / git operations (not used by the server). |
 
@@ -82,6 +84,12 @@ All settings come from the environment (CLI flags override where provided):
 - **Rate limiting** is on by default (30 requests / 60s per client IP) via a
   thread-safe sliding window. Exceeding it returns `429` with a `Retry-After`
   header. Set `REVISION_RATE_LIMIT=0` to disable.
+- **Global request budget** is opt-in (off by default): set
+  `REVISION_GLOBAL_RATE_LIMIT` to cap total `/api/messages` requests across
+  every client combined, regardless of how many distinct IPs are involved.
+  This is the guardrail to set before running ReVision publicly on a shared
+  API key — per-client limiting alone doesn't bound total spend against
+  someone rotating IPs.
 - **Bearer auth** is opt-in: set `REVISION_API_TOKEN` and callers must send
   `Authorization: Bearer <token>` on `/api/messages` (constant-time compared).
   Leave it unset for open local use.
