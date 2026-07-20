@@ -1,19 +1,8 @@
 {
-  "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
-  "name": "connect-apps-plugin",
-  "displayName": "Connect Apps",
-  "version": "0.1.0",
-  "description": "Deep, workflow-level skills for connecting Claude to external apps (Docusign, Figma, GitHub, Clerk, Scite, Exa) and cloud infrastructure platforms (AWS/GCP/Azure, Terraform, Docker/Kubernetes).",
-  "keywords": [
-    "integrations",
-    "mcp",
-    "cloud",
-    "devops",
-    "docusign",
-    "figma",
-    "github",
-    "clerk",
-    "terraform",
-    "kubernetes"
-  ]
+  "name": "connect-apps",
+  "description": "Manage auth and connect to 500+ apps using Composio. Perform real actions from Claude Code - send emails, create issues, post messages, and more.",
+  "author": {
+    "name": "Composio",
+    "email": "support@composio.dev"
+  }
 }
