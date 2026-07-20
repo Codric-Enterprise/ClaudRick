@@ -2,7 +2,7 @@
 
 **Structured Language And System Heuristics**
 
-77 battle-tested prompt-commands for Claude — as slash commands in Claude Code,
+80 battle-tested prompt-commands for Claude — as slash commands in Claude Code,
 or copy-paste prompts in any Claude chat.
 
 Each command is a carefully crafted prompt that turns a vague ask into a
@@ -10,16 +10,16 @@ structured, high-quality result.
 
 ## What's inside
 
-### Free (77 commands)
+### Free (80 commands)
 
 | Group | Commands | Examples |
 |-------|----------|----------|
-| Focus & Context | 9 | `/focus`, `/context`, `/clarify`, `/define` |
-| Think & Solve | 10 | `/think`, `/analyze`, `/compare`, `/challenge` |
+| Focus & Context | 10 | `/focus`, `/context`, `/clarify`, `/brief` |
+| Think & Solve | 11 | `/think`, `/analyze`, `/model-picker`, `/challenge` |
 | Organize & Structure | 9 | `/summary`, `/outline`, `/table`, `/flowchart` |
 | Code & Tech | 9 | `/code`, `/debug`, `/test`, `/refactor` |
 | Automate & Integrate | 8 | `/workflow`, `/automate`, `/api`, `/checklist` |
-| Personalize & Control | 8 | `/tone`, `/style`, `/format`, `/reset` |
+| Personalize & Control | 9 | `/tone`, `/style`, `/about-me`, `/reset` |
 | Write & Edit | 7 | `/write`, `/improve`, `/shorten`, `/rewrite` |
 | Data & Analysis | 5 | `/insights`, `/report`, `/stats`, `/forecast` |
 | Learn & Research | 4 | `/research`, `/learn`, `/sources`, `/explore` |

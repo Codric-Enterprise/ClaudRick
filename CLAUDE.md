@@ -60,10 +60,12 @@ Key design decisions:
 │   ├── skills/               # claude-power-practices + dev skills (dev-check, run-app, add-tool, test-and-lint)
 │   └── README.md             # explains the whole .claude/ setup
 ├── docs/claude-playbook.md   # full Claude tips + command reference (source of the above)
-├── docs/commands-pack.md     # all 80 commands: slash form + paste-ready prompt
+├── docs/claude-2026-cheatsheet.md # 2026 sheets: 5 surfaces, model stack, core files, app workflow
+├── docs/commands-pack.md     # all 83 commands: slash form + paste-ready prompt
 ├── docs/command-console.html # interactive searchable console (shareable artifact)
+├── mastery-system/index.html # "Mastery Protocol" — standalone 6-levels tool (model tree, prompt formula, core files)
 ├── power-pack/               # "S.L.A.S.H." — standalone distributable (see below)
-│   ├── commands/             # 77 portable commands (excludes repo-specific dev ones)
+│   ├── commands/             # 80 portable commands (excludes repo-specific dev ones)
 │   ├── skills/               # power-practices skill
 │   ├── cli.js                # cross-platform Node installer (npx slash-pack)
 │   ├── package.json          # npm-publishable package
@@ -72,14 +74,24 @@ Key design decisions:
 │   ├── README.md             # standalone product README
 │   └── LICENSE               # MIT
 ├── install-power-pack.sh     # legacy installer (wraps power-pack/install.sh)
-├── .github/workflows/ci.yml  # ruff check + ruff format --check + pytest (3.11-3.13) + docker build
+├── .github/workflows/ci.yml           # ruff check + ruff format --check + pytest (3.11-3.13) + docker build
+├── .github/workflows/deploy-pages.yml # publishes mastery-system/ to GitHub Pages on push to main
+├── .devcontainer/devcontainer.json    # generic universal devcontainer (no repo-specific setup)
 ├── Dockerfile                # stdlib-only image; binds 0.0.0.0:8000; HEALTHCHECK /healthz
 ├── .dockerignore
 ├── pyproject.toml            # hatchling build; pytest + ruff config
 ├── .env.example              # local env template (ANTHROPIC_API_KEY, GITHUB_TOKEN, …); copy to gitignored .env
+├── package.json, package-lock.json, sample.js  # unrelated GitHub Models/Azure AI
+│                              # inference sample (see note below) — not part of the ReVision app
 ├── README.md
 └── .gitignore
 ```
+
+> `package.json` / `sample.js` at the repo root are a standalone GitHub Models
+> demo script (`@azure-rest/ai-inference` calling `models.github.ai`), not a
+> ReVision runtime dependency — the "zero runtime dependencies" rule above
+> applies to the `src/revision` Python backend only. Don't wire this into the
+> app or treat its presence as license to add Node deps to ReVision itself.
 
 ## HTTP endpoints
 
@@ -190,8 +202,10 @@ Likely next steps toward production:
 
 ## Claude tooling (commands, skills, playbook)
 
-This repo ships Claude Code helpers under `.claude/`, distilled from two
-power-user cheat-sheets (see `docs/claude-playbook.md` for the full source):
+This repo ships Claude Code helpers under `.claude/`, distilled from power-user
+cheat-sheets (see `docs/claude-playbook.md` for the original source, and
+`docs/claude-2026-cheatsheet.md` for the 2026 update — the 5 surfaces, the
+model stack, the core-files framework, and the Claude Code app workflow):
 
 - **Commands pack** — `docs/commands-pack.md` lists every command's slash form
   alongside its paste-ready prompt (for use in a plain claude.ai chat, where
@@ -201,9 +215,10 @@ power-user cheat-sheets (see `docs/claude-playbook.md` for the full source):
   organize, code, automate, personalize): `/think`, `/analyze`, `/challenge`,
   `/compare`, `/recommend`, `/solve`, `/summary`, `/outline`, `/table`,
   `/mindmap`, `/flowchart`, `/explain`, `/debug`, `/optimize`, `/refactor`,
-  `/test`, `/convert`, `/workflow`, `/automate`, `/tasklist`, `/checklist`, and
-  more. Invoke with `/name [args]`. Note: `/clear`, `/memory`, and `/review`
-  collide with Claude Code built-ins, which take precedence.
+  `/test`, `/convert`, `/workflow`, `/automate`, `/tasklist`, `/checklist`,
+  `/brief`, `/about-me`, `/model-picker`, and more. Invoke with `/name [args]`. Note: `/clear`,
+  `/memory`, and `/review` collide with Claude Code built-ins, which take
+  precedence.
 - **Skills** in `.claude/skills/` —
   - `claude-power-practices`: auto-applied guardrails for high-stakes work (pick
     the right model, structure prompts with XML tags, use extended thinking,
