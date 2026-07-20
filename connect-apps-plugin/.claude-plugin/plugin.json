@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
+  "name": "connect-apps-plugin",
+  "displayName": "Connect Apps",
+  "version": "0.1.0",
+  "description": "Deep, workflow-level skills for connecting Claude to external apps (Docusign, Figma, GitHub, Clerk, Scite, Exa) and cloud infrastructure platforms (AWS/GCP/Azure, Terraform, Docker/Kubernetes).",
+  "keywords": [
+    "integrations",
+    "mcp",
+    "cloud",
+    "devops",
+    "docusign",
+    "figma",
+    "github",
+    "clerk",
+    "terraform",
+    "kubernetes"
+  ]
+}
