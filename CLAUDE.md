@@ -65,7 +65,8 @@ Key design decisions:
 ├── docs/command-console.html # interactive searchable console (shareable artifact)
 ├── mastery-system/index.html # "Mastery Protocol" — standalone 6-levels tool (model tree, prompt formula)
 │                              # deployed to GitHub Pages by .github/workflows/deploy-pages.yml
-├── power-pack/               # "S.L.A.S.H." — standalone distributable (see below)
+│                              # roadmap: mastery-system/ROADMAP.md
+├── power-pack/               # "S.L.A.S.H." — standalone distributable (see below; roadmap: power-pack/ROADMAP.md)
 │   ├── commands/              # 77 free portable commands (excludes repo-specific dev ones)
 │   ├── pro-commands/          # 30 Pro Pack commands (licensed tier: /architect, /security-audit, …)
 │   ├── skills/                # power-practices skill
@@ -74,6 +75,7 @@ Key design decisions:
 │   ├── install.sh              # Unix bash installer (--dry-run, --uninstall, backup)
 │   ├── index.html              # product landing page
 │   ├── README.md               # standalone product README
+│   ├── ROADMAP.md              # done / known gaps / next steps for this artifact
 │   └── LICENSE                 # MIT
 ├── install-power-pack.sh     # legacy installer (wraps power-pack/install.sh)
 ├── sample.js                 # standalone GitHub Models (Azure AI Inference) demo script — not
@@ -88,8 +90,15 @@ Key design decisions:
 ├── pyproject.toml            # hatchling build; pytest + ruff config
 ├── .env.example              # local env template (ANTHROPIC_API_KEY, GITHUB_TOKEN, …); copy to gitignored .env
 ├── README.md
+├── ROADMAP.md                # ReVision roadmap (done / next steps toward production)
 └── .gitignore
 ```
+
+Each independently-distributable artifact in this repo keeps its own roadmap
+next to it rather than sharing one: `ROADMAP.md` (ReVision, this app),
+`power-pack/ROADMAP.md` (S.L.A.S.H.), `mastery-system/ROADMAP.md` (Mastery
+Protocol). Update the relevant one instead of a shared list when planning
+next steps for a specific tool.
 
 > **GitHub Models sample.** `sample.js` (with the top-level `package.json` /
 > `package-lock.json`) is a standalone demo of calling a GitHub Models-hosted
@@ -164,22 +173,12 @@ Uses a **src layout**: importable code is under `src/`; `pyproject.toml` sets
   (terminate TLS at a reverse proxy) and set `REVISION_TRUST_PROXY=true` so rate
   limiting keys off the real client IP.
 
-## Roadmap / "going mainstream" notes
+## Roadmap
 
-Done:
-
-- ✅ Per-client rate limiting and optional bearer auth on `/api/messages`.
-- ✅ Docker image with `/healthz` HEALTHCHECK.
-- ✅ CI: ruff (lint + format) and pytest on 3.11–3.13, plus a Docker build.
-
-Likely next steps toward production:
-
-- Streaming responses (SSE) for faster perceived latency.
-- Persisting the model/config and per-tool token limits.
-- Publishing the Docker image (registry) and a deploy target.
-- A proper ASGI stack (e.g. FastAPI + uvicorn) *if* concurrency needs outgrow
-  the stdlib `ThreadingHTTPServer` — this would add the first runtime deps.
-- Shared/persistent rate-limit store (e.g. Redis) if run multi-process.
+See `ROADMAP.md` for what's done and what's next for the ReVision app.
+`power-pack/ROADMAP.md` and `mastery-system/ROADMAP.md` track the other two
+standalone artifacts in this repo — keep roadmap updates in the file for the
+thing that actually changed, not bundled into this one.
 
 ## Git & branching
 
