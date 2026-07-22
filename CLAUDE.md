@@ -52,7 +52,10 @@ Key design decisions:
 │   ├── test_config.py
 │   ├── test_anthropic_client.py   # mocks urllib.request.urlopen
 │   ├── test_ratelimit.py          # limiter unit tests (monkeypatched clock)
-│   └── test_server.py             # runs a live server on port 0, fake client
+│   ├── test_server.py             # runs a live server on port 0, fake client
+│   └── corpora/               # live evaluation harnesses (Node.js, not pytest — see below)
+│       ├── analyzer/          # 10 .docx fixtures + ground-truth.json + grade.js
+│       └── tools/              # Enhance/Translate/Jargonary inputs.json + grade-tools.js
 ├── .claude/                  # checked-in Claude Code tooling (see "Claude tooling" below)
 │   ├── settings.json         # permissions allowlist + PreToolUse/PostToolUse/SessionStart hooks
 │   ├── hooks/session-start.sh     # SessionStart: loads .env if present, installs dev deps on cold containers
@@ -142,6 +145,19 @@ Uses a **src layout**: importable code is under `src/`; `pyproject.toml` sets
 > Note: in some environments `pytest`/`ruff` are standalone binaries, not in the
 > interpreter's site-packages. If `python -m pytest` says "No module named
 > pytest", call `pytest` / `ruff` directly.
+
+- **Live evaluation corpora** (not run by `pytest` or CI — no `test_*.py` in
+  `tests/corpora/`): batch inputs + graders that score real Claude output
+  against ground truth for all four tools. Needs a running server with a real
+  API key:
+  ```bash
+  ANTHROPIC_API_KEY=sk-ant-... revision &
+  node tests/corpora/analyzer/grade.js http://localhost:8000       # Fine Print Analyzer
+  node tests/corpora/tools/grade-tools.js http://localhost:8000    # Enhance/Translate/Jargonary
+  node tests/corpora/tools/grade-tools.js http://localhost:8000 jargonary  # one tool only
+  ```
+  See `tests/corpora/README.md` and the two `evaluation-report.md` files for
+  rubric definitions and static (no-key) evaluation notes.
 
 ## Conventions
 
