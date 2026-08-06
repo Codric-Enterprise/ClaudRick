@@ -28,6 +28,15 @@
       "forced_continuity",
       "cancellation_obstruction",
       "buried_limitation"
+    ],
+    "contract_traps": [
+      "arbitration_clause",
+      "indemnification",
+      "liability_waiver",
+      "jurisdiction_shopping",
+      "class_action_waiver",
+      "unilateral_modification",
+      "confession_of_judgment"
     ]
   },
   "generated": "2026-07-18T20:29:05.966Z",
@@ -36,7 +45,7 @@
       "id": "D01",
       "file": "D01-gym-membership.docx",
       "kind": "predatory",
-      "title": "FitLife Health Club — Membership Agreement",
+      "title": "FitLife Health Club \u2014 Membership Agreement",
       "planted": [
         {
           "category": "hidden_terms_and_costs",
@@ -79,7 +88,7 @@
       "id": "D02",
       "file": "D02-free-trial-saas.docx",
       "kind": "predatory",
-      "title": "CloudNote Pro — Free Trial Terms",
+      "title": "CloudNote Pro \u2014 Free Trial Terms",
       "planted": [
         {
           "category": "hidden_terms_and_costs",
@@ -110,7 +119,7 @@
       "id": "D03",
       "file": "D03-payday-loan.docx",
       "kind": "predatory",
-      "title": "QuickCash Advance — Loan Offer",
+      "title": "QuickCash Advance \u2014 Loan Offer",
       "planted": [
         {
           "category": "deceptive_language",
@@ -147,7 +156,7 @@
       "id": "D04",
       "file": "D04-timeshare.docx",
       "kind": "predatory",
-      "title": "Azure Shores Vacation Ownership — Invitation",
+      "title": "Azure Shores Vacation Ownership \u2014 Invitation",
       "planted": [
         {
           "category": "tone_manipulation",
@@ -164,7 +173,7 @@
         {
           "category": "artificial_urgency",
           "subtype": "now_or_never",
-          "phrase": "available at today’s presentation only and will not be offered again",
+          "phrase": "available at today\u2019s presentation only and will not be offered again",
           "severity": "high"
         },
         {
@@ -184,7 +193,7 @@
       "id": "D05",
       "file": "D05-subscription-box.docx",
       "kind": "predatory",
-      "title": "GlowBox Beauty — Subscription Offer",
+      "title": "GlowBox Beauty \u2014 Subscription Offer",
       "planted": [
         {
           "category": "artificial_urgency",
@@ -264,7 +273,7 @@
       "id": "D07",
       "file": "D07-apartment-lease.docx",
       "kind": "predatory",
-      "title": "Maple Court Apartments — Lease Addendum",
+      "title": "Maple Court Apartments \u2014 Lease Addendum",
       "planted": [
         {
           "category": "hidden_terms_and_costs",
@@ -301,7 +310,7 @@
       "id": "D08",
       "file": "D08-crypto-pitch.docx",
       "kind": "predatory",
-      "title": "NovaCoin — Private Presale Access",
+      "title": "NovaCoin \u2014 Private Presale Access",
       "planted": [
         {
           "category": "tone_manipulation",
@@ -344,7 +353,7 @@
       "id": "C01",
       "file": "C01-library-newsletter.docx",
       "kind": "control",
-      "title": "Riverside Public Library — Monthly Newsletter",
+      "title": "Riverside Public Library \u2014 Monthly Newsletter",
       "planted": [],
       "expected_score_band": [
         0,
@@ -356,7 +365,7 @@
       "id": "C02",
       "file": "C02-fair-refund-policy.docx",
       "kind": "control",
-      "title": "Northwind Books — Refund Policy",
+      "title": "Northwind Books \u2014 Refund Policy",
       "planted": [],
       "expected_score_band": [
         0,
