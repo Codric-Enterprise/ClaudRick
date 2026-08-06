@@ -72,9 +72,9 @@ class RevisionHandler(BaseHTTPRequestHandler):
         if path == "/healthz":
             self._send_json(200, {"status": "ok"})
             return
-        if path == "/":
-            path = "/index.html"
+        self._serve_static("/index.html" if path == "/" else path)
 
+    def _serve_static(self, path: str) -> None:
         target = (self.static_dir / path.lstrip("/")).resolve()
         root = self.static_dir.resolve()
         # Guard against path traversal outside the static directory.
@@ -112,22 +112,18 @@ class RevisionHandler(BaseHTTPRequestHandler):
             )
             return
 
-        length = int(self.headers.get("content-length", 0) or 0)
-        raw = self.rfile.read(length) if length else b"{}"
-        try:
-            data = json.loads(raw)
-        except json.JSONDecodeError:
-            self._send_json(400, {"error": {"message": "Request body is not valid JSON."}})
+        data = self._read_json_body()
+        if data is None:
             return
 
-        prompt = data.get("prompt")
-        if not isinstance(prompt, str) or not prompt.strip():
-            self._send_json(400, {"error": {"message": "Missing or empty 'prompt'."}})
+        params = self._extract_message_params(data)
+        if params is None:
             return
+        prompt, max_tokens, stream = params
 
-        max_tokens = data.get("max_tokens", 3000)
-        if not isinstance(max_tokens, int) or max_tokens <= 0:
-            max_tokens = 3000
+        if stream:
+            self._handle_stream(prompt, max_tokens)
+            return
 
         try:
             result = self.client.create_message(prompt, max_tokens=max_tokens)
@@ -136,6 +132,50 @@ class RevisionHandler(BaseHTTPRequestHandler):
             return
 
         self._send_json(200, result)
+
+    def _read_json_body(self) -> dict | None:
+        """Read and parse the request body; sends a 400 and returns None on bad JSON."""
+        length = int(self.headers.get("content-length", 0) or 0)
+        raw = self.rfile.read(length) if length else b"{}"
+        try:
+            return json.loads(raw)
+        except json.JSONDecodeError:
+            self._send_json(400, {"error": {"message": "Request body is not valid JSON."}})
+            return None
+
+    def _extract_message_params(self, data: dict) -> tuple[str, int, bool] | None:
+        """Validate the prompt/max_tokens fields; sends a 400 and returns None if invalid."""
+        prompt = data.get("prompt")
+        if not isinstance(prompt, str) or not prompt.strip():
+            self._send_json(400, {"error": {"message": "Missing or empty 'prompt'."}})
+            return None
+
+        max_tokens = data.get("max_tokens", 3000)
+        if not isinstance(max_tokens, int) or max_tokens <= 0:
+            max_tokens = 3000
+
+        return prompt, max_tokens, bool(data.get("stream"))
+
+    def _handle_stream(self, prompt: str, max_tokens: int) -> None:
+        """Proxy an Anthropic SSE stream straight through to the browser."""
+        try:
+            upstream = self.client.open_message_stream(prompt, max_tokens=max_tokens)
+        except AnthropicError as exc:
+            self._send_json(502, {"error": {"message": str(exc)}})
+            return
+
+        self.send_response(200)
+        self.send_header("content-type", "text/event-stream")
+        self.send_header("cache-control", "no-cache")
+        self.end_headers()
+        try:
+            for line in upstream:
+                self.wfile.write(line)
+                self.wfile.flush()
+        except (BrokenPipeError, ConnectionResetError):
+            pass
+        finally:
+            upstream.close()
 
     def log_message(self, *args) -> None:  # noqa: A002 (silence default stderr logging)
         """Suppress the default per-request stderr logging."""

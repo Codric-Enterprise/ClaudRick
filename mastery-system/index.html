@@ -1,0 +1,830 @@
+<title>Mastery Protocol — 6 Levels to Claude Power User</title>
+<style>
+  @font-face{font-family:'JB';font-style:normal;font-weight:400 700;font-display:swap;
+    src:local('JetBrains Mono'),local('SF Mono'),local('Fira Code'),local('Menlo'),local('Consolas')}
+  :root{
+    --bg:#0E0D0C;--surface:#171615;--surface-2:#1E1D1B;--surface-3:#262422;--border:#2E2B28;
+    --text:#EDE9E3;--muted:#9A948D;--faint:#5E5A55;
+    --accent:#F59E0B;--accent-soft:rgba(245,158,11,.12);--accent-strong:#FBBF24;
+    --l1:#EF6461;--l1s:rgba(239,100,97,.12);
+    --l2:#F59E0B;--l2s:rgba(245,158,11,.12);
+    --l3:#EAB308;--l3s:rgba(234,179,8,.12);
+    --l4:#14B8A6;--l4s:rgba(20,184,166,.12);
+    --l5:#6366F1;--l5s:rgba(99,102,241,.12);
+    --l6:#A855F7;--l6s:rgba(168,85,247,.12);
+    --good:#4ADE80;--good-s:rgba(74,222,128,.10);
+    --font-ui:'Inter',system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    --font-mono:'JB',ui-monospace,"SF Mono","JetBrains Mono",Menlo,Consolas,monospace;
+    --radius:10px;
+  }
+  :root[data-theme="light"]{
+    --bg:#F7F5F1;--surface:#FFFFFF;--surface-2:#F0EDE8;--surface-3:#E8E4DD;--border:#D8D2C8;
+    --text:#1C1917;--muted:#6B6560;--faint:#9A948D;
+    --accent:#B45309;--accent-soft:rgba(180,83,9,.08);--accent-strong:#92400E;
+    --l1:#DC2626;--l1s:rgba(220,38,38,.08);
+    --l2:#B45309;--l2s:rgba(180,83,9,.08);
+    --l3:#A16207;--l3s:rgba(161,98,7,.08);
+    --l4:#0F766E;--l4s:rgba(15,118,110,.08);
+    --l5:#4338CA;--l5s:rgba(67,56,202,.08);
+    --l6:#7C3AED;--l6s:rgba(124,58,237,.08);
+    --good:#166534;--good-s:rgba(22,101,52,.06);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);font-family:var(--font-ui);
+    line-height:1.6;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:800px;margin:0 auto;padding:0 20px 80px}
+
+  /* quick nav */
+  body{padding-top:48px}
+  .quicknav{position:fixed;top:0;left:0;right:0;z-index:30;display:flex;align-items:center;gap:5px;
+    padding:8px 10px;background:var(--bg);border-bottom:1px solid var(--border);
+    overflow-x:auto;scrollbar-width:thin}
+  .quicknav::-webkit-scrollbar{height:3px}
+  .quicknav a{flex-shrink:0;font-family:var(--font-mono);font-size:.62rem;font-weight:700;
+    text-transform:uppercase;letter-spacing:.05em;color:var(--muted);text-decoration:none;
+    padding:6px 9px;border-radius:6px;border:1px solid transparent;white-space:nowrap;transition:.15s}
+  .quicknav a:hover{color:var(--text);border-color:var(--border)}
+  .quicknav a.active{color:#fff;background:var(--accent);border-color:var(--accent)}
+
+  /* theme toggle */
+  .theme-btn{flex-shrink:0;margin-left:auto;background:var(--surface-2);
+    border:1px solid var(--border);color:var(--muted);border-radius:7px;padding:5px 8px;
+    cursor:pointer;font-size:.9rem;line-height:1}
+  .theme-btn:hover{color:var(--text);border-color:var(--faint)}
+
+  /* hero */
+  .hero{padding:52px 0 40px;text-align:center}
+  .hero .brand{font-family:var(--font-mono);font-size:.68rem;text-transform:uppercase;
+    letter-spacing:.16em;color:var(--accent);font-weight:700;margin-bottom:14px}
+  .hero h1{font-size:clamp(1.6rem,1.2rem+2vw,2.6rem);font-weight:800;letter-spacing:-.03em;
+    line-height:1.1;text-wrap:balance;margin-bottom:12px}
+  .hero h1 em{font-style:normal;background:linear-gradient(135deg,var(--l1),var(--l3),var(--l4),var(--l5),var(--l6));
+    -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+  .hero .sub{color:var(--muted);font-size:.92rem;max-width:50ch;margin:0 auto;line-height:1.5}
+  .score-pill{display:inline-block;margin-top:16px;font-family:var(--font-mono);font-size:.7rem;
+    font-weight:700;letter-spacing:.04em;color:var(--accent);background:var(--accent-soft);
+    border:1px solid var(--border);border-radius:20px;padding:6px 14px}
+
+  /* filter */
+  .filter-wrap{margin:22px 0 8px}
+  .filter-input{width:100%;background:var(--surface-2);border:1px solid var(--border);
+    color:var(--text);border-radius:8px;padding:10px 14px;font-size:.84rem;font-family:var(--font-ui)}
+  .filter-input::placeholder{color:var(--faint)}
+  .filter-input:focus{outline:none;border-color:var(--accent)}
+  .filter-hide{display:none!important}
+
+  /* progress bar */
+  .progress-bar{display:flex;gap:4px;margin:32px 0 40px;padding:0 4px}
+  .progress-bar .seg{flex:1;height:6px;border-radius:3px;cursor:pointer;transition:.2s;opacity:.4}
+  .progress-bar .seg:hover,.progress-bar .seg.active{opacity:1;transform:scaleY(1.4)}
+  .seg-1{background:var(--l1)}.seg-2{background:var(--l2)}.seg-3{background:var(--l3)}
+  .seg-4{background:var(--l4)}.seg-5{background:var(--l5)}.seg-6{background:var(--l6)}
+
+  /* section headers */
+  .sh{font-family:var(--font-mono);font-size:.66rem;text-transform:uppercase;letter-spacing:.14em;
+    font-weight:700;margin:48px 0 16px;padding-bottom:8px;border-bottom:2px solid var(--border)}
+
+  /* level cards */
+  .level{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+    margin:14px 0;overflow:hidden;transition:.2s;scroll-margin-top:60px}
+  .sh{scroll-margin-top:60px}
+  .level:hover{border-color:var(--faint)}
+  .level-head{display:flex;align-items:center;gap:14px;padding:16px 20px;cursor:pointer;user-select:none}
+  .level-badge{font-family:var(--font-mono);font-size:.58rem;font-weight:800;text-transform:uppercase;
+    letter-spacing:.1em;padding:4px 10px;border-radius:6px;min-width:48px;text-align:center;color:#fff}
+  .b1{background:var(--l1)}.b2{background:var(--l2)}.b3{background:var(--l3)}
+  .b4{background:var(--l4)}.b5{background:var(--l5)}.b6{background:var(--l6)}
+  .level-head .info{flex:1}
+  .level-head .info h3{font-size:.95rem;font-weight:700;line-height:1.3}
+  .level-head .info .tag{font-family:var(--font-mono);font-size:.58rem;text-transform:uppercase;
+    letter-spacing:.1em;color:var(--faint);font-weight:600}
+  .level-head .arrow{color:var(--faint);font-size:.8rem;transition:.2s;font-family:var(--font-mono)}
+  .level.open .level-head .arrow{transform:rotate(90deg)}
+  .level-body{display:none;padding:0 20px 20px;border-top:1px solid var(--border)}
+  .level.open .level-body{display:block}
+
+  /* technique cards inside levels */
+  .tech{background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:14px 16px;margin:12px 0}
+  .tech h4{font-size:.86rem;font-weight:700;margin-bottom:4px;display:flex;align-items:center;gap:8px}
+  .tech h4 .num{font-family:var(--font-mono);font-size:.6rem;color:var(--faint);font-weight:600;
+    background:var(--surface-3);padding:2px 7px;border-radius:4px}
+  .tech p{font-size:.82rem;color:var(--muted);line-height:1.5;margin-bottom:8px}
+
+  /* code blocks */
+  .codeblock{position:relative;background:var(--surface-3);border:1px solid var(--border);
+    border-radius:6px;padding:10px 14px;font-family:var(--font-mono);font-size:.74rem;
+    color:var(--text);line-height:1.6;overflow-x:auto;margin:8px 0;white-space:pre;cursor:pointer;transition:.15s}
+  .codeblock:hover{border-color:var(--accent)}
+  .codeblock.copied{border-color:var(--good);color:var(--good)}
+  .codeblock .copy-hint{position:absolute;top:6px;right:8px;font-size:.56rem;
+    text-transform:uppercase;letter-spacing:.1em;color:var(--faint);pointer-events:none}
+
+  /* model tree */
+  .model-grid{display:grid;gap:10px;grid-template-columns:repeat(auto-fill,minmax(170px,1fr))}
+  .model-card{background:var(--surface-2);border:1px solid var(--border);border-radius:8px;
+    padding:14px;text-align:center}
+  .model-card .name{font-family:var(--font-mono);font-weight:700;font-size:.9rem;margin-bottom:2px}
+  .model-card .desc{font-size:.76rem;color:var(--muted);line-height:1.4}
+  .model-card .use{font-size:.7rem;color:var(--faint);margin-top:6px;font-family:var(--font-mono);
+    background:var(--surface-3);padding:4px 8px;border-radius:4px;display:inline-block}
+  .mc-haiku{border-top:3px solid #94A3B8}
+  .mc-sonnet{border-top:3px solid var(--l2)}
+  .mc-opus{border-top:3px solid var(--l4)}
+  .mc-fable{border-top:3px solid var(--l1)}
+  .mc-mythos{border-top:3px solid var(--l6)}
+  .fc-about{border-top:3px solid var(--l1)}
+  .fc-anti{border-top:3px solid var(--l2)}
+  .fc-brief{border-top:3px solid var(--l4)}
+  .fc-rules{border-top:3px solid var(--l5)}
+
+  /* prompt template */
+  .prompt-tmpl{background:var(--surface-2);border:1px solid var(--border);border-radius:8px;
+    padding:16px;margin:12px 0}
+  .prompt-tmpl .label{font-family:var(--font-mono);font-size:.62rem;text-transform:uppercase;
+    letter-spacing:.12em;font-weight:700;margin-bottom:8px}
+  .prompt-tmpl .step{display:flex;gap:10px;align-items:flex-start;margin:8px 0}
+  .prompt-tmpl .step .n{font-family:var(--font-mono);font-size:.64rem;font-weight:700;
+    min-width:20px;height:20px;border-radius:50%;display:flex;align-items:center;
+    justify-content:center;flex-shrink:0;margin-top:2px}
+  .prompt-tmpl .step .t{font-size:.82rem;color:var(--muted);line-height:1.45}
+  .prompt-tmpl .step .t strong{color:var(--text)}
+
+  /* agent grid */
+  .agent-grid{display:grid;gap:8px;grid-template-columns:repeat(auto-fill,minmax(140px,1fr))}
+  .agent-chip{background:var(--surface-2);border:1px solid var(--border);border-radius:8px;
+    padding:10px 12px;font-size:.78rem;cursor:pointer;transition:.15s}
+  .agent-chip:hover{border-color:var(--accent);background:var(--accent-soft)}
+  .agent-chip .role{font-weight:700;font-size:.8rem;margin-bottom:2px}
+  .agent-chip .desc{color:var(--faint);font-size:.68rem;font-family:var(--font-mono)}
+  .agent-chip.copied{border-color:var(--good)}
+
+  /* token tips */
+  .tip-grid{display:grid;gap:10px;grid-template-columns:1fr 1fr}
+  @media(max-width:560px){.tip-grid{grid-template-columns:1fr}}
+  .tip-card{background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:14px}
+  .tip-card h4{font-size:.84rem;font-weight:700;margin-bottom:4px}
+  .tip-card p{font-size:.78rem;color:var(--muted);line-height:1.45}
+  .tip-card .savings{font-family:var(--font-mono);font-size:.68rem;color:var(--good);
+    background:var(--good-s);padding:2px 8px;border-radius:4px;display:inline-block;margin-top:6px}
+
+  /* checklist */
+  .mastery-checklist{list-style:none}
+  .mastery-checklist li{padding:8px 0 8px 32px;position:relative;font-size:.86rem;
+    color:var(--muted);border-bottom:1px solid var(--border);cursor:pointer;transition:.1s}
+  .mastery-checklist li::before{content:"\25A1";position:absolute;left:4px;font-size:1rem;
+    color:var(--faint);font-family:var(--font-mono)}
+  .mastery-checklist li.done{color:var(--good);text-decoration:line-through;opacity:.6}
+  .mastery-checklist li.done::before{content:"\25A0";color:var(--good)}
+  .mastery-checklist li strong{color:var(--text)}
+
+  /* the chain — super-tool pipeline */
+  .chain-section{background:var(--surface);border:1px solid var(--border);border-radius:12px;
+    padding:24px 22px;margin:20px 0}
+  .chain-section .sh{margin-top:0}
+  .chain-intro{font-size:.84rem;color:var(--muted);line-height:1.55;margin-bottom:18px}
+  .chain-pipeline{display:flex;align-items:flex-start;gap:0;overflow-x:auto;padding:6px 2px 18px;
+    scrollbar-width:thin}
+  .chain-node{display:flex;flex-direction:column;align-items:center;gap:7px;flex-shrink:0;width:96px;text-align:center}
+  .chain-node .dot{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+    font-family:var(--font-mono);font-weight:800;font-size:.82rem;color:#fff;flex-shrink:0}
+  .chain-node .lbl{font-size:.68rem;font-weight:700;line-height:1.25;color:var(--text)}
+  .chain-node .from{font-size:.6rem;color:var(--faint);font-family:var(--font-mono)}
+  .chain-arrow{color:var(--faint);font-size:1.1rem;flex-shrink:0;margin:8px 2px 0}
+  .chain-stage{background:var(--surface-2);border:1px solid var(--border);border-left:3px solid var(--border);
+    border-radius:8px;padding:14px 16px;margin:10px 0}
+  .chain-stage h4{font-size:.86rem;font-weight:700;margin-bottom:3px;display:flex;align-items:center;gap:8px}
+  .chain-stage .src{font-family:var(--font-mono);font-size:.6rem;color:var(--faint);font-weight:600}
+  .chain-stage p{font-size:.8rem;color:var(--muted);line-height:1.5;margin-bottom:8px}
+  .chain-master{margin-top:20px;padding:18px;border-radius:10px;
+    background:linear-gradient(135deg,var(--l1s),var(--l3s) 45%,var(--l6s));
+    border:1px solid var(--border)}
+  .chain-master .label{font-family:var(--font-mono);font-size:.64rem;text-transform:uppercase;
+    letter-spacing:.12em;font-weight:800;color:var(--accent);margin-bottom:10px;display:flex;
+    align-items:center;justify-content:space-between;gap:8px}
+  .chain-master .label .hint{font-weight:600;color:var(--faint);text-transform:none;letter-spacing:0}
+
+  :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  @media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<nav class="quicknav" id="quicknav" aria-label="Section navigation">
+  <a href="#L1" data-target="L1">1 Start</a>
+  <a href="#L2" data-target="L2">2 Brief</a>
+  <a href="#L3" data-target="L3">3 Plan</a>
+  <a href="#L4" data-target="L4">4 Shortcuts</a>
+  <a href="#L5" data-target="L5">5 Delegate</a>
+  <a href="#L6" data-target="L6">6 Automate</a>
+  <a href="#models" data-target="models">Models</a>
+  <a href="#formula" data-target="formula">Formula</a>
+  <a href="#corefiles" data-target="corefiles">Files</a>
+  <a href="#tokens" data-target="tokens">Tokens</a>
+  <a href="#agents" data-target="agents">Agents</a>
+  <a href="#checklist-h" data-target="checklist-h">Checklist</a>
+  <a href="#chain" data-target="chain">Chain</a>
+  <button class="theme-btn" id="themeBtn" aria-label="Toggle theme">&#9685;</button>
+</nav>
+
+<div class="wrap">
+  <div class="hero">
+    <div class="brand">Mastery Protocol</div>
+    <h1>6 Levels from First Install to <em>Claude Power&nbsp;User</em></h1>
+    <p class="sub">Every technique, config, and shortcut — distilled from real Claude workflows into one interactive tool. Click any level to expand.</p>
+    <div class="score-pill" id="scorePill">0 / 18 mastered — 0%</div>
+  </div>
+
+  <div class="filter-wrap">
+    <input type="text" id="filterInput" class="filter-input" placeholder="Filter techniques, tips, agents… (e.g. &quot;subagent&quot;, &quot;token&quot;, &quot;model&quot;)" oninput="applyFilter(this.value)">
+  </div>
+
+  <div class="progress-bar">
+    <div class="seg seg-1 active" data-level="1"></div>
+    <div class="seg seg-2" data-level="2"></div>
+    <div class="seg seg-3" data-level="3"></div>
+    <div class="seg seg-4" data-level="4"></div>
+    <div class="seg seg-5" data-level="5"></div>
+    <div class="seg seg-6" data-level="6"></div>
+  </div>
+
+  <!-- ═══════════════════════════════════════ LEVEL 1 ═══ -->
+  <div class="level open" id="L1">
+    <div class="level-head" onclick="toggle(this)">
+      <span class="level-badge b1">LVL 1</span>
+      <div class="info"><h3>Start</h3><span class="tag">Surface</span></div>
+      <span class="arrow">&#9656;</span>
+    </div>
+    <div class="level-body">
+      <div class="tech">
+        <h4><span class="num">1</span> Install Claude Code</h4>
+        <p>Terminal, VS Code, or JetBrains — one command, 2 minutes.</p>
+        <div class="codeblock" onclick="copyBlock(this)">npm install -g @anthropic-ai/claude-code<span class="copy-hint">click to copy</span></div>
+      </div>
+      <div class="tech">
+        <h4><span class="num">2</span> Run /init to scaffold your project</h4>
+        <p>Claude reads your repo and writes CLAUDE.md in 30 seconds — your standing brief for every future session.</p>
+        <div class="codeblock" onclick="copyBlock(this)">/init<span class="copy-hint">click to copy</span></div>
+      </div>
+      <div class="tech">
+        <h4><span class="num">3</span> Commit first, always</h4>
+        <p>Before Claude changes a single file, make sure your work is saved. Then /rewind is an instant undo when it drifts.</p>
+        <div class="codeblock" onclick="copyBlock(this)">git add -A && git commit -m "checkpoint before claude"<span class="copy-hint">click to copy</span></div>
+      </div>
+      <div class="tech">
+        <h4><span class="num">4</span> Build a personal command library</h4>
+        <p>Save your best prompts as reusable slash commands once, in <code style="font-family:var(--font-mono);font-size:.78rem">~/.claude/commands/</code>, and they're one word away in every project forever.</p>
+        <div class="codeblock" onclick="copyBlock(this)">mkdir -p ~/.claude/commands
+cat > ~/.claude/commands/think.md << 'EOF'
+---
+description: Reason step by step before answering
+---
+Think through $ARGUMENTS step by step: restate the problem,
+weigh the options, check your reasoning, then conclude.
+EOF<span class="copy-hint">click to copy</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════ LEVEL 2 ═══ -->
+  <div class="level" id="L2">
+    <div class="level-head" onclick="toggle(this)">
+      <span class="level-badge b2">LVL 2</span>
+      <div class="info"><h3>Brief It</h3><span class="tag">Setup &mdash; The 4-File System</span></div>
+      <span class="arrow">&#9656;</span>
+    </div>
+    <div class="level-body">
+      <div class="tech">
+        <h4><span class="num">1</span> CLAUDE.md — The Rule Layer</h4>
+        <p>Your onboarding doc. Brand, voice, stack, workflow rules. Read before every chat. Drop a project CLAUDE.md in every folder.</p>
+        <div class="codeblock" onclick="copyBlock(this)"># CLAUDE.md
+
+## Workflow Orchestration
+- Plan first for any 3+ step task.
+- Stop and re-plan if off track.
+
+## Subagent Strategy
+- Use them liberally.
+- One task per subagent.
+
+## Voice
+- [Your brand voice rules here]
+
+## Stack
+- [Your tech stack here]<span class="copy-hint">click to copy</span></div>
+      </div>
+      <div class="tech">
+        <h4><span class="num">2</span> Memory — The Lesson Layer</h4>
+        <p>Claude updates ~/.claude/memory/ as it learns. Every correction, preference, or rule saves as its own .md file. Auto-loads in every session.</p>
+        <div class="codeblock" onclick="copyBlock(this)">Tell Claude: "Remember that I prefer TypeScript over JavaScript"
+# → saves to ~/.claude/memory/typescript-preference.md
+# → auto-loads in every future session<span class="copy-hint">click to copy</span></div>
+      </div>
+      <div class="tech">
+        <h4><span class="num">3</span> Define "done" before starting</h4>
+        <p>Claude writes to a target, not a guess. Tell it what the output looks like before it starts writing.</p>
+        <div class="codeblock" onclick="copyBlock(this)">"I need a REST API for user management. Done looks like:
+- 5 endpoints (CRUD + search)
+- OpenAPI spec
+- Integration tests
+- All tests passing"<span class="copy-hint">click to copy</span></div>
+      </div>
+      <div class="tech">
+        <h4><span class="num">4</span> Save the fix</h4>
+        <p>Same mistake twice becomes a new CLAUDE.md rule. Don't correct Claude repeatedly — write it down once.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════ LEVEL 3 ═══ -->
+  <div class="level" id="L3">
+    <div class="level-head" onclick="toggle(this)">
+      <span class="level-badge b3">LVL 3</span>
+      <div class="info"><h3>Plan &amp; Guard</h3><span class="tag">Workflow</span></div>
+      <span class="arrow">&#9656;</span>
+    </div>
+    <div class="level-body">
+      <div class="tech">
+        <h4><span class="num">1</span> Run /plan first</h4>
+        <p>30 seconds of alignment saves 20 minutes. Claude maps the work before touching code.</p>
+        <div class="codeblock" onclick="copyBlock(this)">/plan Build a rate limiter middleware for Express with sliding window, per-IP tracking, and configurable limits<span class="copy-hint">click to copy</span></div>
+      </div>
+      <div class="tech">
+        <h4><span class="num">2</span> Work in branches</h4>
+        <p>Keep main clean. Every task gets its own branch. Claude can be aggressive when main is safe.</p>
+        <div class="codeblock" onclick="copyBlock(this)">git checkout -b feature/rate-limiter
+# Let Claude work freely
+# Review, then merge<span class="copy-hint">click to copy</span></div>
+      </div>
+      <div class="tech">
+        <h4><span class="num">3</span> Feed errors back</h4>
+        <p>Paste the full stack trace. Claude fixes root causes, not symptoms, when it sees the real error.</p>
+        <div class="codeblock" onclick="copyBlock(this)">"This test is failing. Here's the full output:
+[paste stack trace]
+Fix the root cause, not just the symptom."<span class="copy-hint">click to copy</span></div>
+      </div>
+      <div class="tech">
+        <h4><span class="num">4</span> Auto mode</h4>
+        <p>Scope it, let it run. Only the big calls stop you — irreversible actions, ambiguous decisions.</p>
+        <div class="codeblock" onclick="copyBlock(this)">"Do the simplest thing that works. Only pause for me on irreversible actions."<span class="copy-hint">click to copy</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════ LEVEL 4 ═══ -->
+  <div class="level" id="L4">
+    <div class="level-head" onclick="toggle(this)">
+      <span class="level-badge b4">LVL 4</span>
+      <div class="info"><h3>Shortcuts</h3><span class="tag">Power-Ups</span></div>
+      <span class="arrow">&#9656;</span>
+    </div>
+    <div class="level-body">
+      <div class="tech">
+        <h4><span class="num">1</span> Build skills</h4>
+        <p>A 200-word prompt becomes an 8-character command. Walk through a process once, save it forever.</p>
+        <div class="codeblock" onclick="copyBlock(this)">mkdir -p ~/.claude/skills/summarise
+cat > ~/.claude/skills/summarise/SKILL.md << 'EOF'
+---
+name: summarise
+description: turn notes into a brief
+---
+Read the input, extract the 3-5 key points,
+write a 2-paragraph executive summary.
+Use active voice. No jargon.
+EOF<span class="copy-hint">click to copy</span></div>
+      </div>
+      <div class="tech">
+        <h4><span class="num">2</span> Slash commands</h4>
+        <p>Fire a whole workflow from any session. A well-stocked command library gives you dozens — /think, /analyze, /debug, /pitch, /architect.</p>
+        <div class="codeblock" onclick="copyBlock(this)">/think What's the most elegant way to handle auth in this app?
+/debug This endpoint returns 500 on large payloads
+/architect Design a notification system for 1M users<span class="copy-hint">click to copy</span></div>
+      </div>
+      <div class="tech">
+        <h4><span class="num">3</span> Swap models strategically</h4>
+        <p>Sonnet for 90% of work. Opus when it earns it. Fable for the hardest 10%. Don't pay for brains you don't need.</p>
+        <div class="codeblock" onclick="copyBlock(this)">/model sonnet    # everyday tasks — fast, cheap
+/model opus      # deep work — architecture, complex bugs
+/model fable     # hardest tasks — multi-step reasoning<span class="copy-hint">click to copy</span></div>
+      </div>
+      <div class="tech">
+        <h4><span class="num">4</span> Output to files, not chat</h4>
+        <p>Real docs and code, not chat previews. Tell Claude to write files directly.</p>
+        <div class="codeblock" onclick="copyBlock(this)">"Write the migration plan to docs/migration-plan.md, not in chat."<span class="copy-hint">click to copy</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════ LEVEL 5 ═══ -->
+  <div class="level" id="L5">
+    <div class="level-head" onclick="toggle(this)">
+      <span class="level-badge b5">LVL 5</span>
+      <div class="info"><h3>Delegate</h3><span class="tag">Scale</span></div>
+      <span class="arrow">&#9656;</span>
+    </div>
+    <div class="level-body">
+      <div class="tech">
+        <h4><span class="num">1</span> Use subagents</h4>
+        <p>Parallel workers spread across one big task. One agent scans, another drafts, another QAs.</p>
+        <div class="codeblock" onclick="copyBlock(this)">"Use subagents for this:
+- Agent 1: scan all API endpoints for security issues
+- Agent 2: draft the fix for each finding
+- Agent 3: write tests for each fix"<span class="copy-hint">click to copy</span></div>
+      </div>
+      <div class="tech">
+        <h4><span class="num">2</span> Build agent specialists in .claude/agents/</h4>
+        <p>Each agent is an employee with one job. Describe the specialist you need in plain English.</p>
+        <div class="codeblock" onclick="copyBlock(this)">mkdir -p .claude/agents
+cat > .claude/agents/code-reviewer.md << 'EOF'
+You are a senior code reviewer. For every diff:
+1. Check for bugs, security issues, and performance problems
+2. Verify test coverage for changed code
+3. Flag any style violations
+4. Suggest simplifications
+Be specific. Quote line numbers. No generic praise.
+EOF<span class="copy-hint">click to copy</span></div>
+      </div>
+      <div class="tech">
+        <h4><span class="num">3</span> QA sub-agent</h4>
+        <p>A cheap model checks output before you see it. Catches hallucinations, formatting issues, missed requirements.</p>
+        <div class="codeblock" onclick="copyBlock(this)">"Before showing me the result, have a QA agent verify:
+- All requirements from the spec are met
+- No hardcoded values or TODO comments remain
+- Tests actually test the behavior, not the implementation"<span class="copy-hint">click to copy</span></div>
+      </div>
+      <div class="tech">
+        <h4><span class="num">4</span> Agent pipelines</h4>
+        <p>Chain agents in sequence. Strategist → designer → builder → QA. No human in the middle.</p>
+        <div class="codeblock" onclick="copyBlock(this)"># .claude/agents/ pipeline example:
+# strategist.md   → decides the approach
+# designer.md     → creates the interface spec
+# builder.md      → writes the code
+# pre-flight.md   → runs tests and lint
+# qa-scorer.md    → evaluates quality<span class="copy-hint">click to copy</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════ LEVEL 6 ═══ -->
+  <div class="level" id="L6">
+    <div class="level-head" onclick="toggle(this)">
+      <span class="level-badge b6">LVL 6</span>
+      <div class="info"><h3>Automate</h3><span class="tag">Operating System</span></div>
+      <span class="arrow">&#9656;</span>
+    </div>
+    <div class="level-body">
+      <div class="tech">
+        <h4><span class="num">1</span> Agent teams</h4>
+        <p>Specialists chained into a full pipeline. Plan → build → ship without touching the keyboard.</p>
+      </div>
+      <div class="tech">
+        <h4><span class="num">2</span> Routines with /loop and /goal</h4>
+        <p>Recurring work runs to a target you set. "Check for new issues every hour and triage them."</p>
+        <div class="codeblock" onclick="copyBlock(this)">/loop 60m Check for new GitHub issues, triage by severity, draft responses for anything critical<span class="copy-hint">click to copy</span></div>
+      </div>
+      <div class="tech">
+        <h4><span class="num">3</span> Hooks + MCP connectors</h4>
+        <p>Fire on save. Wire into Notion, Slack, Figma, Google Drive, and 50+ more. Claude becomes your operating system.</p>
+        <div class="codeblock" onclick="copyBlock(this)">// .claude/settings.json — hook example
+{
+  "hooks": {
+    "PostToolUse": [{
+      "matcher": "Write",
+      "command": "echo 'File written: $FILE_PATH'"
+    }]
+  }
+}<span class="copy-hint">click to copy</span></div>
+      </div>
+      <div class="tech">
+        <h4><span class="num">4</span> Workflows</h4>
+        <p>Claude scripts it, hundreds of agents run. Full production pipelines: CI, deployment, monitoring, incident response — all orchestrated.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════ MODEL TREE ═══ -->
+  <div class="sh" id="models" style="color:var(--l1)">Pick the Right Model Every Time</div>
+  <p style="font-size:.84rem;color:var(--muted);margin-bottom:16px">Don't pay for brains you don't need. Match the model to the task.</p>
+  <div class="model-grid">
+    <div class="model-card mc-haiku">
+      <div class="name">Haiku 4.5</div>
+      <div class="desc">Fastest, cheapest. Quick lookups, simple edits, web search.</div>
+      <div class="use">cents per chat</div>
+    </div>
+    <div class="model-card mc-sonnet">
+      <div class="name">Sonnet 5</div>
+      <div class="desc">The everyday model. Simple tasks, quick prompts, most coding work.</div>
+      <div class="use">your daily driver</div>
+    </div>
+    <div class="model-card mc-opus">
+      <div class="name">Opus 4.8</div>
+      <div class="desc">Deep work. Architecture, complex debugging, cowork sessions.</div>
+      <div class="use">effort: high always</div>
+    </div>
+    <div class="model-card mc-fable">
+      <div class="name">Fable 5</div>
+      <div class="desc">The smartest. Hard reasoning, end-to-end workflows, complex research.</div>
+      <div class="use">pay per use</div>
+    </div>
+    <div class="model-card mc-mythos">
+      <div class="name">Mythos 5</div>
+      <div class="desc">Limited-access, high-security. Specialized frontier workflows for approved organizations.</div>
+      <div class="use">by approval</div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════ PROMPT FORMULA ═══ -->
+  <div class="sh" id="formula" style="color:var(--l2)">The 5-Part Prompt Formula</div>
+  <p style="font-size:.84rem;color:var(--muted);margin-bottom:12px">Structure every complex prompt with these 5 elements. Works with any model, any task.</p>
+  <div class="prompt-tmpl">
+    <div class="label" style="color:var(--l1)">The Full Prompt Template</div>
+    <div class="step"><div class="n" style="background:var(--l1s);color:var(--l1)">1</div><div class="t"><strong>The Reason</strong> — why you're asking. "I'm working on [X] for [who]. They need [what the output enables]."</div></div>
+    <div class="step"><div class="n" style="background:var(--l2s);color:var(--l2)">2</div><div class="t"><strong>The Goal</strong> — the outcome, not the steps. "Goal: [outcome]. Here's everything I know: [context]."</div></div>
+    <div class="step"><div class="n" style="background:var(--l3s);color:var(--l3)">3</div><div class="t"><strong>The Interview</strong> — you have what's missing. "Before you start, ask me everything you need to get this right."</div></div>
+    <div class="step"><div class="n" style="background:var(--l4s);color:var(--l4)">4</div><div class="t"><strong>The Boundary</strong> — what it may and may not touch. "Do the simplest thing that works. Only pause for me on irreversible actions."</div></div>
+    <div class="step"><div class="n" style="background:var(--l5s);color:var(--l5)">5</div><div class="t"><strong>The Proof</strong> — kills the fake "all done!" "Only report work you can point to evidence for. Lead with the outcome."</div></div>
+  </div>
+  <div class="codeblock" onclick="copyBlock(this)">"I'm working on [X] for [who]. Goal: [outcome]. Here's what I know: [context]. Before you start, ask me what you need. Do the simplest thing that works, pause only on irreversible actions. Report only what you can prove, outcome first."<span class="copy-hint">click to copy</span></div>
+
+  <!-- ═══════════════════════════════════════ CORE FILES ═══ -->
+  <div class="sh" id="corefiles" style="color:var(--l3)">Write Your Core Files</div>
+  <p style="font-size:.84rem;color:var(--muted);margin-bottom:16px">A few strong <code>.md</code> files beat dozens of random prompts. Write them once, point Claude at them everywhere — global instructions, Projects, or a working folder.</p>
+  <div class="model-grid">
+    <div class="model-card fc-about">
+      <div class="name">about-me.md</div>
+      <div class="desc">Role, goals, voice, priorities. Who you are and what you value in an answer.</div>
+      <div class="use">read me first</div>
+    </div>
+    <div class="model-card fc-anti">
+      <div class="name">anti-style.md</div>
+      <div class="desc">Phrases, tones, and patterns to avoid. What "off-brand" looks like.</div>
+      <div class="use">never do this</div>
+    </div>
+    <div class="model-card fc-brief">
+      <div class="name">project-brief.md</div>
+      <div class="desc">Objective, audience, inputs, constraints. The context every task shares.</div>
+      <div class="use">per project</div>
+    </div>
+    <div class="model-card fc-rules">
+      <div class="name">output-rules.md</div>
+      <div class="desc">Format, length, quality bar, done criteria. What finished actually means.</div>
+      <div class="use">the finish line</div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════ TOKEN TIPS ═══ -->
+  <div class="sh" id="tokens" style="color:var(--l4)">Stop Burning Tokens</div>
+  <div class="tip-grid">
+    <div class="tip-card">
+      <h4>Start fresh chats</h4>
+      <p>New task = new chat. Don't stack unrelated work in one conversation — context bloat kills quality and costs tokens.</p>
+      <span class="savings">~40% savings</span>
+    </div>
+    <div class="tip-card">
+      <h4>Read the exact file</h4>
+      <p>Tell Claude which file, which function. "Read src/auth.ts lines 40-80" beats "find the auth logic."</p>
+      <span class="savings">~60% fewer reads</span>
+    </div>
+    <div class="tip-card">
+      <h4>Use /compact</h4>
+      <p>Run /compact when context hits 50%. Compresses the conversation without losing key decisions.</p>
+      <span class="savings">extends session 2x</span>
+    </div>
+    <div class="tip-card">
+      <h4>Batch your asks</h4>
+      <p>One prompt with 5 requests beats 5 separate prompts. Less context copying, less overhead.</p>
+      <span class="savings">~30% savings</span>
+    </div>
+    <div class="tip-card">
+      <h4>Tight CLAUDE.md</h4>
+      <p>Under 200 lines. Specific. No rule twice. Every line costs tokens on every message.</p>
+      <span class="savings">~15% per message</span>
+    </div>
+    <div class="tip-card">
+      <h4>Plan before you build</h4>
+      <p>30 seconds of /plan alignment saves 20 minutes of redo. Wrong direction wastes everything.</p>
+      <span class="savings">saves full rebuilds</span>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════ AGENT TEMPLATES ═══ -->
+  <div class="sh" id="agents" style="color:var(--l5)">Agent Templates — Build Your Team</div>
+  <p style="font-size:.84rem;color:var(--muted);margin-bottom:16px">Click any role to copy the agent file scaffold. Save to <code style="font-family:var(--font-mono);font-size:.78rem">.claude/agents/</code></p>
+
+  <div style="font-family:var(--font-mono);font-size:.66rem;text-transform:uppercase;letter-spacing:.1em;color:var(--faint);margin:16px 0 8px;font-weight:600">Engineering</div>
+  <div class="agent-grid">
+    <div class="agent-chip" onclick="copyAgent(this,'frontend-developer','Build and iterate on UI components, pages, and client-side logic. React/Vue/Svelte. Mobile-responsive. Accessible.')"><div class="role">Frontend Dev</div><div class="desc">UI components</div></div>
+    <div class="agent-chip" onclick="copyAgent(this,'backend-architect','Design APIs, databases, and server architecture. Performance-first. Security-aware. Scalable.')"><div class="role">Backend Architect</div><div class="desc">APIs &amp; systems</div></div>
+    <div class="agent-chip" onclick="copyAgent(this,'devops-automator','CI/CD pipelines, infrastructure as code, monitoring, deployment automation. Zero-downtime.')"><div class="role">DevOps</div><div class="desc">Infra &amp; deploy</div></div>
+    <div class="agent-chip" onclick="copyAgent(this,'ai-engineer','Prompt engineering, model integration, RAG pipelines, agent orchestration, embedding systems.')"><div class="role">AI Engineer</div><div class="desc">LLM integration</div></div>
+  </div>
+
+  <div style="font-family:var(--font-mono);font-size:.66rem;text-transform:uppercase;letter-spacing:.1em;color:var(--faint);margin:16px 0 8px;font-weight:600">Marketing &amp; Content</div>
+  <div class="agent-grid">
+    <div class="agent-chip" onclick="copyAgent(this,'content-creator','Write blog posts, newsletters, and documentation in brand voice. SEO-aware. Research-backed.')"><div class="role">Content Creator</div><div class="desc">Blogs &amp; docs</div></div>
+    <div class="agent-chip" onclick="copyAgent(this,'social-media-strategist','Platform-native content for Twitter, LinkedIn, Instagram. Hooks, threads, carousels. Engagement-optimized.')"><div class="role">Social Media</div><div class="desc">Platform posts</div></div>
+    <div class="agent-chip" onclick="copyAgent(this,'seo-specialist','Keyword research, content briefs, meta optimization, schema markup, competitive gap analysis.')"><div class="role">SEO Specialist</div><div class="desc">Search ranking</div></div>
+    <div class="agent-chip" onclick="copyAgent(this,'copywriter','High-converting copy for landing pages, emails, ads. Benefit-first. Clear CTAs. A/B test variants.')"><div class="role">Copywriter</div><div class="desc">Conversion copy</div></div>
+  </div>
+
+  <div style="font-family:var(--font-mono);font-size:.66rem;text-transform:uppercase;letter-spacing:.1em;color:var(--faint);margin:16px 0 8px;font-weight:600">Business &amp; Operations</div>
+  <div class="agent-grid">
+    <div class="agent-chip" onclick="copyAgent(this,'financial-analyst','Cash flow analysis, revenue projections, unit economics, budget tracking, financial modeling.')"><div class="role">Finance</div><div class="desc">Numbers &amp; models</div></div>
+    <div class="agent-chip" onclick="copyAgent(this,'contract-reviewer','Review contracts clause by clause. Flag risks, missing protections, aggressive terms. Suggest alternative language.')"><div class="role">Legal Review</div><div class="desc">Contract analysis</div></div>
+    <div class="agent-chip" onclick="copyAgent(this,'project-manager','Sprint planning, task breakdown, dependency tracking, status updates, blocker resolution.')"><div class="role">Project Manager</div><div class="desc">Ship on time</div></div>
+    <div class="agent-chip" onclick="copyAgent(this,'support-responder','Draft customer support responses. Empathetic, solution-first, on-brand. Escalate what needs a human.')"><div class="role">Support</div><div class="desc">Customer replies</div></div>
+  </div>
+
+  <!-- ═══════════════════════════════════════ MASTERY CHECKLIST ═══ -->
+  <div class="sh" id="checklist-h" style="color:var(--l6)">Your Mastery Checklist</div>
+  <p style="font-size:.84rem;color:var(--muted);margin-bottom:12px">Click each item to mark it done. Track your progress from beginner to power user.</p>
+  <ul class="mastery-checklist" id="checklist">
+    <li data-key="ck1" onclick="toggleCheck(this)"><strong>Level 1:</strong> Installed Claude Code</li>
+    <li data-key="ck2" onclick="toggleCheck(this)"><strong>Level 1:</strong> Ran /init on a project</li>
+    <li data-key="ck3" onclick="toggleCheck(this)"><strong>Level 1:</strong> Built a personal command library</li>
+    <li data-key="ck4" onclick="toggleCheck(this)"><strong>Level 2:</strong> Created a CLAUDE.md with rules and voice</li>
+    <li data-key="ck5" onclick="toggleCheck(this)"><strong>Level 2:</strong> Taught Claude a preference it remembers</li>
+    <li data-key="ck6" onclick="toggleCheck(this)"><strong>Level 2:</strong> Defined "done" before starting a task</li>
+    <li data-key="ck7" onclick="toggleCheck(this)"><strong>Level 3:</strong> Used /plan before building something</li>
+    <li data-key="ck8" onclick="toggleCheck(this)"><strong>Level 3:</strong> Worked in a feature branch</li>
+    <li data-key="ck9" onclick="toggleCheck(this)"><strong>Level 3:</strong> Fed a stack trace back to Claude</li>
+    <li data-key="ck10" onclick="toggleCheck(this)"><strong>Level 4:</strong> Built a custom skill</li>
+    <li data-key="ck11" onclick="toggleCheck(this)"><strong>Level 4:</strong> Used a slash command to solve a real problem</li>
+    <li data-key="ck12" onclick="toggleCheck(this)"><strong>Level 4:</strong> Switched models mid-task for the right one</li>
+    <li data-key="ck13" onclick="toggleCheck(this)"><strong>Level 5:</strong> Used subagents to parallelize work</li>
+    <li data-key="ck14" onclick="toggleCheck(this)"><strong>Level 5:</strong> Created an agent specialist in .claude/agents/</li>
+    <li data-key="ck15" onclick="toggleCheck(this)"><strong>Level 5:</strong> Ran a QA agent on Claude's output</li>
+    <li data-key="ck16" onclick="toggleCheck(this)"><strong>Level 6:</strong> Set up a recurring routine with /loop</li>
+    <li data-key="ck17" onclick="toggleCheck(this)"><strong>Level 6:</strong> Connected an MCP server (Slack, Notion, etc.)</li>
+    <li data-key="ck18" onclick="toggleCheck(this)"><strong>Level 6:</strong> Ran an end-to-end agent pipeline</li>
+  </ul>
+
+  <!-- ═══════════════════════════════════════ THE CHAIN ═══ -->
+  <div class="sh" id="chain" style="color:var(--accent);margin-top:56px">The Chain — One Pipeline, Any Task</div>
+  <div class="chain-section">
+    <p class="chain-intro">Six single-purpose commands, run in sequence, turn into one compounding
+      instrument: rigor sets the ground rules, brainstorm opens the field, evaluate narrows it,
+      details fill it in, edit sharpens it, and a verification gate catches what's still unproven
+      before you call it done. Run all six on anything — a plan, a draft, a decision, a piece of
+      code — and the output is categorically better than any single step alone.</p>
+
+    <div class="chain-pipeline">
+      <div class="chain-node"><span class="dot" style="background:var(--l1)">1</span><span class="lbl">Rigor</span><span class="from">power-practices</span></div>
+      <span class="chain-arrow">&#8594;</span>
+      <div class="chain-node"><span class="dot" style="background:var(--l2)">2</span><span class="lbl">Brainstorm</span><span class="from">/brainstorm</span></div>
+      <span class="chain-arrow">&#8594;</span>
+      <div class="chain-node"><span class="dot" style="background:var(--l3)">3</span><span class="lbl">Evaluate</span><span class="from">/evaluate</span></div>
+      <span class="chain-arrow">&#8594;</span>
+      <div class="chain-node"><span class="dot" style="background:var(--l4)">4</span><span class="lbl">Detail</span><span class="from">/details</span></div>
+      <span class="chain-arrow">&#8594;</span>
+      <div class="chain-node"><span class="dot" style="background:var(--l5)">5</span><span class="lbl">Edit</span><span class="from">/edit</span></div>
+      <span class="chain-arrow">&#8594;</span>
+      <div class="chain-node"><span class="dot" style="background:var(--l6)">6</span><span class="lbl">Verify</span><span class="from">test-and-lint</span></div>
+    </div>
+
+    <div class="chain-stage" style="border-left-color:var(--l1)">
+      <h4>1. Rigor <span class="src">power-practices</span></h4>
+      <p>Set the ground rules before a single idea gets generated: right model for the difficulty,
+        verify instead of guess, no fabricated links or numbers, and the goal is a real deliverable —
+        not a description of one.</p>
+      <div class="codeblock" onclick="copyBlock(this)">Before starting: pick the model that matches this task's difficulty, verify any fact you're not certain of instead of guessing, flag anything you can't confirm, and plan to hand back the actual deliverable — not a summary of what it would contain.<span class="copy-hint">click to copy</span></div>
+    </div>
+    <div class="chain-stage" style="border-left-color:var(--l2)">
+      <h4>2. Brainstorm <span class="src">/brainstorm</span></h4>
+      <p>Go wide before going deep. A handful of unconventional options surfaces the ones nobody
+        would reach by narrowing early.</p>
+      <div class="codeblock" onclick="copyBlock(this)">Brainstorm a wide range of options for [task], including a few unconventional ones. Cluster them into themes, then flag the 3 most promising with a one-line reason each.<span class="copy-hint">click to copy</span></div>
+    </div>
+    <div class="chain-stage" style="border-left-color:var(--l3)">
+      <h4>3. Evaluate <span class="src">/evaluate</span></h4>
+      <p>Score the shortlist against criteria you actually state, so the pick is traceable instead
+        of a vibe.</p>
+      <div class="codeblock" onclick="copyBlock(this)">Evaluate the top 3 against [criteria — e.g. cost, speed, risk, reversibility]. Score each 1-5 per criterion, show the math, and recommend one with the tradeoff you're accepting.<span class="copy-hint">click to copy</span></div>
+    </div>
+    <div class="chain-stage" style="border-left-color:var(--l4)">
+      <h4>4. Detail <span class="src">/details</span></h4>
+      <p>Turn the winning option from a concept into something buildable — real numbers, real
+        steps, real names.</p>
+      <div class="codeblock" onclick="copyBlock(this)">Expand the winning option with concrete detail: specific numbers, ordered steps, named tools/files/people. No filler, no "as needed," no vague qualifiers.<span class="copy-hint">click to copy</span></div>
+    </div>
+    <div class="chain-stage" style="border-left-color:var(--l5)">
+      <h4>5. Edit <span class="src">/edit</span></h4>
+      <p>Cut everything that isn't earning its place — hedging, redundancy, passive voice — without
+        losing what it actually says.</p>
+      <div class="codeblock" onclick="copyBlock(this)">Edit this for concision: cut hedge words, redundant phrases, and passive voice. Keep every fact and the original meaning intact. Shorter is only better if nothing true is lost.<span class="copy-hint">click to copy</span></div>
+    </div>
+    <div class="chain-stage" style="border-left-color:var(--l6)">
+      <h4>6. Verify <span class="src">test-and-lint</span></h4>
+      <p>The same gate CI runs on code — checks, lint, tests — generalized to any deliverable:
+        run it, break it, and say exactly what you checked before calling it done.</p>
+      <div class="codeblock" onclick="copyBlock(this)">Before calling this done: what would break it, and did you check? List exactly what you verified — ran it, tested it, confirmed the number — versus what's still unproven. Don't report "done" without evidence.<span class="copy-hint">click to copy</span></div>
+    </div>
+
+    <div class="chain-master">
+      <div class="label">The full chain in one prompt <span class="hint">click to copy</span></div>
+      <div class="codeblock" onclick="copyBlock(this)">Run the full chain on [task]:
+1. RIGOR — pick the model for this task's difficulty, verify facts instead of guessing, flag anything unconfirmed, aim to produce the real deliverable.
+2. BRAINSTORM — generate wide options including unconventional ones, cluster into themes, flag the top 3 with a one-line reason each.
+3. EVALUATE — score the top 3 against [criteria], show the scoring, recommend one and name the tradeoff.
+4. DETAIL — expand the winner with concrete numbers, steps, and names. No filler.
+5. EDIT — tighten the prose: cut hedging, redundancy, passive voice. Keep the meaning intact.
+6. VERIFY — before calling it done, state what would break this, what you actually checked, and what's still unproven.
+Deliver the final result first. Then one line per stage on what it changed.<span class="copy-hint">click to copy</span></div>
+    </div>
+  </div>
+</div>
+
+<script>
+function toggle(el){el.closest('.level').classList.toggle('open');updateProgress()}
+function updateProgress(){
+  document.querySelectorAll('.progress-bar .seg').forEach(function(s){
+    var lv=document.getElementById('L'+s.dataset.level);
+    s.classList.toggle('active',lv&&lv.classList.contains('open'));
+  });
+}
+function copyBlock(el){
+  var t=el.textContent.replace(/click to copy$/,'').trim();
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(t).then(function(){flash(el)},function(){fbCopy(t);flash(el)});
+  }else{fbCopy(t);flash(el)}
+}
+function flash(el){el.classList.add('copied');setTimeout(function(){el.classList.remove('copied')},1200)}
+function fbCopy(t){var a=document.createElement('textarea');a.value=t;a.style.cssText='position:fixed;opacity:0';
+  document.body.appendChild(a);a.select();try{document.execCommand('copy')}catch(e){}document.body.removeChild(a)}
+function copyAgent(chip,name,desc){
+  var t='# .claude/agents/'+name+'.md\n\n'+desc+'\n\nBe specific. No generic advice. Reference actual code, files, and data.\nAsk clarifying questions before starting if the task is ambiguous.\nOne deliverable per run — do it well rather than doing many things poorly.';
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(t).then(function(){chip.classList.add('copied');setTimeout(function(){chip.classList.remove('copied')},1200)});
+  }else{fbCopy(t);chip.classList.add('copied');setTimeout(function(){chip.classList.remove('copied')},1200)}
+}
+function store(k,v){try{localStorage.setItem('mp:'+k,v)}catch(e){}}
+function retrieve(k){try{return localStorage.getItem('mp:'+k)}catch(e){return null}}
+
+function toggleCheck(li){
+  li.classList.toggle('done');
+  store(li.dataset.key,li.classList.contains('done')?'1':'0');
+  updateScore();
+}
+function updateScore(){
+  var items=document.querySelectorAll('#checklist li');
+  var done=document.querySelectorAll('#checklist li.done').length;
+  var pct=Math.round(done/items.length*100);
+  document.getElementById('scorePill').textContent=done+' / '+items.length+' mastered — '+pct+'%';
+}
+function restoreChecklist(){
+  document.querySelectorAll('#checklist li[data-key]').forEach(function(li){
+    if(retrieve(li.dataset.key)==='1')li.classList.add('done');
+  });
+  updateScore();
+}
+
+document.getElementById('themeBtn').onclick=function(){
+  var r=document.documentElement,c=r.getAttribute('data-theme');
+  if(!c)c='dark';
+  var next=c==='dark'?'light':'dark';
+  r.setAttribute('data-theme',next);
+  store('theme',next);
+};
+(function(){
+  var saved=retrieve('theme');
+  if(saved)document.documentElement.setAttribute('data-theme',saved);
+})();
+restoreChecklist();
+
+document.querySelectorAll('.quicknav a').forEach(function(a){
+  a.addEventListener('click',function(e){
+    e.preventDefault();
+    var id=a.dataset.target,el=document.getElementById(id);
+    if(!el)return;
+    if(el.classList.contains('level'))el.classList.add('open');
+    el.scrollIntoView({behavior:'smooth',block:'start'});
+    history.replaceState(null,'','#'+id);
+  });
+});
+(function(){
+  var navLinks=document.querySelectorAll('.quicknav a');
+  var targets=Array.prototype.map.call(navLinks,function(a){return document.getElementById(a.dataset.target)}).filter(Boolean);
+  if(!('IntersectionObserver' in window))return;
+  var io=new IntersectionObserver(function(entries){
+    entries.forEach(function(entry){
+      if(!entry.isIntersecting)return;
+      var id=entry.target.id;
+      navLinks.forEach(function(a){a.classList.toggle('active',a.dataset.target===id)});
+    });
+  },{rootMargin:'-50px 0px -70% 0px',threshold:0});
+  targets.forEach(function(t){io.observe(t)});
+})();
+
+function applyFilter(q){
+  q=q.trim().toLowerCase();
+  var targets=document.querySelectorAll('.tech, .chain-stage, .tip-card, .agent-chip, .model-card');
+  targets.forEach(function(el){
+    var match=!q||el.textContent.toLowerCase().indexOf(q)!==-1;
+    el.classList.toggle('filter-hide',!match);
+  });
+  document.querySelectorAll('.level').forEach(function(lvl){
+    if(!q){lvl.classList.remove('filter-hide');return}
+    var anyVisible=lvl.querySelectorAll('.tech:not(.filter-hide)').length>0;
+    lvl.classList.toggle('filter-hide',!anyVisible);
+    if(anyVisible)lvl.classList.add('open');
+  });
+  updateProgress();
+}
+</script>

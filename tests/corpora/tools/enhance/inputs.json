@@ -1,0 +1,95 @@
+{
+  "tool": "enhance",
+  "output": "plain_text",
+  "rubric": [
+    "non_empty",
+    "length_ratio_0.5_to_3x",
+    "preserves_must_keep",
+    "no_meta_preamble",
+    "tone_direction_signal"
+  ],
+  "inputs": [
+    {
+      "id": "E1",
+      "docType": "email",
+      "tone": 85,
+      "clarity": 50,
+      "persuasiveness": 40,
+      "text": "hey — just checking in, did u get the invoice for $4,200? its due on the 15th. lmk if the PO number (PO-8831) is wrong. thx",
+      "must_keep": [
+        "$4,200",
+        "15th",
+        "PO-8831"
+      ],
+      "tone_target": "formal"
+    },
+    {
+      "id": "E2",
+      "docType": "memo",
+      "tone": 15,
+      "clarity": 30,
+      "persuasiveness": 40,
+      "text": "Pursuant to the aforementioned policy revision, all personnel are hereby required to submit quarterly compliance attestations no later than the fifth business day following each fiscal quarter-end.",
+      "must_keep": [
+        "quarterly",
+        "fifth business day"
+      ],
+      "tone_target": "conversational"
+    },
+    {
+      "id": "E3",
+      "docType": "product_description",
+      "tone": 55,
+      "clarity": 45,
+      "persuasiveness": 90,
+      "text": "The XT-40 water bottle holds 750ml and is made of stainless steel. It keeps drinks cold for 24 hours.",
+      "must_keep": [
+        "750ml",
+        "stainless steel",
+        "24 hours"
+      ],
+      "tone_target": "balanced"
+    },
+    {
+      "id": "E4",
+      "docType": "cover_letter",
+      "tone": 70,
+      "clarity": 60,
+      "persuasiveness": 75,
+      "text": "I am writing about the data analyst job. I know Python and SQL. I worked at a bank for 3 years. I think I would be good at this.",
+      "must_keep": [
+        "Python",
+        "SQL",
+        "3 years"
+      ],
+      "tone_target": "formal"
+    },
+    {
+      "id": "E5",
+      "docType": "announcement",
+      "tone": 45,
+      "clarity": 35,
+      "persuasiveness": 55,
+      "text": "Effective immediately, the office kitchen will be closed for renovation from March 3 through March 17. Coffee will be available in the 4th floor lounge.",
+      "must_keep": [
+        "March 3",
+        "March 17",
+        "4th floor"
+      ],
+      "tone_target": "balanced"
+    },
+    {
+      "id": "E6",
+      "docType": "bio",
+      "tone": 60,
+      "clarity": 50,
+      "persuasiveness": 65,
+      "text": "Dana is a nurse. She has worked in the ER for 8 years. She likes helping patients and teaching new staff.",
+      "must_keep": [
+        "ER",
+        "8 years"
+      ],
+      "tone_target": "balanced"
+    }
+  ]
+}

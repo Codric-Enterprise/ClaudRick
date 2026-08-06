@@ -1,0 +1,377 @@
+{
+  "schema": {
+    "deceptive_language": [
+      "(freeform)"
+    ],
+    "tone_manipulation": [
+      "fear_appeal",
+      "emotional_appeal",
+      "greed_appeal",
+      "false_authority",
+      "false_consensus"
+    ],
+    "scare_tactics": [
+      "negative_consequence",
+      "threat",
+      "worst_case_framing",
+      "social_harm"
+    ],
+    "artificial_urgency": [
+      "time_pressure",
+      "scarcity_claim",
+      "now_or_never",
+      "limited_quantity"
+    ],
+    "hidden_terms_and_costs": [
+      "hidden_fee",
+      "auto_renewal",
+      "forced_continuity",
+      "cancellation_obstruction",
+      "buried_limitation"
+    ],
+    "contract_traps": [
+      "arbitration_clause",
+      "indemnification",
+      "liability_waiver",
+      "jurisdiction_shopping",
+      "class_action_waiver",
+      "unilateral_modification",
+      "confession_of_judgment"
+    ]
+  },
+  "generated": "2026-07-18T20:29:05.966Z",
+  "documents": [
+    {
+      "id": "D01",
+      "file": "D01-gym-membership.docx",
+      "kind": "predatory",
+      "title": "FitLife Health Club \u2014 Membership Agreement",
+      "planted": [
+        {
+          "category": "hidden_terms_and_costs",
+          "subtype": "auto_renewal",
+          "phrase": "renews automatically each year",
+          "severity": "high"
+        },
+        {
+          "category": "hidden_terms_and_costs",
+          "subtype": "cancellation_obstruction",
+          "phrase": "must be delivered in person at your home branch",
+          "severity": "critical"
+        },
+        {
+          "category": "hidden_terms_and_costs",
+          "subtype": "hidden_fee",
+          "phrase": "$49 annual maintenance charge applies and is billed separately",
+          "severity": "medium"
+        },
+        {
+          "category": "artificial_urgency",
+          "subtype": "now_or_never",
+          "phrase": "only available if you enroll before you leave the club today",
+          "severity": "high"
+        },
+        {
+          "category": "tone_manipulation",
+          "subtype": "emotional_appeal",
+          "phrase": "do not be the person who gives up on themselves",
+          "severity": "medium"
+        }
+      ],
+      "expected_score_band": [
+        70,
+        90
+      ],
+      "planted_count": 5
+    },
+    {
+      "id": "D02",
+      "file": "D02-free-trial-saas.docx",
+      "kind": "predatory",
+      "title": "CloudNote Pro \u2014 Free Trial Terms",
+      "planted": [
+        {
+          "category": "hidden_terms_and_costs",
+          "subtype": "forced_continuity",
+          "phrase": "automatically enrolled in the Pro plan and charged $59 per month",
+          "severity": "critical"
+        },
+        {
+          "category": "deceptive_language",
+          "subtype": "contradiction",
+          "phrase": "No commitment!",
+          "severity": "high"
+        },
+        {
+          "category": "tone_manipulation",
+          "subtype": "greed_appeal",
+          "phrase": "ahead of everyone else",
+          "severity": "low"
+        }
+      ],
+      "expected_score_band": [
+        65,
+        85
+      ],
+      "planted_count": 3
+    },
+    {
+      "id": "D03",
+      "file": "D03-payday-loan.docx",
+      "kind": "predatory",
+      "title": "QuickCash Advance \u2014 Loan Offer",
+      "planted": [
+        {
+          "category": "deceptive_language",
+          "subtype": "framing",
+          "phrase": "just a small fee of $75 per $100 borrowed",
+          "severity": "high"
+        },
+        {
+          "category": "hidden_terms_and_costs",
+          "subtype": "buried_limitation",
+          "phrase": "annual percentage rate on this product may exceed 390%, as disclosed in section 9(c)",
+          "severity": "critical"
+        },
+        {
+          "category": "scare_tactics",
+          "subtype": "negative_consequence",
+          "phrase": "you could fall behind on rent and risk losing your home",
+          "severity": "high"
+        },
+        {
+          "category": "scare_tactics",
+          "subtype": "social_harm",
+          "phrase": "Do not let that happen to your family",
+          "severity": "medium"
+        }
+      ],
+      "expected_score_band": [
+        75,
+        95
+      ],
+      "planted_count": 4
+    },
+    {
+      "id": "D04",
+      "file": "D04-timeshare.docx",
+      "kind": "predatory",
+      "title": "Azure Shores Vacation Ownership \u2014 Invitation",
+      "planted": [
+        {
+          "category": "tone_manipulation",
+          "subtype": "false_authority",
+          "phrase": "hand-selected guest, you have been pre-approved",
+          "severity": "medium"
+        },
+        {
+          "category": "tone_manipulation",
+          "subtype": "false_consensus",
+          "phrase": "Thousands of smart families have already joined",
+          "severity": "medium"
+        },
+        {
+          "category": "artificial_urgency",
+          "subtype": "now_or_never",
+          "phrase": "available at today\u2019s presentation only and will not be offered again",
+          "severity": "high"
+        },
+        {
+          "category": "hidden_terms_and_costs",
+          "subtype": "cancellation_obstruction",
+          "phrase": "cancel within the statutory rescission period; details are provided in the appendix",
+          "severity": "medium"
+        }
+      ],
+      "expected_score_band": [
+        65,
+        85
+      ],
+      "planted_count": 4
+    },
+    {
+      "id": "D05",
+      "file": "D05-subscription-box.docx",
+      "kind": "predatory",
+      "title": "GlowBox Beauty \u2014 Subscription Offer",
+      "planted": [
+        {
+          "category": "artificial_urgency",
+          "subtype": "scarcity_claim",
+          "phrase": "Only 12 boxes left at this price",
+          "severity": "medium"
+        },
+        {
+          "category": "artificial_urgency",
+          "subtype": "limited_quantity",
+          "phrase": "once they are gone, they are gone",
+          "severity": "low"
+        },
+        {
+          "category": "hidden_terms_and_costs",
+          "subtype": "hidden_fee",
+          "phrase": "separate handling charge of $8.95 applies to every shipment and is not included",
+          "severity": "high"
+        },
+        {
+          "category": "hidden_terms_and_costs",
+          "subtype": "forced_continuity",
+          "phrase": "subscription continues every month and renews on its own",
+          "severity": "high"
+        }
+      ],
+      "expected_score_band": [
+        60,
+        85
+      ],
+      "planted_count": 4
+    },
+    {
+      "id": "D06",
+      "file": "D06-course-upsell.docx",
+      "kind": "predatory",
+      "title": "The Wealth Accelerator Program",
+      "planted": [
+        {
+          "category": "deceptive_language",
+          "subtype": "false_guarantee",
+          "phrase": "guaranteed to 10x your income in 90 days",
+          "severity": "critical"
+        },
+        {
+          "category": "artificial_urgency",
+          "subtype": "time_pressure",
+          "phrase": "Enrollment closes at midnight tonight",
+          "severity": "high"
+        },
+        {
+          "category": "artificial_urgency",
+          "subtype": "scarcity_claim",
+          "phrase": "only 5 seats remain",
+          "severity": "medium"
+        },
+        {
+          "category": "hidden_terms_and_costs",
+          "subtype": "forced_continuity",
+          "phrase": "ongoing coaching at $197 per month, charged automatically",
+          "severity": "critical"
+        },
+        {
+          "category": "tone_manipulation",
+          "subtype": "greed_appeal",
+          "phrase": "People who hesitate stay broke",
+          "severity": "medium"
+        }
+      ],
+      "expected_score_band": [
+        80,
+        98
+      ],
+      "planted_count": 5
+    },
+    {
+      "id": "D07",
+      "file": "D07-apartment-lease.docx",
+      "kind": "predatory",
+      "title": "Maple Court Apartments \u2014 Lease Addendum",
+      "planted": [
+        {
+          "category": "hidden_terms_and_costs",
+          "subtype": "hidden_fee",
+          "phrase": "move-in administrative fee of $350 is non-refundable under any circumstances",
+          "severity": "high"
+        },
+        {
+          "category": "hidden_terms_and_costs",
+          "subtype": "cancellation_obstruction",
+          "phrase": "notice provided by any other method will be treated as void",
+          "severity": "high"
+        },
+        {
+          "category": "scare_tactics",
+          "subtype": "threat",
+          "phrase": "may face immediate eviction proceedings and a report to collections",
+          "severity": "high"
+        },
+        {
+          "category": "hidden_terms_and_costs",
+          "subtype": "buried_limitation",
+          "phrase": "lease-break fee equal to two months rent",
+          "severity": "medium"
+        }
+      ],
+      "expected_score_band": [
+        65,
+        88
+      ],
+      "planted_count": 4
+    },
+    {
+      "id": "D08",
+      "file": "D08-crypto-pitch.docx",
+      "kind": "predatory",
+      "title": "NovaCoin \u2014 Private Presale Access",
+      "planted": [
+        {
+          "category": "tone_manipulation",
+          "subtype": "false_authority",
+          "phrase": "Endorsed by leading experts and insiders",
+          "severity": "high"
+        },
+        {
+          "category": "tone_manipulation",
+          "subtype": "false_consensus",
+          "phrase": "Everyone in the know is already in",
+          "severity": "medium"
+        },
+        {
+          "category": "artificial_urgency",
+          "subtype": "now_or_never",
+          "phrase": "presale window slams shut in 3 hours and will never reopen",
+          "severity": "high"
+        },
+        {
+          "category": "scare_tactics",
+          "subtype": "worst_case_framing",
+          "phrase": "spend years watching others get rich without you",
+          "severity": "medium"
+        },
+        {
+          "category": "tone_manipulation",
+          "subtype": "fear_appeal",
+          "phrase": "do not be the last one standing on the sidelines",
+          "severity": "medium"
+        }
+      ],
+      "expected_score_band": [
+        80,
+        98
+      ],
+      "planted_count": 5
+    },
+    {
+      "id": "C01",
+      "file": "C01-library-newsletter.docx",
+      "kind": "control",
+      "title": "Riverside Public Library \u2014 Monthly Newsletter",
+      "planted": [],
+      "expected_score_band": [
+        0,
+        12
+      ],
+      "planted_count": 0
+    },
+    {
+      "id": "C02",
+      "file": "C02-fair-refund-policy.docx",
+      "kind": "control",
+      "title": "Northwind Books \u2014 Refund Policy",
+      "planted": [],
+      "expected_score_band": [
+        0,
+        15
+      ],
+      "planted_count": 0
+    }
+  ]
+}

@@ -1,0 +1,373 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>CLAUDE.md Generator — ClaudRick Enterprises</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Answer a few questions, get a real CLAUDE.md. Runs entirely in your browser — nothing you type is sent anywhere.">
+<style>
+  @font-face{font-family:'JB';font-style:normal;font-weight:400 700;font-display:swap;
+    src:local('JetBrains Mono'),local('SF Mono'),local('Fira Code'),local('Menlo'),local('Consolas')}
+  :root{
+    --bg:#F7F5F1;--surface:#FFFFFF;--surface-2:#EDE9E3;--border:#D8D2C8;
+    --text:#1C1917;--muted:#6B6560;--faint:#9A948D;
+    --accent:#B45309;--accent-strong:#92400E;--accent-soft:rgba(180,83,9,.10);
+    --good:#166534;--good-soft:rgba(22,101,52,.10);
+    --shadow:rgba(28,25,23,.08);
+    --font-ui:'Inter',system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --font-mono:'JB',ui-monospace,"SF Mono","JetBrains Mono","Fira Code",Menlo,Consolas,monospace;
+    --radius:10px;
+  }
+  @media (prefers-color-scheme: dark){:root{
+    --bg:#111110;--surface:#1A1918;--surface-2:#242220;--border:#353230;
+    --text:#EDE9E3;--muted:#9A948D;--faint:#6B6560;
+    --accent:#F59E0B;--accent-strong:#FBBF24;--accent-soft:rgba(245,158,11,.14);
+    --good:#4ADE80;--good-soft:rgba(74,222,128,.12);
+    --shadow:rgba(0,0,0,.35);
+  }}
+  :root[data-theme="dark"]{
+    --bg:#111110;--surface:#1A1918;--surface-2:#242220;--border:#353230;
+    --text:#EDE9E3;--muted:#9A948D;--faint:#6B6560;
+    --accent:#F59E0B;--accent-strong:#FBBF24;--accent-soft:rgba(245,158,11,.14);
+    --good:#4ADE80;--good-soft:rgba(74,222,128,.12);
+    --shadow:rgba(0,0,0,.35);
+  }
+  :root[data-theme="light"]{
+    --bg:#F7F5F1;--surface:#FFFFFF;--surface-2:#EDE9E3;--border:#D8D2C8;
+    --text:#1C1917;--muted:#6B6560;--faint:#9A948D;
+    --accent:#B45309;--accent-strong:#92400E;--accent-soft:rgba(180,83,9,.10);
+    --good:#166534;--good-soft:rgba(22,101,52,.10);
+    --shadow:rgba(28,25,23,.08);
+  }
+
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:var(--font-ui);
+    line-height:1.5;-webkit-font-smoothing:antialiased}
+  @media (prefers-reduced-motion: reduce){*{animation-duration:.001ms !important;transition-duration:.001ms !important}}
+
+  a{color:var(--accent-strong)}
+  :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+  header{position:sticky;top:0;z-index:20;background:color-mix(in srgb,var(--bg) 90%,transparent);
+    backdrop-filter:blur(8px);border-bottom:1px solid var(--border)}
+  .bar{max-width:1180px;margin:0 auto;padding:14px 20px;display:flex;align-items:center;gap:14px}
+  .logo{display:flex;align-items:center;gap:8px;font-family:var(--font-mono);font-weight:700;
+    font-size:.95rem;letter-spacing:-.01em;white-space:nowrap}
+  .logo .dot{width:8px;height:8px;border-radius:50%;background:var(--accent);flex:none}
+  .logo .co{color:var(--muted);font-weight:500}
+  .bar h1{font-size:.95rem;margin:0;padding-left:14px;border-left:1px solid var(--border);
+    font-weight:600;color:var(--muted)}
+  .bar .sub{margin-left:auto;font-size:.78rem;color:var(--faint);display:flex;align-items:center;gap:8px}
+  .privacy-pill{display:inline-flex;align-items:center;gap:6px;font-family:var(--font-mono);
+    font-size:.68rem;text-transform:uppercase;letter-spacing:.08em;color:var(--good);
+    background:var(--good-soft);padding:4px 10px;border-radius:20px;white-space:nowrap}
+  .privacy-pill::before{content:'';width:6px;height:6px;border-radius:50%;background:var(--good)}
+  .theme-btn{background:none;border:1px solid var(--border);color:var(--muted);width:30px;height:30px;
+    border-radius:8px;cursor:pointer;display:grid;place-items:center;font-size:.9rem;flex:none}
+  .theme-btn:hover{color:var(--text);border-color:var(--faint)}
+
+  .intro{max-width:1180px;margin:0 auto;padding:28px 20px 8px}
+  .intro p{max-width:62ch;color:var(--muted);font-size:.95rem;margin:0}
+  .intro .example-link{font-family:var(--font-mono);font-size:.78rem;background:none;border:none;
+    color:var(--accent-strong);cursor:pointer;padding:0;margin-top:10px;display:inline-flex;
+    align-items:center;gap:6px;text-decoration:underline;text-underline-offset:3px}
+
+  main{max-width:1180px;margin:0 auto;padding:18px 20px 60px;display:grid;
+    grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px;align-items:start}
+  @media (max-width:900px){main{grid-template-columns:1fr}}
+
+  .panel{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+    box-shadow:0 1px 2px var(--shadow)}
+
+  form.panel{padding:6px 22px 22px}
+  fieldset{border:none;margin:0;padding:18px 0;border-bottom:1px solid var(--border)}
+  fieldset:last-of-type{border-bottom:none}
+  legend{display:flex;align-items:center;gap:10px;padding:0;margin-bottom:12px;width:100%}
+  .step-n{font-family:var(--font-mono);font-size:.7rem;font-weight:700;color:var(--accent-strong);
+    background:var(--accent-soft);width:20px;height:20px;border-radius:50%;display:grid;place-items:center;flex:none}
+  legend .lt{font-weight:600;font-size:.92rem}
+  legend .opt{font-family:var(--font-mono);font-size:.65rem;text-transform:uppercase;letter-spacing:.06em;
+    color:var(--faint);margin-left:auto}
+
+  label{display:block;font-size:.8rem;color:var(--muted);margin:12px 0 5px}
+  label:first-of-type{margin-top:0}
+  input[type=text],textarea{width:100%;background:var(--surface-2);border:1px solid var(--border);
+    border-radius:8px;padding:9px 11px;font-family:var(--font-ui);font-size:.88rem;color:var(--text);
+    resize:vertical}
+  textarea{min-height:64px;line-height:1.45}
+  input[type=text]:focus,textarea:focus{outline:none;border-color:var(--accent);
+    box-shadow:0 0 0 3px var(--accent-soft)}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media (max-width:520px){.row2{grid-template-columns:1fr}}
+  .hint{font-size:.72rem;color:var(--faint);margin-top:4px}
+
+  .preview-wrap{position:sticky;top:70px}
+  .preview-toolbar{display:flex;align-items:center;gap:10px;padding:12px 16px;border-bottom:1px solid var(--border)}
+  .preview-toolbar .lt{font-family:var(--font-mono);font-size:.72rem;text-transform:uppercase;
+    letter-spacing:.08em;color:var(--muted)}
+  .preview-toolbar .count{margin-left:auto;font-family:var(--font-mono);font-size:.72rem;color:var(--faint);
+    font-variant-numeric:tabular-nums}
+  .btn{font-family:var(--font-mono);font-size:.74rem;font-weight:600;border-radius:7px;padding:6px 12px;
+    cursor:pointer;border:1px solid var(--border);background:var(--surface-2);color:var(--text);
+    display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+  .btn:hover{border-color:var(--faint)}
+  .btn-primary{background:var(--accent);border-color:var(--accent);color:#fff}
+  .btn-primary:hover{filter:brightness(1.08)}
+  .btn.copied{background:var(--good-soft);border-color:var(--good);color:var(--good)}
+
+  pre#preview{margin:0;padding:18px 20px;font-family:var(--font-mono);font-size:.78rem;line-height:1.6;
+    white-space:pre-wrap;word-break:break-word;color:var(--text);max-height:calc(100vh - 150px);
+    overflow-y:auto;overflow-x:auto}
+  pre#preview .h1{color:var(--accent-strong);font-weight:700}
+  pre#preview .h2{color:var(--accent-strong)}
+  pre#preview .muted{color:var(--faint)}
+
+  footer{max-width:1180px;margin:0 auto;padding:0 20px 40px;color:var(--faint);font-size:.76rem}
+  footer a{color:var(--muted)}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="bar">
+    <div class="logo"><span class="dot"></span>ClaudRick<span class="co">&nbsp;Enterprises</span></div>
+    <h1>CLAUDE.md Generator</h1>
+    <div class="sub">
+      <span class="privacy-pill">Runs in your browser</span>
+      <button class="theme-btn" id="themeBtn" type="button" aria-label="Toggle color theme" title="Toggle light/dark">◐</button>
+    </div>
+  </div>
+</header>
+
+<div class="intro">
+  <p>Answer what you can — skip the rest. The preview builds a real <code>CLAUDE.md</code> as you type, following the same shape maintainers actually use to brief Claude on a codebase. Nothing here is sent to a server; copy or download when it looks right.</p>
+  <button class="example-link" id="exampleBtn" type="button">↦ Fill in an example project</button>
+</div>
+
+<main>
+  <form class="panel" id="form" autocomplete="off">
+
+    <fieldset>
+      <legend><span class="step-n">1</span><span class="lt">Project overview</span></legend>
+      <label for="projectName">Project name</label>
+      <input type="text" id="projectName" placeholder="e.g. Northwind Billing API">
+      <label for="oneLiner">One-line description</label>
+      <input type="text" id="oneLiner" placeholder="e.g. Internal service that generates and emails monthly invoices">
+      <label for="audience">Who works on this <span class="hint" style="display:inline">(optional)</span></label>
+      <input type="text" id="audience" placeholder="e.g. 3-person backend team, occasional contractor PRs">
+    </fieldset>
+
+    <fieldset>
+      <legend><span class="step-n">2</span><span class="lt">Architecture</span></legend>
+      <label for="arch">How the pieces fit together</label>
+      <textarea id="arch" placeholder="e.g. Django app + Celery workers + Postgres. The API queues invoice jobs; workers render PDFs and email them via SES."></textarea>
+    </fieldset>
+
+    <fieldset>
+      <legend><span class="step-n">3</span><span class="lt">Repository structure</span><span class="opt">optional</span></legend>
+      <label for="structure">Key directories (paste a tree, or list the important ones)</label>
+      <textarea id="structure" placeholder="e.g.&#10;src/billing/     — core domain logic&#10;src/api/         — HTTP handlers&#10;workers/         — Celery tasks&#10;tests/           — mirrors src/"></textarea>
+    </fieldset>
+
+    <fieldset>
+      <legend><span class="step-n">4</span><span class="lt">Commands</span></legend>
+      <div class="row2">
+        <div><label for="cmdInstall">Install</label><input type="text" id="cmdInstall" placeholder="pip install -e .[dev]"></div>
+        <div><label for="cmdRun">Run</label><input type="text" id="cmdRun" placeholder="python manage.py runserver"></div>
+      </div>
+      <div class="row2">
+        <div><label for="cmdTest">Test</label><input type="text" id="cmdTest" placeholder="pytest"></div>
+        <div><label for="cmdLint">Lint / format</label><input type="text" id="cmdLint" placeholder="ruff check . && ruff format ."></div>
+      </div>
+      <label for="cmdBuild">Build / deploy <span class="hint" style="display:inline">(optional)</span></label>
+      <input type="text" id="cmdBuild" placeholder="docker build -t billing-api .">
+    </fieldset>
+
+    <fieldset>
+      <legend><span class="step-n">5</span><span class="lt">Conventions</span></legend>
+      <label for="style">Code style & structure</label>
+      <textarea id="style" placeholder="e.g. Type-hint public functions. One module per domain concept under billing/. No business logic in views."></textarea>
+      <label for="testing">Testing conventions <span class="hint" style="display:inline">(optional)</span></label>
+      <textarea id="testing" placeholder="e.g. tests/ mirrors src/ 1:1. Mock external calls (SES, Stripe) — no network in tests."></textarea>
+    </fieldset>
+
+    <fieldset>
+      <legend><span class="step-n">6</span><span class="lt">Git & branching</span><span class="opt">optional</span></legend>
+      <label for="branching">Branch & PR policy</label>
+      <textarea id="branching" placeholder="e.g. Feature branches off main, e.g. name/short-topic. PRs required, squash-merge, CI must be green."></textarea>
+    </fieldset>
+
+    <fieldset>
+      <legend><span class="step-n">7</span><span class="lt">Security notes</span><span class="opt">optional</span></legend>
+      <label for="security">Anything security-sensitive Claude should never do</label>
+      <textarea id="security" placeholder="e.g. Never log full card numbers. Stripe secret key is server-side only, read from env."></textarea>
+    </fieldset>
+
+    <fieldset>
+      <legend><span class="step-n">8</span><span class="lt">Notes for AI assistants</span></legend>
+      <textarea id="aiNotes" style="min-height:80px"></textarea>
+    </fieldset>
+
+  </form>
+
+  <div class="preview-wrap panel">
+    <div class="preview-toolbar">
+      <span class="lt">CLAUDE.md — live preview</span>
+      <span class="count" id="lineCount">0 lines</span>
+      <button class="btn" id="copyBtn" type="button">Copy</button>
+      <button class="btn btn-primary" id="downloadBtn" type="button">Download</button>
+    </div>
+    <pre id="preview"></pre>
+  </div>
+</main>
+
+<footer>
+  Built by ClaudRick Enterprises. No accounts, no analytics, no network calls — view source if you don't believe it.
+</footer>
+
+<script>
+(function(){
+  var root = document.documentElement;
+  var themeBtn = document.getElementById('themeBtn');
+  themeBtn.addEventListener('click', function(){
+    var current = root.getAttribute('data-theme') ||
+      (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    root.setAttribute('data-theme', current === 'dark' ? 'light' : 'dark');
+  });
+
+  var ids = ['projectName','oneLiner','audience','arch','structure',
+    'cmdInstall','cmdRun','cmdTest','cmdLint','cmdBuild','style','testing',
+    'branching','security','aiNotes'];
+  var els = {};
+  ids.forEach(function(id){ els[id] = document.getElementById(id); });
+
+  var DEFAULT_AI_NOTES =
+    'Verify claims against the actual repository before acting.\n' +
+    'Run the test suite and linter before committing non-trivial changes.\n' +
+    'Keep this file updated as the codebase evolves — treat documentation drift as a bug.';
+  els.aiNotes.value = DEFAULT_AI_NOTES;
+
+  var EXAMPLE = {
+    projectName: 'Northwind Billing API',
+    oneLiner: 'Internal service that generates and emails monthly customer invoices.',
+    audience: '3-person backend team, occasional contractor PRs.',
+    arch: 'Django app + Celery workers + Postgres. The API queues invoice jobs; workers render PDFs and email them via SES. Stripe webhooks update payment status asynchronously.',
+    structure: 'src/billing/     — core domain logic (invoices, line items, tax rules)\nsrc/api/         — HTTP handlers, thin — no business logic\nworkers/         — Celery tasks (render, email, retry)\ntests/           — mirrors src/ 1:1',
+    cmdInstall: 'pip install -e ".[dev]"',
+    cmdRun: 'python manage.py runserver',
+    cmdTest: 'pytest',
+    cmdLint: 'ruff check . && ruff format .',
+    cmdBuild: 'docker build -t billing-api .',
+    style: 'Type-hint public functions. One module per domain concept under billing/. No business logic in views or Celery tasks — call into billing/.',
+    testing: 'tests/ mirrors src/ 1:1. Mock Stripe and SES — no network calls in tests. Celery tasks run eager in test settings.',
+    branching: 'Feature branches off main, e.g. name/short-topic. PRs required, squash-merge, CI (lint + test) must be green before merge.',
+    security: 'Never log full card numbers or Stripe tokens. Stripe secret key and SES credentials are server-side only, read from env — never in client code or committed files.'
+  };
+
+  document.getElementById('exampleBtn').addEventListener('click', function(){
+    Object.keys(EXAMPLE).forEach(function(k){ if (els[k]) els[k].value = EXAMPLE[k]; });
+    render();
+  });
+
+  function esc(s){
+    return (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  function section(heading, body){
+    if (!body || !String(body).trim()) return '';
+    return '## ' + heading + '\n\n' + body.trim() + '\n\n';
+  }
+
+  function buildMarkdown(){
+    var v = {};
+    ids.forEach(function(id){ v[id] = els[id].value; });
+
+    var md = '# CLAUDE.md\n\n';
+    md += 'Guidance for AI assistants (and humans) working in this repository.\n\n';
+
+    var overviewBody = '';
+    if (v.projectName || v.oneLiner) {
+      overviewBody += '**' + (v.projectName || 'This project') + '**';
+      if (v.oneLiner) overviewBody += ' — ' + v.oneLiner;
+      overviewBody += '\n\n';
+    }
+    if (v.audience) overviewBody += v.audience + '\n\n';
+    md += section('Project overview', overviewBody.trim());
+
+    md += section('Architecture', v.arch);
+
+    if (v.structure && v.structure.trim()) {
+      md += '## Repository structure\n\n```\n' + v.structure.trim() + '\n```\n\n';
+    }
+
+    var cmdLines = [];
+    if (v.cmdInstall) cmdLines.push('- **Install:** `' + v.cmdInstall + '`');
+    if (v.cmdRun) cmdLines.push('- **Run:** `' + v.cmdRun + '`');
+    if (v.cmdTest) cmdLines.push('- **Test:** `' + v.cmdTest + '`');
+    if (v.cmdLint) cmdLines.push('- **Lint / format:** `' + v.cmdLint + '`');
+    if (v.cmdBuild) cmdLines.push('- **Build / deploy:** `' + v.cmdBuild + '`');
+    if (cmdLines.length) md += '## Commands\n\n' + cmdLines.join('\n') + '\n\n';
+
+    var convBody = (v.style || '').trim();
+    if (v.testing && v.testing.trim()) {
+      convBody += (convBody ? '\n\n' : '') + '### Testing\n\n' + v.testing.trim();
+    }
+    md += section('Conventions', convBody);
+
+    md += section('Git & branching', v.branching);
+    md += section('Security notes', v.security);
+    md += section('Notes for AI assistants', v.aiNotes);
+
+    return md.replace(/\n{3,}/g, '\n\n').trim() + '\n';
+  }
+
+  function highlight(md){
+    return esc(md).split('\n').map(function(line){
+      if (/^# /.test(line)) return '<span class="h1">' + line + '</span>';
+      if (/^## /.test(line)) return '<span class="h2">' + line + '</span>';
+      if (/^```/.test(line)) return '<span class="muted">' + line + '</span>';
+      return line;
+    }).join('\n');
+  }
+
+  var previewEl = document.getElementById('preview');
+  var lineCountEl = document.getElementById('lineCount');
+  var currentMd = '';
+
+  function render(){
+    currentMd = buildMarkdown();
+    previewEl.innerHTML = highlight(currentMd);
+    var lines = currentMd.split('\n').length;
+    lineCountEl.textContent = lines + (lines === 1 ? ' line' : ' lines');
+  }
+
+  document.getElementById('form').addEventListener('input', render);
+
+  document.getElementById('copyBtn').addEventListener('click', function(){
+    var btn = this;
+    navigator.clipboard.writeText(currentMd).then(function(){
+      var original = btn.textContent;
+      btn.textContent = 'Copied';
+      btn.classList.add('copied');
+      setTimeout(function(){ btn.textContent = original; btn.classList.remove('copied'); }, 1400);
+    });
+  });
+
+  document.getElementById('downloadBtn').addEventListener('click', function(){
+    var blob = new Blob([currentMd], {type: 'text/markdown;charset=utf-8'});
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = 'CLAUDE.md';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>

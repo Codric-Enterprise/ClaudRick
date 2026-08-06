@@ -11,12 +11,31 @@ from revision.config import Config
 from revision.server import create_server
 
 
+class _FakeStream:
+    """Stand-in for the streaming response returned by open_message_stream."""
+
+    def __init__(self, lines):
+        self._lines = iter(lines)
+        self.closed = False
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        return next(self._lines)
+
+    def close(self):
+        self.closed = True
+
+
 class _FakeClient:
     """Stand-in for AnthropicClient; records calls and returns/raises on demand."""
 
-    def __init__(self, result=None, error=None):
+    def __init__(self, result=None, error=None, stream_lines=None, stream_error=None):
         self.result = result
         self.error = error
+        self.stream_lines = stream_lines
+        self.stream_error = stream_error
         self.calls = []
 
     def create_message(self, prompt, max_tokens=3000):
@@ -24,6 +43,12 @@ class _FakeClient:
         if self.error:
             raise self.error
         return self.result
+
+    def open_message_stream(self, prompt, max_tokens=3000):
+        self.calls.append((prompt, max_tokens))
+        if self.stream_error:
+            raise self.stream_error
+        return _FakeStream(self.stream_lines or [])
 
 
 @contextmanager
@@ -131,6 +156,39 @@ def test_auth_required_when_token_set():
         )
         assert status == 200
     assert client.calls == [("hi", 3000)]
+
+
+def test_api_messages_streams_sse():
+    lines = [
+        b"event: content_block_delta\n",
+        b'data: {"type":"content_block_delta","delta":{"type":"text_delta","text":"Hi"}}\n',
+        b"\n",
+        b"event: message_stop\n",
+        b'data: {"type":"message_stop"}\n',
+        b"\n",
+    ]
+    client = _FakeClient(stream_lines=lines)
+    with running_server(client) as base:
+        req = urllib.request.Request(
+            base + "/api/messages",
+            data=json.dumps({"prompt": "hi", "stream": True}).encode(),
+            headers={"content-type": "application/json"},
+            method="POST",
+        )
+        with urllib.request.urlopen(req) as resp:
+            content_type = resp.headers["content-type"]
+            body = resp.read()
+    assert content_type == "text/event-stream"
+    assert b"content_block_delta" in body
+    assert client.calls == [("hi", 3000)]
+
+
+def test_api_messages_stream_error_returns_502_json():
+    client = _FakeClient(stream_error=AnthropicError("boom"))
+    with running_server(client) as base:
+        status, data, _ = _post(base + "/api/messages", {"prompt": "hi", "stream": True})
+    assert status == 502
+    assert data["error"]["message"] == "boom"
 
 
 def test_rate_limit_returns_429_with_retry_after():

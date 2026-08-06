@@ -233,6 +233,33 @@ and `pros-cons`/`proscons` do the same job — keep whichever you prefer.
 
 ---
 
+
+## Learn & Research
+
+### /research
+> Research the following in depth. Lay out what's known, the key perspectives or debates, and the current state of evidence. Distinguish well-established facts from contested or uncertain points, and note where a claim would need checking against a live source. Don't fabricate sources, figures, or quotes. Topic: {your input}
+
+### /learn
+> Help me learn the following. Start from what a beginner needs, build up in a logical order, and use concrete examples. Flag the common misconceptions, and end with a couple of quick questions to check understanding. Topic: {your input}
+
+### /sources
+> Suggest where to find reliable information on the following: the types of sources worth trusting and specific well-known ones. Do NOT invent URLs, titles, or citations — if unsure a source exists, say what to search for instead. Topic: {your input}
+
+### /explore
+> Explore the following broadly: the main sub-areas, adjacent ideas, open questions, and interesting angles worth pursuing. Aim to widen the map, not to conclude. End with a few threads most worth going deeper on. Topic: {your input}
+
+---
+
+## Collaborate
+
+### /email
+> Draft an email for the following. If the recipient or goal is unclear, ask first; otherwise produce a subject line and a concise, appropriately-toned message with a clear ask or next step. Offer a shorter or warmer variant if it would help. Details: {your input}
+
+### /feedback
+> Give constructive feedback on the following. Lead with what genuinely works, then the most important issues with specific, actionable fixes ranked by impact. Be candid but kind, and separate must-change from optional polish. Subject: {your input}
+
+---
+
 ## Content tools (text transforms)
 
 ### /eli5
@@ -249,6 +276,22 @@ and `pros-cons`/`proscons` do the same job — keep whichever you prefer.
 
 ### /glossary
 > Scan the text below for jargon, acronyms, and dense domain terms. Return a glossary: each term with a one-line plain-language definition as used in this context. Sort alphabetically. {your input}
+
+---
+
+## Structure & setup (2026 cheat sheet)
+
+See [`claude-2026-cheatsheet.md`](claude-2026-cheatsheet.md) for the sheets these
+came from.
+
+### /brief
+> Turn the following into a structured brief before doing any work. Fill in: Task (the single outcome), Context (background that changes the approach), Inputs/files (what's provided vs. missing), Constraints (scope/tone/tech/length/deadlines), Success criteria (how "done" is judged), and Output format (exact shape of the deliverable). Then list any clarifying questions and only start once the brief is settled. Request: {your input}
+
+### /about-me
+> Help me build an about-me.md core file — the profile Claude reads before acting, covering my role & context, goals, voice (and what to avoid), priorities, and default formats/tone/units. If my details are thin, ask up to 6 high-signal questions first; then output a concise, copy-paste-ready about-me.md with clear headings and a one-line note on where to put it. Details: {your input}
+
+### /model-picker
+> Recommend which Claude model fits the task below, matching capability to the job: Haiku 4.5 for bulk/simple triage and transforms; Sonnet 5 as the everyday default; Opus 4.8 for deep reasoning, writing, and strategy; Fable 5 for the hardest long-horizon work; Mythos 5 only for approved organizations' high-security workflows. Give the recommended model, the signals that drove the choice, what would escalate it a tier, and a per-phase split if the task has phases. Task: {your input}
 
 ---
 
