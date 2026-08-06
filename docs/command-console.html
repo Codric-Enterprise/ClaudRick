@@ -1,0 +1,642 @@
+<title>Slashboard — Claude Command Console</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  @font-face{font-family:'JB';font-style:normal;font-weight:400 700;font-display:swap;
+    src:local('JetBrains Mono'),local('SF Mono'),local('Fira Code'),local('Menlo'),local('Consolas')}
+  :root{
+    --bg:#EEF1F4; --surface:#FFFFFF; --surface-2:#F5F7FA; --border:#DBE0E6;
+    --text:#161B21; --muted:#5A6472; --faint:#8A93A1;
+    --accent:#B9720F; --accent-strong:#9C5E08; --accent-soft:rgba(185,114,15,.10);
+    --good:#2E7D53; --good-soft:rgba(46,125,83,.10);
+    --shadow:rgba(20,25,35,.10);
+    --font-ui:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --font-mono:'JB',ui-monospace,"SF Mono","JetBrains Mono","Fira Code",Menlo,Consolas,monospace;
+    --radius:10px;
+  }
+  @media(prefers-color-scheme:dark){:root{
+    --bg:#0F1218;--surface:#161B22;--surface-2:#1C222C;--border:#2A313C;
+    --text:#E9EDF2;--muted:#8A93A1;--faint:#6C7583;
+    --accent:#F4B23D;--accent-strong:#FFC658;--accent-soft:rgba(244,178,61,.14);
+    --good:#4FB07A;--good-soft:rgba(79,176,122,.12);--shadow:rgba(0,0,0,.45);
+  }}
+  :root[data-theme="light"]{
+    --bg:#EEF1F4;--surface:#FFFFFF;--surface-2:#F5F7FA;--border:#DBE0E6;
+    --text:#161B21;--muted:#5A6472;--faint:#8A93A1;
+    --accent:#B9720F;--accent-strong:#9C5E08;--accent-soft:rgba(185,114,15,.10);
+    --good:#2E7D53;--good-soft:rgba(46,125,83,.10);--shadow:rgba(20,25,35,.10);
+  }
+  :root[data-theme="dark"]{
+    --bg:#0F1218;--surface:#161B22;--surface-2:#1C222C;--border:#2A313C;
+    --text:#E9EDF2;--muted:#8A93A1;--faint:#6C7583;
+    --accent:#F4B23D;--accent-strong:#FFC658;--accent-soft:rgba(244,178,61,.14);
+    --good:#4FB07A;--good-soft:rgba(79,176,122,.12);--shadow:rgba(0,0,0,.45);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:var(--font-ui);
+    line-height:1.5;-webkit-font-smoothing:antialiased}
+  a{color:var(--accent-strong);text-decoration:none}
+  a:hover{text-decoration:underline}
+  .wrap{max-width:1180px;margin:0 auto;padding:0 20px}
+
+  /* header */
+  header{position:sticky;top:0;z-index:20;background:color-mix(in srgb,var(--bg) 86%,transparent);
+    backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid var(--border)}
+  .bar{display:flex;align-items:center;gap:14px;padding:14px 20px;max-width:1180px;margin:0 auto;flex-wrap:wrap}
+  .brand{display:flex;align-items:baseline;gap:10px;font-family:var(--font-mono);
+    font-weight:600;letter-spacing:-.02em;font-size:clamp(1.1rem,1rem+.8vw,1.4rem)}
+  .brand .dot{width:9px;height:9px;border-radius:50%;background:var(--accent);
+    box-shadow:0 0 0 4px var(--accent-soft);align-self:center;animation:pulse 2.4s ease-in-out infinite}
+  @keyframes pulse{0%,100%{box-shadow:0 0 0 4px var(--accent-soft)}50%{box-shadow:0 0 0 8px var(--accent-soft)}}
+  .brand small{font-family:var(--font-mono);font-weight:500;font-size:.6rem;letter-spacing:.16em;
+    text-transform:uppercase;color:var(--faint)}
+  .search{position:relative;flex:1 1 280px;min-width:200px}
+  .search .slash{position:absolute;left:14px;top:50%;transform:translateY(-50%);
+    font-family:var(--font-mono);color:var(--accent);font-weight:700;pointer-events:none}
+  .search input{width:100%;font-family:var(--font-mono);font-size:.88rem;color:var(--text);
+    background:var(--surface);border:1px solid var(--border);border-radius:9px;
+    padding:10px 12px 10px 30px;outline:none;transition:border-color .15s,box-shadow .15s}
+  .search input::placeholder{color:var(--faint)}
+  .search input:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+  .search kbd{position:absolute;right:10px;top:50%;transform:translateY(-50%);
+    font-family:var(--font-mono);font-size:.66rem;color:var(--faint);background:var(--surface-2);
+    border:1px solid var(--border);border-radius:5px;padding:2px 6px}
+  .hbtn{flex:0 0 auto;background:var(--surface);border:1px solid var(--border);color:var(--muted);
+    border-radius:9px;padding:8px 10px;cursor:pointer;font-size:.95rem;line-height:1;transition:.15s}
+  .hbtn:hover{border-color:var(--accent);color:var(--text)}
+
+  /* mode toggle in header */
+  .mode-toggle{display:flex;background:var(--surface-2);border:1px solid var(--border);
+    border-radius:8px;overflow:hidden;font-family:var(--font-mono);font-size:.72rem}
+  .mode-toggle button{background:none;border:none;color:var(--muted);padding:7px 12px;
+    cursor:pointer;transition:.14s;letter-spacing:.04em;text-transform:uppercase;font-family:inherit;font-size:inherit}
+  .mode-toggle button:hover{color:var(--text)}
+  .mode-toggle button.active{background:var(--accent);color:#161105;font-weight:600}
+
+  /* filter rail */
+  .rail{position:sticky;top:57px;z-index:15;background:color-mix(in srgb,var(--bg) 86%,transparent);
+    backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid var(--border)}
+  .rail.hidden{display:none}
+  .chips{display:flex;gap:8px;overflow-x:auto;padding:10px 20px;max-width:1180px;margin:0 auto;scrollbar-width:thin}
+  .chip{flex:0 0 auto;font-family:var(--font-ui);font-size:.8rem;color:var(--muted);
+    background:var(--surface-2);border:1px solid var(--border);border-radius:20px;
+    padding:5px 12px;cursor:pointer;white-space:nowrap;transition:.14s;display:flex;gap:6px;align-items:center}
+  .chip:hover{color:var(--text);border-color:var(--faint)}
+  .chip .n{font-family:var(--font-mono);font-size:.68rem;color:var(--faint);font-variant-numeric:tabular-nums}
+  .chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:#161105;font-weight:600}
+  .chip[aria-pressed="true"] .n{color:#161105;opacity:.75}
+
+  /* --- START HERE (beginner) --- */
+  .start{padding:36px 0 20px}
+  .start h1{font-family:var(--font-ui);font-weight:700;letter-spacing:-.02em;
+    font-size:clamp(1.7rem,1.1rem+2.2vw,2.8rem);line-height:1.05;margin:0 0 8px;text-wrap:balance;max-width:22ch}
+  .start h1 em{font-style:normal;color:var(--accent-strong)}
+  .start>p{color:var(--muted);font-size:.98rem;max-width:52ch;margin:0 0 28px}
+
+  .tiles{display:grid;gap:14px;grid-template-columns:repeat(auto-fill,minmax(260px,1fr))}
+  .tile{background:var(--surface);border:1px solid var(--border);border-radius:12px;
+    padding:20px;cursor:pointer;transition:border-color .15s,transform .15s,box-shadow .15s;position:relative}
+  .tile:hover{border-color:color-mix(in srgb,var(--accent) 55%,var(--border));
+    transform:translateY(-2px);box-shadow:0 8px 22px -12px var(--shadow)}
+  .tile:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+  .tile .icon{font-size:1.6rem;margin-bottom:8px;display:block;line-height:1}
+  .tile h3{font-family:var(--font-ui);font-weight:600;font-size:1.02rem;margin:0 0 4px;color:var(--text)}
+  .tile .desc{font-size:.84rem;color:var(--muted);line-height:1.4;margin:0}
+  .tile .badge{position:absolute;top:14px;right:14px;font-family:var(--font-mono);font-size:.62rem;
+    text-transform:uppercase;letter-spacing:.1em;color:var(--accent-strong);background:var(--accent-soft);
+    padding:2px 7px;border-radius:4px;font-weight:600}
+
+  .tile-cmds{display:none;margin-top:14px;padding-top:14px;border-top:1px solid var(--border)}
+  .tile.open .tile-cmds{display:block}
+  .tile-cmd{display:flex;align-items:flex-start;gap:10px;padding:8px 0}
+  .tile-cmd+.tile-cmd{border-top:1px solid color-mix(in srgb,var(--border) 50%,transparent)}
+  .tile-cmd .tc-left{flex:1;min-width:0}
+  .tile-cmd .tc-name{font-family:var(--font-mono);font-weight:600;font-size:.88rem;color:var(--text)}
+  .tile-cmd .tc-name .sl{color:var(--accent)}
+  .tile-cmd .tc-why{font-size:.78rem;color:var(--muted);line-height:1.35;margin-top:2px}
+  .tile-cmd .tc-prompt{font-family:var(--font-mono);font-size:.72rem;color:var(--faint);
+    background:var(--surface-2);border:1px solid var(--border);border-radius:6px;
+    padding:7px 9px;margin-top:6px;white-space:pre-wrap;line-height:1.5;display:none}
+  .tile-cmd .tc-prompt.open{display:block}
+  .tile-cmd .tc-prompt .ph{color:var(--accent-strong);font-style:normal}
+  .tile-cmd .tc-copy{flex:0 0 auto;font-family:var(--font-ui);font-size:.7rem;color:var(--muted);
+    background:var(--surface-2);border:1px solid var(--border);border-radius:6px;padding:5px 9px;
+    cursor:pointer;display:inline-flex;align-items:center;gap:4px;transition:.14s;margin-top:2px}
+  .tile-cmd .tc-copy:hover{border-color:var(--accent);color:var(--text)}
+  .tile-cmd .tc-copy.ok{color:var(--good);border-color:var(--good)}
+  .tile-cmd .tc-copy svg{width:11px;height:11px}
+
+  .start-footer{margin-top:24px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+  .start-footer .sf-link{font-family:var(--font-mono);font-size:.82rem;color:var(--accent-strong);
+    cursor:pointer;display:inline-flex;align-items:center;gap:6px;padding:8px 0;background:none;border:none}
+  .start-footer .sf-link:hover{text-decoration:underline}
+  .start-footer .sf-count{font-family:var(--font-mono);font-size:.78rem;color:var(--faint)}
+
+  /* --- POWER MODE (full grid) --- */
+  .hero{padding:28px 0 18px}
+  .hero h1{font-family:var(--font-ui);font-weight:700;letter-spacing:-.02em;
+    font-size:clamp(1.5rem,1rem+1.8vw,2.2rem);line-height:1.08;margin:0 0 10px;text-wrap:balance;max-width:22ch}
+  .hero h1 em{font-style:normal;color:var(--accent-strong)}
+  .hero p{color:var(--muted);font-size:.94rem;max-width:58ch;margin:0 0 16px}
+  .meta{display:flex;gap:20px;flex-wrap:wrap;align-items:center;font-family:var(--font-mono);
+    font-size:.76rem;color:var(--faint);letter-spacing:.04em}
+  .meta b{color:var(--text);font-weight:600}
+
+  details.rules{margin-top:18px;background:var(--surface);border:1px solid var(--border);border-radius:11px;overflow:hidden}
+  details.rules>summary{cursor:pointer;list-style:none;padding:12px 16px;display:flex;align-items:center;gap:10px;
+    font-family:var(--font-mono);font-size:.72rem;text-transform:uppercase;letter-spacing:.13em;color:var(--muted)}
+  details.rules>summary::-webkit-details-marker{display:none}
+  details.rules>summary .tri{color:var(--accent);transition:transform .2s}
+  details.rules[open]>summary .tri{transform:rotate(90deg)}
+  .rules ul{margin:0;padding:0 16px 14px;display:grid;gap:9px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
+  .rules li{list-style:none;font-size:.82rem;color:var(--muted);padding-left:14px;position:relative;line-height:1.4}
+  .rules li::before{content:"";position:absolute;left:0;top:.55em;width:5px;height:5px;border-radius:1px;
+    background:var(--accent);transform:rotate(45deg)}
+  .rules li b{color:var(--text);font-weight:600}
+
+  .install-banner{margin-top:18px;background:var(--surface);border:1px solid var(--border);border-radius:11px;
+    padding:16px 18px;display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+  .install-banner .ib-text{flex:1 1 240px}
+  .install-banner .ib-text strong{color:var(--text);font-size:.88rem}
+  .install-banner .ib-text p{color:var(--muted);font-size:.78rem;margin:3px 0 0}
+  .install-banner .ib-cmd{flex:0 1 auto;display:flex;align-items:center;gap:8px;
+    background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:9px 13px;
+    font-family:var(--font-mono);font-size:.8rem;color:var(--text);cursor:pointer;transition:.15s;white-space:nowrap}
+  .install-banner .ib-cmd:hover{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+  .install-banner .ib-cmd.ok{border-color:var(--good);color:var(--good)}
+  .install-banner .ib-tag{font-family:var(--font-mono);font-size:.58rem;text-transform:uppercase;
+    letter-spacing:.12em;color:var(--accent-strong);background:var(--accent-soft);
+    padding:2px 7px;border-radius:4px;font-weight:600;white-space:nowrap}
+
+  /* card grid */
+  main{padding:6px 0 36px}
+  section.grp{padding-top:22px;scroll-margin-top:110px}
+  .ghead{display:flex;align-items:center;gap:10px;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border)}
+  .ghead h2{font-family:var(--font-mono);font-size:.76rem;text-transform:uppercase;letter-spacing:.14em;
+    color:var(--text);margin:0;font-weight:600}
+  .ghead .gc{font-family:var(--font-mono);font-size:.68rem;color:var(--faint);font-variant-numeric:tabular-nums}
+  .ghead .copygrp{margin-left:auto;font-family:var(--font-ui);font-size:.72rem;color:var(--muted);
+    background:none;border:1px solid var(--border);border-radius:7px;padding:4px 9px;cursor:pointer;transition:.14s}
+  .ghead .copygrp:hover{border-color:var(--accent);color:var(--text)}
+  .grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(280px,1fr))}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px;
+    display:flex;flex-direction:column;gap:8px;transition:border-color .15s,transform .15s,box-shadow .15s}
+  .card:hover{border-color:color-mix(in srgb,var(--accent) 55%,var(--border));transform:translateY(-2px);
+    box-shadow:0 8px 22px -12px var(--shadow)}
+  .card:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+  .crow{display:flex;align-items:center;gap:8px}
+  .cmd{font-family:var(--font-mono);font-weight:600;font-size:.95rem;color:var(--text);letter-spacing:-.01em}
+  .cmd .sl{color:var(--accent)}
+  .copy{margin-left:auto;flex:0 0 auto;font-family:var(--font-ui);font-size:.7rem;color:var(--muted);
+    background:var(--surface-2);border:1px solid var(--border);border-radius:7px;padding:4px 8px;cursor:pointer;
+    display:inline-flex;align-items:center;gap:5px;transition:.14s}
+  .copy:hover{border-color:var(--accent);color:var(--text)}
+  .copy.ok{color:var(--good);border-color:var(--good)}
+  .copy svg{width:11px;height:11px}
+  .purpose{font-size:.84rem;color:var(--muted);line-height:1.35}
+  .prompt{font-family:var(--font-mono);font-size:.76rem;line-height:1.5;color:var(--faint);
+    background:var(--surface-2);border:1px solid var(--border);border-radius:7px;padding:8px 9px;margin:0;
+    white-space:pre-wrap;cursor:pointer;max-height:4.6em;overflow:hidden;position:relative;transition:max-height .25s}
+  .prompt.open{max-height:44em}
+  .prompt::after{content:"";position:absolute;left:0;right:0;bottom:0;height:1.8em;
+    background:linear-gradient(transparent,var(--surface-2));pointer-events:none;opacity:1;transition:opacity .2s}
+  .prompt.open::after{opacity:0}
+  .prompt .ph{color:var(--accent-strong);font-style:normal}
+
+  .empty{text-align:center;padding:60px 20px;color:var(--muted)}
+  .empty code{font-family:var(--font-mono);color:var(--accent-strong)}
+
+  /* how-to */
+  .howto{background:var(--surface);border:1px solid var(--border);border-radius:11px;
+    padding:24px 22px;margin:24px 0 0}
+  .howto h2{font-family:var(--font-mono);font-size:.78rem;text-transform:uppercase;
+    letter-spacing:.14em;color:var(--text);margin:0 0 16px;font-weight:600}
+  .ways{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
+  .way{background:var(--surface-2);border:1px solid var(--border);border-radius:9px;padding:14px}
+  .way h3{font-family:var(--font-mono);font-size:.74rem;color:var(--accent-strong);margin:0 0 5px;
+    font-weight:600;display:flex;align-items:center;gap:7px}
+  .way h3 .tag{font-size:.56rem;text-transform:uppercase;letter-spacing:.1em;
+    background:var(--accent-soft);color:var(--accent-strong);padding:2px 5px;border-radius:3px}
+  .way p{font-size:.8rem;color:var(--muted);margin:0 0 8px;line-height:1.4}
+  .way code{font-family:var(--font-mono);font-size:.74rem;background:var(--bg);
+    border:1px solid var(--border);border-radius:5px;padding:5px 9px;display:block;color:var(--text);word-break:break-all}
+
+  footer{border-top:1px solid var(--border);padding:22px 0 40px;color:var(--muted);font-size:.82rem}
+  footer .wrap{display:flex;gap:16px;flex-wrap:wrap;justify-content:space-between;align-items:center}
+  footer code{font-family:var(--font-mono);font-size:.78rem;color:var(--accent-strong);
+    background:var(--accent-soft);padding:1px 5px;border-radius:4px}
+  footer .keys{display:flex;gap:10px;font-family:var(--font-mono);font-size:.7rem;color:var(--faint)}
+  footer .keys kbd{background:var(--surface-2);border:1px solid var(--border);border-radius:4px;
+    padding:2px 5px;font-family:inherit}
+
+  #toast{position:fixed;left:50%;bottom:24px;transform:translate(-50%,20px);opacity:0;pointer-events:none;
+    background:var(--text);color:var(--bg);font-family:var(--font-mono);font-size:.78rem;padding:8px 14px;
+    border-radius:8px;box-shadow:0 10px 30px -8px var(--shadow);transition:.22s;z-index:40}
+  #toast.show{opacity:1;transform:translate(-50%,0)}
+
+  .hidden{display:none!important}
+  :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+  @media(max-width:560px){.bar{gap:8px}.search kbd{display:none}.install-banner{flex-direction:column}
+    .mode-toggle button{padding:6px 8px;font-size:.66rem}}
+</style>
+
+<header>
+  <div class="bar">
+    <div class="brand"><span class="dot"></span>slashboard <small id="brandsub">83 commands</small></div>
+    <div class="mode-toggle" id="modeToggle">
+      <button class="active" data-mode="start" type="button">Start here</button>
+      <button data-mode="power" type="button">All 80</button>
+    </div>
+    <div class="search">
+      <span class="slash">/</span>
+      <input id="q" type="search" placeholder="what do you need?" autocomplete="off" spellcheck="false" aria-label="Search commands">
+      <kbd>/</kbd>
+    </div>
+    <button class="hbtn" id="theme" title="Toggle theme" aria-label="Toggle light or dark theme">&#9685;</button>
+  </div>
+  <div class="rail hidden" id="rail"><div class="chips" id="chips"></div></div>
+</header>
+
+<!-- BEGINNER: START HERE -->
+<div class="wrap" id="startView">
+  <div class="start">
+    <h1>What do you need <em>Claude to do?</em></h1>
+    <p>Pick what you're working on. You'll get the exact prompt to copy — paste it into any Claude chat and go.</p>
+    <div class="tiles" id="tiles"></div>
+    <div class="start-footer">
+      <button class="sf-link" id="showAll" type="button">See all 83 commands &#8594;</button>
+      <span class="sf-count">12 groups · works in Claude Code, claude.ai, or any chat</span>
+    </div>
+  </div>
+</div>
+
+<!-- POWER: FULL GRID -->
+<div class="wrap hidden" id="powerHero">
+  <div class="hero">
+    <h1>Every Claude command, <em>one console.</em></h1>
+    <p>83 prompt-commands — searchable, grouped, one-click copy. In Claude Code they run as <code>/slash</code> commands; anywhere else, paste the prompt.</p>
+    <div class="meta"><span><b id="mTotal">83</b> commands</span><span><b>12</b> groups</span><span><b id="mShown">83</b> shown</span></div>
+    <details class="rules">
+      <summary><span class="tri">&#9656;</span> Operating rules — the guardrails baked in</summary>
+      <ul>
+        <li><b>Right model for the job.</b> Opus for hard reasoning, Sonnet for balance, Haiku for fast iteration.</li>
+        <li><b>Think before hard problems.</b> Restate, weigh trade-offs, check reasoning, then answer with confidence.</li>
+        <li><b>Don't guess — verify.</b> Separate what you know from what you infer; never fabricate links or citations.</li>
+        <li><b>Produce real deliverables.</b> Make the file/artifact, don't just describe it.</li>
+        <li><b>Systematize the repeatable.</b> Turn anything done twice into a workflow worth automating.</li>
+      </ul>
+    </details>
+    <div class="install-banner">
+      <div class="ib-text">
+        <strong>Install globally — any platform</strong>
+        <p>One command copies 80 commands + power-practices to <code>~/.claude/</code></p>
+      </div>
+      <span class="ib-tag">cross-platform</span>
+      <div class="ib-cmd" id="installCmd" role="button" tabindex="0" title="Click to copy">npx slash-pack</div>
+    </div>
+  </div>
+</div>
+
+<main class="wrap hidden" id="main"></main>
+
+<div class="wrap" id="howtoWrap">
+  <div class="howto">
+    <h2>Three ways to use</h2>
+    <div class="ways">
+      <div class="way">
+        <h3>Copy &amp; Paste <span class="tag">easiest</span></h3>
+        <p>Click "Copy" on any command, paste into a claude.ai chat, replace <code>{your input}</code>.</p>
+        <code>Works everywhere — no setup</code>
+      </div>
+      <div class="way">
+        <h3>Claude Code <span class="tag">any platform</span></h3>
+        <p>Install once, then type <code>/think</code>, <code>/analyze</code>, etc.</p>
+        <code>npx slash-pack</code>
+      </div>
+      <div class="way">
+        <h3>Per project <span class="tag">teams</span></h3>
+        <p>Drop <code>.claude/commands/</code> into any repo — auto-loads for everyone.</p>
+        <code>cp -r .claude/commands/ your-repo/.claude/</code>
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer><div class="wrap">
+  <span>Replace <code>{your input}</code> with your text. Click prompts to expand.</span>
+  <div class="keys"><span><kbd>/</kbd> search</span><span><kbd>Esc</kbd> clear</span></div>
+</div></footer>
+
+<div id="toast" role="status" aria-live="polite"></div>
+
+<!-- DATA -->
+<script type="application/json" id="usecases">
+[
+  {"icon":"🧠","title":"Think through a problem","desc":"Reason step by step, weigh trade-offs, or make a hard decision.","cmds":["/think","/pros-cons","/analyze"]},
+  {"icon":"📝","title":"Write or improve text","desc":"Draft, edit, shorten, or strengthen any writing.","cmds":["/write","/improve","/shorten"]},
+  {"icon":"📋","title":"Summarize something long","desc":"Get the key points or a quick TL;DR from dense text.","cmds":["/summary","/tldr","/key-points"]},
+  {"icon":"💡","title":"Generate ideas","desc":"Brainstorm options, explore a topic, or plan next steps.","cmds":["/brainstorm","/explore","/tasklist"]},
+  {"icon":"🔍","title":"Research or learn","desc":"Deep-dive a topic, find sources, or learn something new.","cmds":["/research","/learn","/sources"]},
+  {"icon":"✉️","title":"Draft a message","desc":"Write an email or give constructive feedback.","cmds":["/email","/feedback","/tone"]},
+  {"icon":"💻","title":"Work with code","desc":"Write, debug, test, or review code.","cmds":["/code","/debug","/test"]},
+  {"icon":"📊","title":"Analyze data","desc":"Extract insights, clean data, or build a report.","cmds":["/insights","/report","/stats"]}
+]
+</script>
+
+<script type="application/json" id="groups">
+[["focus","Focus & Context"],["think","Think & Solve"],["organize","Organize & Structure"],["code","Code & Tech"],["automate","Automate & Integrate"],["personalize","Personalize & Control"],["write","Write & Edit"],["data","Data & Analysis"],["learn","Learn & Research"],["collab","Collaborate"],["content","Content Transforms"],["dev","Repo Dev"]]
+</script>
+<script type="application/json" id="data">
+[
+["/focus","focus","Set the single main objective","Treat the following as the single main objective for this task. Restate it in one sentence, then keep everything that follows aligned to it — flag anything that would drift off-objective. Objective: {your input}"],
+["/context","focus","Add background context","Take the following as background context for the current task. Acknowledge the key facts, note anything that changes your approach, and ask about any gap that would materially affect the outcome. Context: {your input}"],
+["/details","focus","Go deeper on specifics","Go deeper on the following: add the specifics, edge cases, and mechanics that a high-level summary leaves out. If details are missing to do this well, list the exact questions you need answered. Topic: {your input}"],
+["/examples","focus","Give concrete examples","Give concrete, varied examples of the following — including at least one edge or counter-example. Keep each example short and label what it illustrates. Concept: {your input}"],
+["/clarify","focus","Ask clarifying questions first","Before answering, ask the follow-up questions needed to remove ambiguity from the following. List them in priority order, and say why each one matters to the result. Don't proceed until the load-bearing ones are resolved. Request: {your input}"],
+["/define","focus","Define terms precisely","Define the following term(s) precisely: a one-line plain-language definition, then the nuance or common misconception, then how the term is used in this context. Distinguish it from any term it's often confused with. Term(s): {your input}"],
+["/assumptions","focus","Surface the assumptions","Surface the assumptions behind the following — both stated and unstated. Mark each as safe, uncertain, or risky, and note which ones the outcome depends on most. Subject: {your input}"],
+["/priorities","focus","Rank by priority","Rank the following by priority. State the ranking criterion (impact, urgency, effort, dependency), order the items, and explain the top choice. Flag anything that's a prerequisite for the rest. Items: {your input}"],
+["/constraints","focus","Set hard constraints","Take the following as hard constraints for the task. Restate them as a checklist, note any that conflict with each other, and keep every proposed solution inside them — call out explicitly if a good option would require breaking one. Constraints: {your input}"],
+["/brief","focus","Scaffold a structured brief","Turn the following into a structured brief before doing any work. Fill in: Task (the single outcome), Context (background that changes the approach), Inputs/files (what's provided vs. missing), Constraints (scope/tone/tech/length/deadlines), Success criteria (how \"done\" is judged), and Output format (exact shape of the deliverable). Then list any clarifying questions and only start once the brief is settled. Request: {your input}"],
+["/think","think","Reason step by step","Think hard about the following before answering. Work through it step by step: restate the problem, lay out the options and their trade-offs, check your reasoning for errors, then give the conclusion with your confidence and what would change it. Problem: {your input}"],
+["/analyze","think","Break it down","Break the following down into its component parts: sub-problems, dependencies, unknowns, and the key decision points. Surface anything ambiguous before concluding. Target: {your input}"],
+["/compare","think","Compare options","Compare the options below across the dimensions that matter for the decision (cost, effort, risk, maintainability, speed, and any domain-specific ones). Present a compact table, then name the situations where each option wins. Options: {your input}"],
+["/pros-cons","think","Weigh pros and cons","List the pros and cons of the following. Be concrete and weight them — mark which points are decisive versus minor. End with a one-line net assessment. Subject: {your input}"],
+["/proscons","think","Steelman both sides","For the decision or option below, lay out the strongest pros and the strongest cons as two balanced lists. Then give a brief, reasoned recommendation and name the single biggest risk. Be even-handed — steelman both sides before concluding. Subject: {your input}"],
+["/evaluate","think","Judge against criteria","Evaluate the following against clear, stated criteria. For each criterion give a short judgment and evidence, then a summary verdict with confidence level. Call out what would change the verdict. Idea: {your input}"],
+["/recommend","think","Give one clear call","Give a single clear recommendation for the following, not a survey. Lead with the recommendation, then the top 2–3 reasons, then the main trade-off you are accepting. State your confidence. Question: {your input}"],
+["/brainstorm","think","Go wide on ideas","Brainstorm ideas for the following. Go wide first (include a few unconventional options), then cluster them into themes, then flag the 3 most promising with a one-line reason each. Goal: {your input}"],
+["/solve","think","Solve end to end","Solve the following. Restate the problem, choose an approach (and say why), work to a concrete answer, then verify the answer against the original constraints. Show the key steps, not every keystroke. Problem: {your input}"],
+["/model-picker","think","Pick the right model","Recommend which Claude model fits the task below, matching capability to the job: Haiku 4.5 for bulk/simple triage and transforms; Sonnet 5 as the everyday default; Opus 4.8 for deep reasoning, writing, and strategy; Fable 5 for the hardest long-horizon work; Mythos 5 only for approved organizations' high-security workflows. Give the recommended model, the signals that drove the choice, what would escalate it a tier, and a per-phase split if the task has phases. Task: {your input}"],
+["/challenge","think","Red-team it","Red-team the following. List the load-bearing assumptions, then attack each: where could it fail, what evidence is missing, what's the strongest counter-argument? Finish with the single biggest risk. Target: {your input}"],
+["/outline","organize","Build an outline","Create a clear hierarchical outline for the following — main sections with nested sub-points, ordered logically. Keep each line short. Subject: {your input}"],
+["/structure","organize","Impose structure","Organize the following into a clear structure: group related items, order the groups logically, and add headings. Don't drop or invent content — just impose order. Content: {your input}"],
+["/bullet","organize","Make bullet points","Rewrite the following as clean bullet points — one idea per bullet, parallel phrasing, no filler. Use one level of nesting only where it genuinely helps. Content: {your input}"],
+["/numbered","organize","Make a numbered list","Rewrite the following as a numbered list. Use numbering to convey order or sequence (steps, ranked items). Keep each item to one action or idea. Content: {your input}"],
+["/table","organize","Make a table","Organize the following into a clean Markdown table. Infer sensible columns if they aren't given, keep cells terse, and don't invent data — leave unknown cells blank. Data: {your input}"],
+["/summary","organize","Summarize","Summarize the following. Give a one-sentence TL;DR, then 5–10 bullets covering the substance, then any open questions or caveats. Preserve exact meaning; do not add claims that aren't in the source. Content: {your input}"],
+["/key-points","organize","Extract key points","Extract only the key points from the following as a tight bullet list — the things someone must know, nothing filler. Bold the single most important point. Content: {your input}"],
+["/mindmap","organize","Make a mind map","Build a mind map of the following as a Mermaid mindmap diagram in a fenced code block: central node, main branches, and sub-branches. Keep labels to a few words. Topic: {your input}"],
+["/flowchart","organize","Draw a flowchart","Draw the following process as a Mermaid flowchart TD in a fenced code block. Include decision branches and end states. Keep node labels short. Process: {your input}"],
+["/code","code","Write code","Write code for the following. Match the surrounding project's language, style, and conventions. Keep it minimal and correct, handle the obvious edge cases, and briefly note anything you assumed or left out. Show how to run or test it. Task: {your input}"],
+["/debug","code","Fix a bug","Debug the following. Form a hypothesis about the root cause, confirm it against the code/evidence before changing anything, then apply the minimal fix and state how to verify it's resolved. Note any related latent bugs you spot. Problem: {your input}"],
+["/explain","code","Explain code or a concept","Explain the following clearly. Start with a one-line \"what it is / what it does,\" then how it works step by step, then any gotchas. For code, reference specific file:line locations. Match the depth to the audience if one is stated. Target: {your input}"],
+["/optimize","code","Improve performance","Optimize the following code. First measure or reason about where the real cost is, then propose changes ranked by impact-to-effort. Show the diff and state the expected win and any risk. Don't change behavior without saying so. Target: {your input}"],
+["/refactor","code","Refactor safely","Refactor the following for clarity and maintainability while preserving behavior. Explain the smell you're addressing, make the change match surrounding style, and confirm tests still pass (or note which to run). Target: {your input}"],
+["/test","code","Write tests","Write tests for the following. Cover the happy path, edge cases, and failure modes. Match the project's existing test framework and layout. Make the tests deterministic and independent, then note how to run them. Target: {your input}"],
+["/convert","code","Convert formats","Convert the following into the requested target format (e.g. JSON↔CSV↔YAML, Markdown↔HTML, one language→another). Preserve all data and meaning, and flag anything that can't map cleanly. Request: {your input}"],
+["/documentation","code","Write docs","Write documentation for the following. Lead with what it is and when to use it, then usage with a concrete example, then parameters/return/errors and any gotchas. Match the surrounding docs' tone and format. Don't document behavior you haven't verified. Target: {your input}"],
+["/review","code","Review code or text","Review the following and report issues most-important first: correctness, clarity, and consistency, with a concrete fix for each. Separate must-fix from nice-to-have, and note what's already good. Target: {your input}"],
+["/workflow","automate","Build a workflow","Turn the following into a repeatable workflow: numbered steps, the input/output of each, decision points, and where a human check is needed. Note which steps could be automated (script, CI, etc.) and how. End with the trigger that should start the workflow. Task: {your input}"],
+["/automate","automate","Automate a task","Figure out how to automate the following. Identify the manual steps, pick the right mechanism (script, cron, CI job, MCP tool), and produce the concrete automation plus how to trigger and verify it. Note anything that must stay a manual/human check. Task: {your input}"],
+["/api","automate","Work with an API","Help use the following API. Identify the right endpoint(s), required auth, parameters, and response shape, then give a minimal working request example and handle errors/rate limits. Prefer the official docs; don't invent endpoints or fields. Request: {your input}"],
+["/integrate","automate","Connect two systems","Plan an integration between the following tools/systems. Define what data flows which way, the connection method (API, webhook, connector, file exchange), auth, and failure handling. Give the concrete steps to wire it up and how to test the round trip. Integration: {your input}"],
+["/schedule","automate","Schedule a run","Set up scheduling for the following. Translate the timing into a concrete schedule (e.g. cron expression or one-shot time), state what runs and what it produces, and note timezone and what happens on failure or a missed run. Schedule: {your input}"],
+["/trigger","automate","Define a trigger","Define a trigger for the following: the event that fires it, the condition to match, and the action to take. Specify how the event is detected (webhook, file watch, poll), and add a guard against firing on the wrong thing or firing twice. Trigger: {your input}"],
+["/tasklist","automate","Make a task list","Break the following into an ordered task list. Each task should be a concrete, single-outcome action, sequenced by dependency, with blockers marked. Keep it actionable — no vague \"figure out\" items. End with the first task to start. Goal: {your input}"],
+["/checklist","automate","Make a checklist","Produce a checklist for the following as checkboxes — the things to verify or do, in order, each independently checkable. Cover the easy-to-forget steps. Subject: {your input}"],
+["/preferences","personalize","Set working preferences","Take the following as my working preferences and apply them to your responses from here on: restate them back as a short list so we're aligned, then follow them. Ask before overriding one when a task would benefit from doing so. Preferences: {your input}"],
+["/about-me","personalize","Draft an about-me core file","Help me build an about-me.md core file — the profile Claude reads before acting, covering my role & context, goals, voice (and what to avoid), priorities, and default formats/tone/units. If my details are thin, ask up to 6 high-signal questions first; then output a concise, copy-paste-ready about-me.md with clear headings and a one-line note on where to put it. Details: {your input}"],
+["/memory","personalize","Remember a fact","Remember the following and apply it going forward. If it's a durable fact or convention, propose where to record it so it persists. To remember: {your input}"],
+["/tone","personalize","Adjust tone","Adjust the tone as requested below (e.g. formal, friendly, direct, diplomatic). Change only the tone — keep the facts, meaning, and structure intact. Request: {your input}"],
+["/style","personalize","Change writing style","Rewrite in the requested style below (e.g. plain English, technical, executive summary, marketing). Preserve the underlying meaning and any specifics; change voice, vocabulary, and rhythm to fit. Request: {your input}"],
+["/length","personalize","Change length","Adjust length as requested below. To shorten: cut redundancy and keep the substance. To lengthen: add real detail and examples, not padding. Request: {your input}"],
+["/format","personalize","Change format","Reformat into the requested shape below (e.g. table, bullets, numbered steps, JSON, headings). Keep all content; change only presentation. Request: {your input}"],
+["/reset","personalize","Restart the approach","Set aside the approach taken so far and restart clean. Briefly confirm what we're keeping (goal, constraints) versus discarding (the prior approach), then begin fresh. New direction: {your input}"],
+["/clear","personalize","Start a fresh topic","Drop the prior topic from active focus and start fresh on the new topic below. Don't carry over assumptions from the previous thread. New topic: {your input}"],
+["/write","write","Write from scratch","Write the following as requested. Establish the audience, purpose, and format first (ask if unclear), then produce a clean draft. Match the requested tone, keep it tight and free of filler, and don't fabricate facts. Brief: {your input}"],
+["/edit","write","Edit existing text","Edit the text below for clarity, flow, and correctness while preserving the author's meaning and voice. Return the edited version, then a short list of the substantive changes you made. Text: {your input}"],
+["/rewrite","write","Rewrite stronger","Rewrite the following to be clearer and stronger. Keep the meaning; improve structure, word choice, and rhythm. If a goal is given (shorter, friendlier, more formal), optimize for it. Don't add or drop information. Text: {your input}"],
+["/shorten","write","Make it shorter","Shorten the following without losing substance. Cut redundancy, hedging, and filler; keep every key fact and the original meaning. Aim for the tightest version that still reads well. Text: {your input}"],
+["/expand","write","Expand with substance","Expand the following with real substance — detail, examples, context, and reasoning — not padding. Keep the original intent and voice. Flag anything you added that should be fact-checked. Text: {your input}"],
+["/improve","write","Improve the writing","Improve the writing below for clarity, concision, flow, and impact while preserving meaning and voice. Return the improved version, then note the top 3 changes and why. Text: {your input}"],
+["/paraphrase","write","Restate in fresh words","Paraphrase the following in fresh wording while keeping the exact meaning. Don't echo the original phrasing, and don't add or drop information. If a register is specified, match it. Text: {your input}"],
+["/insights","data","Extract insights","Extract the meaningful insights from the data/text below — patterns, outliers, and what they imply — not just a restatement of the numbers. Rank by importance and note your confidence. Don't invent data. Data: {your input}"],
+["/forecast","data","Project a forecast","Produce a forecast from the following. State your method and assumptions, give the projection as a range (not false-precision single numbers), and list what would change it. Be explicit about uncertainty; don't fabricate data. Basis: {your input}"],
+["/report","data","Generate a report","Turn the following into a structured report: a short executive summary, then findings with supporting detail, then recommendations / next steps. Keep every claim traceable to the source and mark anything assumed. Material: {your input}"],
+["/stats","data","Summarize statistics","Summarize the key statistics for the data below: relevant totals, averages, spread/distribution, and notable comparisons. Show the calculation basis, and state any assumption about missing/ambiguous values rather than guessing silently. Data: {your input}"],
+["/clean","data","Clean data","Clean the data below: identify duplicates, inconsistent formats, missing values, and likely errors, then return the cleaned version plus a change log of what you fixed. Ask before dropping anything ambiguous — never silently discard rows. Data: {your input}"],
+["/research","learn","Research in depth","Research the following in depth. Lay out what's known, the key perspectives or debates, and the current state of evidence. Distinguish well-established facts from contested or uncertain points, and note where a claim would need checking against a live source. Don't fabricate sources, figures, or quotes. Topic: {your input}"],
+["/learn","learn","Learn a topic","Help me learn the following. Start from what a beginner needs, build up in a logical order, and use concrete examples. Flag the common misconceptions, and end with a couple of quick questions to check understanding. Topic: {your input}"],
+["/sources","learn","Find reliable sources","Suggest where to find reliable information on the following: the types of sources worth trusting and specific well-known ones. Do NOT invent URLs, titles, or citations — if unsure a source exists, say what to search for instead. Topic: {your input}"],
+["/explore","learn","Explore broadly","Explore the following broadly: the main sub-areas, adjacent ideas, open questions, and interesting angles worth pursuing. Aim to widen the map, not to conclude. End with a few threads most worth going deeper on. Topic: {your input}"],
+["/email","collab","Draft an email","Draft an email for the following. If the recipient or goal is unclear, ask first; otherwise produce a subject line and a concise, appropriately-toned message with a clear ask or next step. Offer a shorter or warmer variant if it would help. Details: {your input}"],
+["/feedback","collab","Give feedback","Give constructive feedback on the following. Lead with what genuinely works, then the most important issues with specific, actionable fixes ranked by impact. Be candid but kind, and separate must-change from optional polish. Subject: {your input}"],
+["/eli5","content","Explain simply","Explain the following in plain, jargon-free language someone with no background could follow. Use one short everyday analogy, keep it to a few sentences, and don't oversimplify to the point of being wrong. {your input}"],
+["/tldr","content","TL;DR a text","Summarize the text below. Give a one-sentence TL;DR, then 3–5 bullets capturing the essentials. Preserve critical numbers, names, and caveats. Do not add anything that isn't in the source. {your input}"],
+["/factcheck","content","Check the claims","Extract the factual, checkable claims from the text below. For each: state the claim, your assessment (supported / unsupported / misleading / uncertain), and a one-line reason. Flag anything you cannot verify rather than guessing. {your input}"],
+["/proofread","content","Proofread","Proofread the text below. Return the corrected version, preserving the author's meaning, tone, and voice — fix only grammar, spelling, punctuation, and obvious slips. Then list the notable changes you made. {your input}"],
+["/glossary","content","Build a glossary","Scan the text below for jargon, acronyms, and dense domain terms. Return a glossary: each term with a one-line plain-language definition as used in this context. Sort alphabetically. {your input}"],
+["/keypoints","content","Pull key points","Read the text below and extract the key points as a scannable bullet list, most important first. Group under short headings if there are natural sections. Stay faithful to the source. {your input}"],
+["/check","dev","Run the CI gate","Run the same checks CI enforces in order: ruff check, ruff format check, then pytest. Summarize failures with file and line and propose fixes. Do not auto-commit. (ReVision repo)"],
+["/run-app","dev","Start the app","Start the ReVision server (revision, or from source with PYTHONPATH). It serves localhost:8000; without an API key the UI still loads and the messages endpoint returns a graceful error. (ReVision repo)"],
+["/smoke","dev","Smoke-test the server","With the server running, verify the three surfaces: the health endpoint, the static UI returns 200, and the messages endpoint returns a reply or a graceful error. Report status and body for each. (ReVision repo)"]
+]
+</script>
+
+<script>
+(function(){
+  var GROUPS=JSON.parse(document.getElementById("groups").textContent);
+  var DATA=JSON.parse(document.getElementById("data").textContent);
+  var USECASES=JSON.parse(document.getElementById("usecases").textContent);
+  var GNAME={};GROUPS.forEach(function(g){GNAME[g[0]]=g[1]});
+  var count={};DATA.forEach(function(d){count[d[1]]=(count[d[1]]||0)+1});
+  var BYNAME={};DATA.forEach(function(d){BYNAME[d[0]]=d});
+
+  var qEl=document.getElementById("q");
+  var chipsEl=document.getElementById("chips");
+  var railEl=document.getElementById("rail");
+  var mainEl=document.getElementById("main");
+  var shownEl=document.getElementById("mShown");
+  var toastEl=document.getElementById("toast");
+  var startView=document.getElementById("startView");
+  var powerHero=document.getElementById("powerHero");
+  var tilesEl=document.getElementById("tiles");
+  var state={q:"",group:"all",mode:"start"};
+
+  var CHECK='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>';
+  var COPYI='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>';
+
+  function hl(t){return t.replace(/\{your input\}/g,'<span class="ph">{your input}</span>')}
+  function toast(m){toastEl.textContent=m;toastEl.classList.add("show");
+    clearTimeout(toast._t);toast._t=setTimeout(function(){toastEl.classList.remove("show")},1600)}
+  function doCopy(text,cb){
+    if(navigator.clipboard&&navigator.clipboard.writeText){
+      navigator.clipboard.writeText(text).then(cb,function(){fb(text);cb()});
+    }else{fb(text);cb()}
+  }
+  function fb(t){var a=document.createElement("textarea");a.value=t;a.style.position="fixed";a.style.opacity="0";
+    document.body.appendChild(a);a.select();try{document.execCommand("copy")}catch(e){}document.body.removeChild(a)}
+
+  // MODE SWITCHING
+  function setMode(m){
+    state.mode=m;
+    var btns=document.getElementById("modeToggle").children;
+    for(var i=0;i<btns.length;i++){btns[i].classList.toggle("active",btns[i].dataset.mode===m)}
+
+    if(m==="start"){
+      startView.classList.remove("hidden");
+      powerHero.classList.add("hidden");
+      mainEl.classList.add("hidden");
+      railEl.classList.add("hidden");
+      qEl.placeholder="what do you need?";
+    }else{
+      startView.classList.add("hidden");
+      powerHero.classList.remove("hidden");
+      mainEl.classList.remove("hidden");
+      railEl.classList.remove("hidden");
+      qEl.placeholder="search "+DATA.length+" commands…";
+      renderPower();
+    }
+  }
+  document.getElementById("modeToggle").onclick=function(e){
+    if(e.target.dataset.mode)setMode(e.target.dataset.mode);
+  };
+  document.getElementById("showAll").onclick=function(){setMode("power")};
+
+  // BEGINNER TILES
+  USECASES.forEach(function(uc){
+    var tile=document.createElement("div");tile.className="tile";tile.tabIndex=0;
+    var cmdsData=uc.cmds.map(function(n){return BYNAME[n]}).filter(Boolean);
+    var badge=cmdsData.length+" commands";
+    tile.innerHTML='<span class="icon">'+uc.icon+'</span><h3>'+uc.title+'</h3><p class="desc">'+uc.desc+'</p>'+
+      '<span class="badge">'+badge+'</span><div class="tile-cmds" id="tc-'+uc.title.replace(/\s/g,'')+'"></div>';
+
+    var tcWrap=tile.querySelector(".tile-cmds");
+    cmdsData.forEach(function(d){
+      var row=document.createElement("div");row.className="tile-cmd";
+      var name=d[0].replace("/",'<span class="sl">/</span>');
+      row.innerHTML='<div class="tc-left"><div class="tc-name">'+name+'</div>'+
+        '<div class="tc-why">'+d[2]+'</div>'+
+        '<pre class="tc-prompt">'+hl(d[3])+'</pre></div>'+
+        '<button class="tc-copy" type="button" aria-label="Copy '+d[0]+'">'+COPYI+'Copy</button>';
+      var promptEl=row.querySelector(".tc-prompt");
+      row.querySelector(".tc-name").style.cursor="pointer";
+      row.querySelector(".tc-name").onclick=function(e){e.stopPropagation();promptEl.classList.toggle("open")};
+      var btn=row.querySelector(".tc-copy");
+      btn.onclick=function(e){
+        e.stopPropagation();
+        doCopy(d[3],function(){
+          btn.classList.add("ok");btn.innerHTML=CHECK+"Copied";toast("Copied  "+d[0]);
+          clearTimeout(btn._t);btn._t=setTimeout(function(){btn.classList.remove("ok");btn.innerHTML=COPYI+"Copy"},1500);
+        });
+      };
+      tcWrap.appendChild(row);
+    });
+
+    tile.onclick=function(e){
+      if(e.target.closest(".tc-copy")||e.target.closest(".tc-name"))return;
+      tile.classList.toggle("open");
+    };
+    tile.onkeydown=function(e){
+      if(e.key==="Enter"&&!e.target.closest(".tc-copy")){tile.classList.toggle("open")}
+    };
+    tilesEl.appendChild(tile);
+  });
+
+  // search in start mode auto-switches to power mode
+  qEl.addEventListener("input",function(){
+    state.q=qEl.value;
+    if(state.mode==="start"&&state.q.trim().length>0){setMode("power")}
+    if(state.mode==="power")renderPower();
+  });
+
+  // POWER MODE
+  function makeChip(key,label,n){
+    var b=document.createElement("button");b.className="chip";b.type="button";b.dataset.g=key;
+    b.setAttribute("aria-pressed",key===state.group?"true":"false");
+    b.innerHTML=label+' <span class="n">'+n+'</span>';
+    b.onclick=function(){state.group=key;syncChips();renderPower()};
+    return b;
+  }
+  chipsEl.appendChild(makeChip("all","All",DATA.length));
+  GROUPS.forEach(function(g){chipsEl.appendChild(makeChip(g[0],GNAME[g[0]],count[g[0]]||0))});
+  function syncChips(){
+    [].forEach.call(chipsEl.children,function(c){
+      c.setAttribute("aria-pressed",c.dataset.g===state.group?"true":"false");
+    });
+  }
+
+  function card(d){
+    var el=document.createElement("div");el.className="card";
+    var name=d[0].replace("/",'<span class="sl">/</span>');
+    el.innerHTML='<div class="crow"><span class="cmd">'+name+'</span>'+
+      '<button class="copy" type="button" aria-label="Copy '+d[0]+'">'+COPYI+'Copy</button></div>'+
+      '<div class="purpose">'+d[2]+'</div>'+
+      '<pre class="prompt" tabindex="0" role="button" aria-label="Expand prompt">'+hl(d[3])+'</pre>';
+    var pre=el.querySelector(".prompt");
+    pre.onclick=function(){pre.classList.toggle("open")};
+    pre.onkeydown=function(e){if(e.key==="Enter"||e.key===" "){e.preventDefault();pre.classList.toggle("open")}};
+    var btn=el.querySelector(".copy");
+    btn.onclick=function(){
+      doCopy(d[3],function(){
+        btn.classList.add("ok");btn.innerHTML=CHECK+"Copied";toast("Copied  "+d[0]);
+        clearTimeout(btn._t);btn._t=setTimeout(function(){btn.classList.remove("ok");btn.innerHTML=COPYI+"Copy"},1500);
+      });
+    };
+    return el;
+  }
+
+  function renderPower(){
+    var q=state.q.trim().toLowerCase();
+    mainEl.innerHTML="";var shown=0;
+    GROUPS.forEach(function(g){
+      var key=g[0];
+      if(state.group!=="all"&&state.group!==key)return;
+      var items=DATA.filter(function(d){
+        if(d[1]!==key)return false;
+        if(!q)return true;
+        return(d[0]+" "+d[2]+" "+d[3]).toLowerCase().indexOf(q)>-1;
+      });
+      if(!items.length)return;
+      shown+=items.length;
+      var sec=document.createElement("section");sec.className="grp";
+      var head=document.createElement("div");head.className="ghead";
+      head.innerHTML='<h2>'+GNAME[key]+'</h2><span class="gc">'+items.length+'</span>'+
+        '<button class="copygrp" type="button">Copy all '+items.length+'</button>';
+      head.querySelector(".copygrp").onclick=function(){
+        var all=items.map(function(d){return d[0]+"\n"+d[3]}).join("\n\n");
+        doCopy(all,function(){toast("Copied "+items.length+" prompts")});
+      };
+      var grid=document.createElement("div");grid.className="grid";
+      items.forEach(function(d){grid.appendChild(card(d))});
+      sec.appendChild(head);sec.appendChild(grid);mainEl.appendChild(sec);
+    });
+    if(!shown){
+      mainEl.innerHTML='<div class="empty">No commands match <code>'+(q||state.group)+'</code>.<br>Try a different term or clear the filter.</div>';
+    }
+    shownEl.textContent=shown;
+    document.getElementById("mTotal").textContent=DATA.length;
+  }
+
+  // install cmd copy
+  var ic=document.getElementById("installCmd");
+  if(ic){
+    function icClick(){doCopy("npx slash-pack",function(){
+      ic.classList.add("ok");ic.textContent="Copied!";toast("Install command copied");
+      setTimeout(function(){ic.classList.remove("ok");ic.textContent="npx slash-pack"},1500);
+    })}
+    ic.onclick=icClick;ic.onkeydown=function(e){if(e.key==="Enter"||e.key===" "){e.preventDefault();icClick()}};
+  }
+
+  // theme toggle
+  document.getElementById("theme").onclick=function(){
+    var r=document.documentElement,c=r.getAttribute("data-theme");
+    if(!c)c=matchMedia("(prefers-color-scheme:dark)").matches?"dark":"light";
+    r.setAttribute("data-theme",c==="dark"?"light":"dark");
+  };
+
+  // keyboard
+  document.addEventListener("keydown",function(e){
+    if(e.key==="/"&&document.activeElement!==qEl&&document.activeElement.tagName!=="INPUT"){
+      e.preventDefault();qEl.focus();qEl.select();
+    }
+    if(e.key==="Escape"&&document.activeElement===qEl){qEl.value="";state.q="";
+      if(state.mode==="power")renderPower();qEl.blur();
+    }
+  });
+
+  // init in start mode
+  setMode("start");
+})();
+</script>

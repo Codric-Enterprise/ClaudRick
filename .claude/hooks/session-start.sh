@@ -13,6 +13,17 @@ fi
 
 cd "${CLAUDE_PROJECT_DIR:-.}"
 
+# Load local env vars (GITHUB_TOKEN, ANTHROPIC_API_KEY, etc.) from a gitignored
+# `.env` if the developer created one from `.env.example`. Scoped to this hook
+# process; use it for anything the hook runs, and source `.env` in your own
+# shell (`set -a; . ./.env; set +a`) for interactive work.
+if [ -f .env ]; then
+  set -a
+  # shellcheck disable=SC1091
+  . ./.env
+  set +a
+fi
+
 # Fast path: nothing to do if the package imports and both dev tools resolve.
 # The container caches the install, so this is the common case on resume/compact.
 if python -c 'import revision' 2>/dev/null \

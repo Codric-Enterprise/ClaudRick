@@ -1,4 +1,5 @@
 # Claude Commands Pack — 62 commands
+# Claude Commands Pack — 74 commands
 
 For each command: the **slash form** works in Claude Code (type `/name your input`);
 the **prompt** below it is what to paste into a normal claude.ai chat (replace
@@ -189,6 +190,77 @@ and `pros-cons`/`proscons` do the same job — keep whichever you prefer.
 
 ---
 
+## Write & Edit
+
+### /write
+> Write the following as requested. Establish the audience, purpose, and format first (ask if unclear), then produce a clean draft. Match the requested tone, keep it tight and free of filler, and don't fabricate facts. Brief: {your input}
+
+### /edit
+> Edit the text below for clarity, flow, and correctness while preserving the author's meaning and voice. Return the edited version, then a short list of the substantive changes you made. Text: {your input}
+
+### /rewrite
+> Rewrite the following to be clearer and stronger. Keep the meaning; improve structure, word choice, and rhythm. If a goal is given (shorter, friendlier, more formal), optimize for it. Don't add or drop information. Text: {your input}
+
+### /shorten
+> Shorten the following without losing substance. Cut redundancy, hedging, and filler; keep every key fact and the original meaning. Aim for the tightest version that still reads well. Text: {your input}
+
+### /expand
+> Expand the following with real substance — detail, examples, context, and reasoning — not padding. Keep the original intent and voice. Flag anything you added that should be fact-checked. Text: {your input}
+
+### /improve
+> Improve the writing below for clarity, concision, flow, and impact while preserving meaning and voice. Return the improved version, then note the top 3 changes and why. Text: {your input}
+
+### /paraphrase
+> Paraphrase the following in fresh wording while keeping the exact meaning. Don't echo the original phrasing, and don't add or drop information. If a register is specified, match it. Text: {your input}
+
+---
+
+## Data & Analysis
+
+### /insights
+> Extract the meaningful insights from the data/text below — patterns, outliers, and what they imply — not just a restatement of the numbers. Rank by importance and note your confidence. Don't invent data. Data: {your input}
+
+### /forecast
+> Produce a forecast from the following. State your method and assumptions, give the projection as a range (not false-precision single numbers), and list what would change it. Be explicit about uncertainty; don't fabricate data. Basis: {your input}
+
+### /report
+> Turn the following into a structured report: a short executive summary, then findings with supporting detail, then recommendations / next steps. Keep every claim traceable to the source and mark anything assumed. Material: {your input}
+
+### /stats
+> Summarize the key statistics for the data below: relevant totals, averages, spread/distribution, and notable comparisons. Show the calculation basis, and state any assumption about missing/ambiguous values rather than guessing silently. Data: {your input}
+
+### /clean
+> Clean the data below: identify duplicates, inconsistent formats, missing values, and likely errors, then return the cleaned version plus a change log of what you fixed. Ask before dropping anything ambiguous — never silently discard rows. Data: {your input}
+
+---
+
+
+## Learn & Research
+
+### /research
+> Research the following in depth. Lay out what's known, the key perspectives or debates, and the current state of evidence. Distinguish well-established facts from contested or uncertain points, and note where a claim would need checking against a live source. Don't fabricate sources, figures, or quotes. Topic: {your input}
+
+### /learn
+> Help me learn the following. Start from what a beginner needs, build up in a logical order, and use concrete examples. Flag the common misconceptions, and end with a couple of quick questions to check understanding. Topic: {your input}
+
+### /sources
+> Suggest where to find reliable information on the following: the types of sources worth trusting and specific well-known ones. Do NOT invent URLs, titles, or citations — if unsure a source exists, say what to search for instead. Topic: {your input}
+
+### /explore
+> Explore the following broadly: the main sub-areas, adjacent ideas, open questions, and interesting angles worth pursuing. Aim to widen the map, not to conclude. End with a few threads most worth going deeper on. Topic: {your input}
+
+---
+
+## Collaborate
+
+### /email
+> Draft an email for the following. If the recipient or goal is unclear, ask first; otherwise produce a subject line and a concise, appropriately-toned message with a clear ask or next step. Offer a shorter or warmer variant if it would help. Details: {your input}
+
+### /feedback
+> Give constructive feedback on the following. Lead with what genuinely works, then the most important issues with specific, actionable fixes ranked by impact. Be candid but kind, and separate must-change from optional polish. Subject: {your input}
+
+---
+
 ## Content tools (text transforms)
 
 ### /eli5
@@ -205,6 +277,22 @@ and `pros-cons`/`proscons` do the same job — keep whichever you prefer.
 
 ### /glossary
 > Scan the text below for jargon, acronyms, and dense domain terms. Return a glossary: each term with a one-line plain-language definition as used in this context. Sort alphabetically. {your input}
+
+---
+
+## Structure & setup (2026 cheat sheet)
+
+See [`claude-2026-cheatsheet.md`](claude-2026-cheatsheet.md) for the sheets these
+came from.
+
+### /brief
+> Turn the following into a structured brief before doing any work. Fill in: Task (the single outcome), Context (background that changes the approach), Inputs/files (what's provided vs. missing), Constraints (scope/tone/tech/length/deadlines), Success criteria (how "done" is judged), and Output format (exact shape of the deliverable). Then list any clarifying questions and only start once the brief is settled. Request: {your input}
+
+### /about-me
+> Help me build an about-me.md core file — the profile Claude reads before acting, covering my role & context, goals, voice (and what to avoid), priorities, and default formats/tone/units. If my details are thin, ask up to 6 high-signal questions first; then output a concise, copy-paste-ready about-me.md with clear headings and a one-line note on where to put it. Details: {your input}
+
+### /model-picker
+> Recommend which Claude model fits the task below, matching capability to the job: Haiku 4.5 for bulk/simple triage and transforms; Sonnet 5 as the everyday default; Opus 4.8 for deep reasoning, writing, and strategy; Fable 5 for the hardest long-horizon work; Mythos 5 only for approved organizations' high-security workflows. Give the recommended model, the signals that drove the choice, what would escalate it a tier, and a per-phase split if the task has phases. Task: {your input}
 
 ---
 

@@ -1,0 +1,35 @@
+{
+  "name": "slash-pack",
+  "version": "1.0.0",
+  "description": "S.L.A.S.H. — 77 battle-tested prompt-commands for Claude. Structured Language And System Heuristics.",
+  "keywords": [
+    "claude",
+    "claude-code",
+    "anthropic",
+    "prompts",
+    "slash-commands",
+    "slash-pack",
+    "ai",
+    "productivity"
+  ],
+  "license": "SEE LICENSE IN LICENSE",
+  "author": "ReVision Contributors",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Codric-Enterprise/ClaudRick"
+  },
+  "bin": {
+    "slash-pack": "cli.js"
+  },
+  "files": [
+    "cli.js",
+    "commands/",
+    "pro-commands/",
+    "skills/",
+    "LICENSE",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=16"
+  }
+}
