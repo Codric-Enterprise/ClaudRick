@@ -28,15 +28,6 @@
       "forced_continuity",
       "cancellation_obstruction",
       "buried_limitation"
-    ],
-    "contract_traps": [
-      "arbitration_clause",
-      "indemnification",
-      "liability_waiver",
-      "jurisdiction_shopping",
-      "class_action_waiver",
-      "unilateral_modification",
-      "confession_of_judgment"
     ]
   },
   "generated": "2026-07-18T20:29:05.966Z",
@@ -88,7 +79,7 @@
       "id": "D02",
       "file": "D02-free-trial-saas.docx",
       "kind": "predatory",
-      "title": "CloudNote Pro \u2014 Free Trial Terms",
+      "title": "CloudNote Pro — Free Trial Terms",
       "planted": [
         {
           "category": "hidden_terms_and_costs",
@@ -119,7 +110,7 @@
       "id": "D03",
       "file": "D03-payday-loan.docx",
       "kind": "predatory",
-      "title": "QuickCash Advance \u2014 Loan Offer",
+      "title": "QuickCash Advance — Loan Offer",
       "planted": [
         {
           "category": "deceptive_language",
@@ -156,7 +147,7 @@
       "id": "D04",
       "file": "D04-timeshare.docx",
       "kind": "predatory",
-      "title": "Azure Shores Vacation Ownership \u2014 Invitation",
+      "title": "Azure Shores Vacation Ownership — Invitation",
       "planted": [
         {
           "category": "tone_manipulation",
@@ -173,7 +164,7 @@
         {
           "category": "artificial_urgency",
           "subtype": "now_or_never",
-          "phrase": "available at today\u2019s presentation only and will not be offered again",
+          "phrase": "available at today’s presentation only and will not be offered again",
           "severity": "high"
         },
         {
@@ -273,6 +264,7 @@
       "id": "D07",
       "file": "D07-apartment-lease.docx",
       "kind": "predatory",
+      "title": "Maple Court Apartments — Lease Addendum",
       "title": "Maple Court Apartments \u2014 Lease Addendum",
       "planted": [
         {
@@ -310,6 +302,7 @@
       "id": "D08",
       "file": "D08-crypto-pitch.docx",
       "kind": "predatory",
+      "title": "NovaCoin — Private Presale Access",
       "title": "NovaCoin \u2014 Private Presale Access",
       "planted": [
         {
@@ -353,6 +346,7 @@
       "id": "C01",
       "file": "C01-library-newsletter.docx",
       "kind": "control",
+      "title": "Riverside Public Library — Monthly Newsletter",
       "title": "Riverside Public Library \u2014 Monthly Newsletter",
       "planted": [],
       "expected_score_band": [
@@ -365,6 +359,7 @@
       "id": "C02",
       "file": "C02-fair-refund-policy.docx",
       "kind": "control",
+      "title": "Northwind Books — Refund Policy",
       "title": "Northwind Books \u2014 Refund Policy",
       "planted": [],
       "expected_score_band": [
