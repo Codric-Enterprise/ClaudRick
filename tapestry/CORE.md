@@ -198,12 +198,38 @@ or the right. `1 + if a then 2 else 3` is outside the grammar;
 `(if a then 1 else 2) != 3` is inside it, and parentheses are the only
 thing that makes a conditional an atom.
 
+**The incumbent discarded everything after a definition.**
+`syntax.py`'s `program()` returned from the definition branch without
+checking that it had reached the end of the input, while the
+expression branch checked. So `1 2` was refused and
+
+```
+def f(n) = n ) ) )
+def f(n) = n garbage
+```
+
+both came back `stage="ready"` with the tail silently dropped. All
+sixteen forge front ends refuse those texts; the incumbent did not,
+and the asymmetry between its own two branches is what gives it away.
+Fixed in `2-interpreter-python/syntax.py`; its 212 assertions pass
+unchanged, so no test had been asserting the defect.
+
 **The DFA scanner raised on a bare `.`.** A `.` reaching the table in
 start position is in no row, so the lookup raised `KeyError` instead of
 refusing. Found by the fuzzer inside `let9.1`. SEMANTICS.md G1 says
 evaluation is total — *"no exceptions, no undefined behavior"* — and a
 scanner that raises makes that a property of whoever remembered to
 catch it. It now refuses with `misbound`.
+
+**The trie scanner used `$` as its end-of-token marker.** `$` is a
+character a source text may contain, so a `$` in the input walked into
+the marker, and the next character indexed a tuple:
+`TypeError: tuple indices must be integers`. Found at generation 7 on
+`false =$= 35`, which is to say: found because the fuzz budget doubles
+after every clean generation, and the seventh generation was the first
+one big enough. The fix is a sentinel that cannot collide with the
+alphabet it indexes, not a guard against the one character that
+happened to break it.
 
 ---
 
@@ -253,7 +279,25 @@ inside the text — it just does not decide whether two front ends agree.
 
 ---
 
-## 6. What the emitted grammar makes possible
+## 6. Which front end is which
+
+Two front ends now exist, and they are not the same thing.
+
+| | |
+|---|---|
+| `2-interpreter-python/syntax.py` | **Ever V3.0's front end.** Still `program := fndef \| expr` — one definition per text. One fix applied: it now checks for end of input in both branches. |
+| `7-forge/` | **The reference front end for the core.** Four scanners and four parsers, all sixteen pairings agreeing on the grammar in section 1. |
+
+So `syntax.py` refuses a two-definition text and the core accepts one.
+**Adopting the core grammar in `syntax.py` is the obvious next step and
+is not done here** — it would be a change to the seed's own parser
+rather than a finding about the language, and it belongs in its own
+change with the pipeline's 63 assertions re-derived against the new
+rules.
+
+---
+
+## 7. What the emitted grammar makes possible
 
 PIPELINE.md ends by naming what stage 4 does not have:
 

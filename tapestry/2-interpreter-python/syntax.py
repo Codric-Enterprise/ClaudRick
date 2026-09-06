@@ -257,9 +257,17 @@ class Parser:
 
     # ── grammar ──
     def program(self) -> Node:
+        # Both branches must reach the end of the input. The definition
+        # branch used to return without checking, so everything after a
+        # definition was silently dropped and compile_ever still
+        # reported "ready": `def f(n) = n ) ) )` and
+        # `def f(n) = n` followed by a second definition both came back
+        # clean, with the tail discarded. Found by layer 7, where all
+        # sixteen front ends refuse the same texts.
         if self.at(T.KW, "def"):
-            return self.fndef()
-        node = self.expr()
+            node = self.fndef()
+        else:
+            node = self.expr()
         if not self.at(T.EOF):
             t = self.peek()
             raise ParseError(f"unexpected {t.text!r} at line {t.line}")

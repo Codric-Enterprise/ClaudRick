@@ -166,6 +166,13 @@ GOLDEN: List[Case] = [
     _g("bad-def-no-body", "def f(n) =", REFUSE_PARSE),
     _g("bad-def-no-eq", "def f(n) n", REFUSE_PARSE),
     _g("bad-two-exprs", "1 2", REFUSE_PARSE),
+    _g("bad-tail-after-def", "def f(n) = n garbage", REFUSE_PARSE,
+       note="found by the forge: the incumbent's program() returned "
+            "from the definition branch without checking for EOF, so "
+            "everything after a definition was discarded and "
+            "compile_ever still reported 'ready'."),
+    _g("bad-tail-parens", "def f(n) = n ) ) )", REFUSE_PARSE),
+    _g("bad-tail-numbers", "def f(n) = n 1 2 3", REFUSE_PARSE),
     _g("bad-comma-loose", "1, 2", REFUSE_PARSE),
     _g("bad-empty", "", REFUSE_PARSE),
     _g("bad-only-comment", "# nothing", REFUSE_PARSE),
