@@ -1,0 +1,252 @@
+{
+  "converged": true,
+  "generations": 16,
+  "pairs": 16,
+  "lexers": [
+    "L1-regex-master",
+    "L2-handrolled",
+    "L3-dfa",
+    "L4-trie"
+  ],
+  "parsers": [
+    "P1-recdescent",
+    "P2-pratt",
+    "P3-shunting",
+    "P4-earley"
+  ],
+  "programs_fuzzed": 250600,
+  "budget_reached": 25000,
+  "counterexamples_carried": 46,
+  "settled": {
+    "cmp_kind": {
+      "answer": "CMP",
+      "generation": 0,
+      "rationale": "doctrine (PIPELINE.md, section 2): compare := additive [ CMP additive ] \u2014 the published grammar names CMP as the class of the comparison operator, so a bare '<' that scans as OP cannot satisfy the rule the project already printed."
+    },
+    "unterminated_string_defect": {
+      "answer": "unbounded",
+      "generation": 0,
+      "rationale": "doctrine (PIPELINE.md and SEMANTICS.md 1): PIPELINE.md classifies running out of input ('1 +') as Z(unbounded) and an illegal character ('a $ b') as Z(misbound). A string with no closing quote ran out of input; it is not a character the language rejects."
+    },
+    "reserved_words": {
+      "answer": [
+        "def",
+        "else",
+        "false",
+        "if",
+        "then",
+        "true"
+      ],
+      "generation": 0,
+      "rationale": "doctrine (PIPELINE.md, section 2): 'This is the whole language. Anything not derivable here is outside the grammar.' Thirteen of the incumbent's nineteen reserved words appear in no rule, so they reserve names against a syntax that does not exist."
+    },
+    "multi_definition": {
+      "answer": true,
+      "generation": 0,
+      "rationale": "coverage gap: more than one definition in one namespace. Runtime: Lambda.globals holds ['double', 'triple'] simultaneously; double(4)=8, triple(4)=12. Syntax: no front end accepts 'def double(n) = n * 2\\ndef triple(n) = n * 3' \u2014 the published rule is program := fndef | expr, one only. SEMANTICS.md 7 lists the module system as missing and describes the namespace it is missing from as 'one flat global namespace' \u2014 a namespace the runtime already populates and the grammar cannot address."
+    },
+    "chained_comparison": {
+      "answer": false,
+      "generation": 0,
+      "rationale": "doctrine (PIPELINE.md, section 2): compare := additive [ CMP additive ] \u2014 the brackets are optional-once, not repeated, so 'a < b < c' is outside the published grammar."
+    },
+    "trailing_comma": {
+      "answer": false,
+      "generation": 0,
+      "rationale": "consensus: 16 of 16 independent witnesses, threshold pi=3 and two thirds"
+    },
+    "trailing_expression": {
+      "answer": false,
+      "generation": 0,
+      "rationale": "finding (law unambiguous): Allowing 'program := deflist [expr]' makes the grammar ambiguous. 'def f(n) = 1 - 1' has two derivations: a body of '1 - 1', or a body of '1' followed by the expression '- 1' under prefix minus. The chart parser reports overbound; the three deterministic parsers resolve it greedily and never mention it. Dropping the trailing expression removes the ambiguity and still closes the coverage gap, which was about holding several definitions in one namespace and never about a trailing expression."
+    }
+  },
+  "escalated": {},
+  "coverage_gaps": [],
+  "generations_log": [
+    {
+      "gen": 0,
+      "cases": 479,
+      "fuzzed": 400,
+      "golden_failures": 20,
+      "violations": 112,
+      "divergences": 53,
+      "ratified": [
+        "cmp_kind := 'CMP'  [doctrine]",
+        "unterminated_string_defect := 'unbounded'  [doctrine]",
+        "reserved_words := ['def', 'else', 'false', 'if', 'then', 'true']  [doctrine]",
+        "multi_definition := True  [coverage gap]",
+        "chained_comparison := False  [doctrine]",
+        "trailing_comma := False  [consensus 16/16]",
+        "trailing_expression := False  [finding/unambiguous]"
+      ],
+      "promoted": 46,
+      "seconds": 2.51
+    },
+    {
+      "gen": 1,
+      "cases": 525,
+      "fuzzed": 400,
+      "golden_failures": 0,
+      "violations": 0,
+      "divergences": 0,
+      "ratified": [],
+      "promoted": 0,
+      "seconds": 3.98
+    },
+    {
+      "gen": 2,
+      "cases": 925,
+      "fuzzed": 800,
+      "golden_failures": 0,
+      "violations": 0,
+      "divergences": 0,
+      "ratified": [],
+      "promoted": 0,
+      "seconds": 6.91
+    },
+    {
+      "gen": 3,
+      "cases": 1725,
+      "fuzzed": 1600,
+      "golden_failures": 0,
+      "violations": 0,
+      "divergences": 0,
+      "ratified": [],
+      "promoted": 0,
+      "seconds": 8.96
+    },
+    {
+      "gen": 4,
+      "cases": 3325,
+      "fuzzed": 3200,
+      "golden_failures": 0,
+      "violations": 0,
+      "divergences": 0,
+      "ratified": [],
+      "promoted": 0,
+      "seconds": 17.25
+    },
+    {
+      "gen": 5,
+      "cases": 6525,
+      "fuzzed": 6400,
+      "golden_failures": 0,
+      "violations": 0,
+      "divergences": 0,
+      "ratified": [],
+      "promoted": 0,
+      "seconds": 35.16
+    },
+    {
+      "gen": 6,
+      "cases": 12925,
+      "fuzzed": 12800,
+      "golden_failures": 0,
+      "violations": 0,
+      "divergences": 0,
+      "ratified": [],
+      "promoted": 0,
+      "seconds": 77.77
+    },
+    {
+      "gen": 7,
+      "cases": 25125,
+      "fuzzed": 25000,
+      "golden_failures": 0,
+      "violations": 0,
+      "divergences": 0,
+      "ratified": [],
+      "promoted": 0,
+      "seconds": 153.17
+    },
+    {
+      "gen": 8,
+      "cases": 25125,
+      "fuzzed": 25000,
+      "golden_failures": 0,
+      "violations": 0,
+      "divergences": 0,
+      "ratified": [],
+      "promoted": 0,
+      "seconds": 165.81
+    },
+    {
+      "gen": 9,
+      "cases": 25125,
+      "fuzzed": 25000,
+      "golden_failures": 0,
+      "violations": 0,
+      "divergences": 0,
+      "ratified": [],
+      "promoted": 0,
+      "seconds": 145.06
+    },
+    {
+      "gen": 10,
+      "cases": 25125,
+      "fuzzed": 25000,
+      "golden_failures": 0,
+      "violations": 0,
+      "divergences": 0,
+      "ratified": [],
+      "promoted": 0,
+      "seconds": 143.13
+    },
+    {
+      "gen": 11,
+      "cases": 25125,
+      "fuzzed": 25000,
+      "golden_failures": 0,
+      "violations": 0,
+      "divergences": 0,
+      "ratified": [],
+      "promoted": 0,
+      "seconds": 149.02
+    },
+    {
+      "gen": 12,
+      "cases": 25125,
+      "fuzzed": 25000,
+      "golden_failures": 0,
+      "violations": 0,
+      "divergences": 0,
+      "ratified": [],
+      "promoted": 0,
+      "seconds": 152.61
+    },
+    {
+      "gen": 13,
+      "cases": 25125,
+      "fuzzed": 25000,
+      "golden_failures": 0,
+      "violations": 0,
+      "divergences": 0,
+      "ratified": [],
+      "promoted": 0,
+      "seconds": 118.73
+    },
+    {
+      "gen": 14,
+      "cases": 25125,
+      "fuzzed": 25000,
+      "golden_failures": 0,
+      "violations": 0,
+      "divergences": 0,
+      "ratified": [],
+      "promoted": 0,
+      "seconds": 145.81
+    },
+    {
+      "gen": 15,
+      "cases": 25125,
+      "fuzzed": 25000,
+      "golden_failures": 0,
+      "violations": 0,
+      "divergences": 0,
+      "ratified": [],
+      "promoted": 0,
+      "seconds": 169.8
+    }
+  ]
+}

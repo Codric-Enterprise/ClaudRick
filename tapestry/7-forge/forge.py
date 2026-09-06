@@ -43,6 +43,13 @@ Convergence has to be earned: the fuzz budget doubles after every
 clean generation, so "no counterexample found" is a statement about a
 search that keeps getting harder, not about a search that got lucky.
 
+A run picks up where the last one stopped. Without `--reset` the
+programs already fuzzed, the budget already reached and the generation
+log are read back from the ledger, so a search interrupted at 50,000
+resumes at 50,000 rather than starting the climb again. A convergence
+claim that could only ever be made by one uninterrupted process would
+be a claim about the process.
+
 Codric Enterprise · Ricky (Dreid) · 2026
 """
 
@@ -215,7 +222,8 @@ class GenReport:
 class Forge:
     def __init__(self, seed: int = 1, budget: int = 400,
                  quiet_needed: int = 3, floor: int = 50_000,
-                 max_gens: int = 60, verbose: bool = True):
+                 max_gens: int = 60, verbose: bool = True,
+                 max_seconds: int = 0):
         self.pairs = build_pairs()
         self.seed = seed
         self.budget = budget
@@ -223,12 +231,16 @@ class Forge:
         self.floor = floor
         self.max_gens = max_gens
         self.verbose = verbose
+        self.max_seconds = max_seconds
         self.reports: List[GenReport] = []
         self.total_fuzzed = 0
         self.promoted: List[Case] = []
         self.escalations: Dict[str, str] = {}
         self.gaps: List[Gap] = []
+        self.prior_log: List[dict] = []
+        self.gen_offset = 0
         self._load_promoted()
+        self._load_ledger()
 
     # ── persistence of counterexamples ──
     def _load_promoted(self) -> None:
@@ -239,6 +251,25 @@ class Forge:
         self.promoted = [Case(r["cid"], r["src"], r.get("outcome"),
                               r.get("sexp"), r.get("note", ""), "promoted")
                          for r in raw.get("cases", [])]
+
+    def _load_ledger(self) -> None:
+        """Resume: the search so far is part of the evidence, whether or
+        not one process produced all of it."""
+        if not os.path.exists(LEDGER):
+            return
+        try:
+            with open(LEDGER) as fh:
+                raw = json.load(fh)
+        except (OSError, ValueError):
+            return
+        self.total_fuzzed = raw.get("programs_fuzzed", 0)
+        self.prior_log = raw.get("generations_log", [])
+        self.gen_offset = raw.get("generations", 0)
+        self.budget = max(self.budget, raw.get("budget_reached", 0))
+        if self.verbose and self.total_fuzzed:
+            print(f"resuming: {self.total_fuzzed:,} programs already "
+                  f"fuzzed over {self.gen_offset} generations, "
+                  f"budget {self.budget:,}\n")
 
     def _save_promoted(self) -> None:
         with open(COUNTEREXAMPLES, "w") as fh:
@@ -500,7 +531,7 @@ class Forge:
 
     # ── convergence ──
     def converge(self) -> bool:
-        quiet = 0
+        quiet = self._prior_quiet_streak()
         gen = 0
         if self.verbose:
             print(f"\n{'=' * 78}\nTHE FORGE — {len(self.pairs)} front ends "
@@ -509,8 +540,9 @@ class Forge:
             print(f"open questions at start: "
                   f"{len(SPEC.open_questions)}\n")
 
+        started = time.time()
         while gen < self.max_gens:
-            rep = self.generation(gen)
+            rep = self.generation(self.gen_offset + gen)
             self.arbitrate(gen, rep)
             self.reports.append(rep)
             if self.verbose:
@@ -526,6 +558,19 @@ class Forge:
             else:
                 quiet = 0
                 self.budget = max(self.budget, 400)
+
+            # Write after every generation, not only at the end. A run
+            # that is interrupted mid-search has still done the search,
+            # and losing the record of it would mean redoing work that
+            # was already honest.
+            self._write_ledger(False, gen + 1)
+
+            if self.max_seconds and time.time() - started > self.max_seconds:
+                if self.verbose:
+                    print(f"\nstopping at the time limit with "
+                          f"{self.total_fuzzed:,} programs fuzzed; "
+                          f"rerun without --reset to carry on")
+                return False
 
             done = (quiet >= self.quiet_needed
                     and self.total_fuzzed >= self.floor
@@ -545,7 +590,19 @@ class Forge:
         self._write_ledger(False, gen)
         return False
 
+    def _prior_quiet_streak(self) -> int:
+        """Clean generations already on the record still count. They
+        were run, and rerunning them would not make them cleaner."""
+        streak = 0
+        for entry in reversed(self.prior_log):
+            if (entry.get("golden_failures", 0) or entry.get("violations", 0)
+                    or entry.get("divergences", 0)):
+                break
+            streak += 1
+        return streak
+
     def _write_ledger(self, converged: bool, gens: int) -> None:
+        gens = self.gen_offset + gens
         with open(LEDGER, "w") as fh:
             json.dump({
                 "converged": converged,
@@ -554,6 +611,7 @@ class Forge:
                 "lexers": sorted(LEXERS),
                 "parsers": sorted(PARSERS),
                 "programs_fuzzed": self.total_fuzzed,
+                "budget_reached": self.budget,
                 "counterexamples_carried": len(self.promoted),
                 "settled": {q.key: {"answer": q.answer,
                                     "generation": q.generation,
@@ -565,7 +623,7 @@ class Forge:
                      "runtime": g.runtime_evidence,
                      "syntax": g.syntax_evidence, "citation": g.citation}
                     for g in self.gaps],
-                "generations_log": [
+                "generations_log": self.prior_log + [
                     {"gen": r.generation, "cases": r.cases,
                      "fuzzed": r.fuzzed,
                      "golden_failures": len(r.golden_failures),
@@ -589,6 +647,9 @@ if __name__ == "__main__":
     ap.add_argument("--quiet", type=int, default=3)
     ap.add_argument("--reset", action="store_true",
                     help="clear every ruling and start from unratified")
+    ap.add_argument("--max-seconds", type=int, default=0,
+                    help="stop after this long, keeping the ledger so a "
+                         "later run resumes (0 = no limit)")
     args = ap.parse_args()
 
     if args.reset:
@@ -599,6 +660,7 @@ if __name__ == "__main__":
                 os.remove(path)
 
     forge = Forge(seed=args.seed, budget=args.budget, floor=args.floor,
-                  max_gens=args.max_gens, quiet_needed=args.quiet)
+                  max_gens=args.max_gens, quiet_needed=args.quiet,
+                  max_seconds=args.max_seconds)
     ok = forge.converge()
     sys.exit(0 if ok else 1)

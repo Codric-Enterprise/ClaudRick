@@ -271,7 +271,12 @@ inside the text — it just does not decide whether two front ends agree.
 - **Convergence is a statement about a search, not a proof.** No
   counterexample was found; that is not a proof that none exists.
   `undermine` in VOWELS.md returns **Z** for exactly this reason, and
-  the same honesty applies here.
+  the same honesty applies here. The search that stands behind this
+  document: **250,600 programs**, generated and mutated, run through
+  all sixteen front ends, over **16 generations** with the fuzz budget
+  doubling after every clean one, ending on **15 consecutive clean
+  generations at 25,000 programs each**. `7-forge/ledger.json` is the
+  full record.
 - **The gaps SEMANTICS.md 7 still names remain open.** Composite data,
   higher-order functions, pattern matching, a static type system, a
   module system, transpiler back-ends, a soundness proof. The formal
