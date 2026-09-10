@@ -126,6 +126,34 @@ GOLDEN: List[Case] = [
     _g("call-nested", "f(g(1))", ACCEPT, "(prog (call f (call g 1)))"),
     _g("call-expr-arg", "f(1 + 2)", ACCEPT, "(prog (call f (+ 1 2)))"),
 
+    # ── lists ──
+    _g("list-empty", "[]", ACCEPT, "(prog (list))"),
+    _g("list-three", "[1, 2, 3]", ACCEPT, "(prog (list 1 2 3))"),
+    _g("list-nested", "[1, [2, 3]]", ACCEPT, "(prog (list 1 (list 2 3)))"),
+    _g("list-exprs", "[1 + 1, n * 2]", ACCEPT,
+       "(prog (list (+ 1 1) (* n 2)))"),
+    _g("list-as-arg", "f([1, 2])", ACCEPT, "(prog (call f (list 1 2)))"),
+    _g("list-unclosed", "[1, 2", REFUSE_PARSE),
+    _g("list-trailing-comma", "[1,]", REFUSE_PARSE,
+       note="the trailing-comma ruling covers brackets too"),
+    _g("list-bare-open", "[", REFUSE_PARSE),
+
+    # ── let ──
+    _g("let-simple", "let x = 5 in x + 1", ACCEPT,
+       "(prog (let x 5 (+ x 1)))"),
+    _g("let-nested", "let x = 1 in let y = 2 in x + y", ACCEPT,
+       "(prog (let x 1 (let y 2 (+ x y))))"),
+    _g("let-in-def", "def f(n) = let d = n * 2 in d + 1", ACCEPT,
+       "(prog (def f (n) (let d (* n 2) (+ d 1))))"),
+    _g("let-list-value", "let a = [1, 2] in a", ACCEPT,
+       "(prog (let a (list 1 2) a))"),
+    _g("let-not-operand", "1 + let x = 2 in x", REFUSE_PARSE,
+       note="let is an alternative of expr, not a member of atom -- "
+            "the same placement the conditional has, for the same "
+            "reason"),
+    _g("let-no-in", "let x = 5 then x", REFUSE_PARSE),
+    _g("let-no-value", "let x = in x", REFUSE_PARSE),
+
     # ── conditionals ──
     _g("if-simple", "if true then 1 else 2", ACCEPT,
        "(prog (if true 1 2))"),
@@ -280,6 +308,10 @@ class Fuzzer:
             return f"{r.choice(_FNS)}({args})"
         if pick < 0.60:
             return f"-{self.atom(depth - 1, bound)}"
+        if pick < 0.66:
+            k = r.randint(0, 3)
+            inner = ", ".join(self.expr(depth - 1, bound) for _ in range(k))
+            return f"[{inner}]"
         return self.arith(depth - 1, bound)
 
     def arith(self, depth: int, bound: List[str]) -> str:
@@ -292,7 +324,11 @@ class Fuzzer:
     def expr(self, depth: int, bound: List[str]) -> str:
         r = self.r
         p = r.random()
-        if depth > 0 and p < 0.18:
+        if depth > 0 and p < 0.10:
+            name = r.choice(_NAMES)
+            return (f"let {name} = {self.expr(depth - 1, bound)} "
+                    f"in {self.expr(depth - 1, bound + [name])}")
+        if depth > 0 and p < 0.24:
             return (f"if {self.compare(depth - 1, bound)} "
                     f"then {self.expr(depth - 1, bound)} "
                     f"else {self.expr(depth - 1, bound)}")
@@ -324,7 +360,8 @@ class Fuzzer:
         return self.expr(depth, [])
 
     # ── damaged ──
-    _POISON = list("$@?&`~\;:[]{}|^%'") + ["!!", "1x", '"', "..", "=="]
+    _POISON = list("$@?&`~\;:{}|^%'") + ["!!", "1x", '"', "..", "==",
+                                        "[", "]", "let", "in"]
 
     def mutate(self, src: str) -> str:
         r = self.r
@@ -347,9 +384,9 @@ class Fuzzer:
                                        "true", "let", "anchor"]) + src[i:]
         return src[i:] + src[:i]
 
-    _SOUP = (["def", "if", "then", "else", "true", "false", "let"]
-             + ["(", ")", ",", "=", "+", "-", "*", "/", "<", ">", "<=",
-                ">=", "==", "!="]
+    _SOUP = (["def", "if", "then", "else", "true", "false", "let", "in"]
+             + ["(", ")", "[", "]", ",", "=", "+", "-", "*", "/", "<", ">",
+                "<=", ">=", "==", "!="]
              + ["n", "x", "f", "0", "1", "42", "1.5", '"s"', "#c\n"])
 
     def soup(self, k: int = 8) -> str:

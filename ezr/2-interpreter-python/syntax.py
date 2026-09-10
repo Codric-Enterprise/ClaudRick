@@ -43,12 +43,16 @@ from ezr import (
 class T(Enum):
     NUM = auto(); STR = auto(); NAME = auto(); KW = auto()
     OP = auto(); CMP = auto(); LPAR = auto(); RPAR = auto()
+    LBRACK = auto(); RBRACK = auto()
     COMMA = auto(); EQ = auto(); EOF = auto()
 
 
-KEYWORDS = {"if", "then", "else", "def", "let", "true", "false",
-            "anchor", "ezr", "z", "show", "expect", "ascend",
-            "assimilate", "learn", "equiv", "example", "to", "by"}
+#: The words the grammar actually reaches, and no others. The
+#: incumbent reserved nineteen, thirteen of which appeared in no rule
+#: and so reserved names against a syntax that did not exist -- see
+#: CORE.md 2.2. `show` is deliberately not here: it is a builtin
+#: function, so it has to lex as a NAME to be callable.
+KEYWORDS = {"def", "else", "false", "if", "in", "let", "then", "true"}
 
 SPEC = [
     (T.NUM,   r'\d+\.\d+|\d+'),
@@ -58,6 +62,8 @@ SPEC = [
     (T.OP,    r'[-+*/<>]'),
     (T.LPAR,  r'\('),
     (T.RPAR,  r'\)'),
+    (T.LBRACK, r'\['),
+    (T.RBRACK, r'\]'),
     (T.COMMA, r','),
     (T.NAME,  r'[A-Za-z_]\w*'),
 ]
@@ -199,6 +205,32 @@ class Call(Node):
         return f"{self.name}({', '.join(a.shape() for a in self.args)})"
     def __str__(self) -> str:
         return f"{self.name}({', '.join(str(a) for a in self.args)})"
+
+
+@dataclass
+class Lst(Node):
+    """A list literal. Its confidence is the chain rule over its
+    elements: no more trusted than the least-trusted thing in it."""
+    items: List[Node] = field(default_factory=list)
+    def children(self) -> List[Node]: return list(self.items)
+    def shape(self) -> str:
+        return f"[{', '.join(i.shape() for i in self.items)}]"
+    def __str__(self) -> str:
+        return "[" + ", ".join(str(i) for i in self.items) + "]"
+
+
+@dataclass
+class Let(Node):
+    """`let x = v in body`. A name for a thread that already exists --
+    nothing is overwritten, so G9 still holds."""
+    name: str
+    value: Node
+    body: Node
+    def children(self) -> List[Node]: return [self.value, self.body]
+    def shape(self) -> str:
+        return f"let {self.value.shape()} in {self.body.shape()}"
+    def __str__(self) -> str:
+        return f"let {self.name} = {self.value} in {self.body}"
 
 
 @dataclass
@@ -345,6 +377,13 @@ class Parser:
         return FnDef(name, params, self.expr())
 
     def expr(self) -> Node:
+        if self.at(T.KW, "let"):
+            self.take()
+            name = self.expect(T.NAME).text
+            self.expect(T.EQ)
+            value = self.expr()
+            self.expect(T.KW, "in")
+            return Let(name, value, self.expr())
         if self.at(T.KW, "if"):
             self.take()
             cond = self.expr()
@@ -383,6 +422,16 @@ class Parser:
             self.take(); return Str(t.text[1:-1])
         if t.kind is T.KW and t.text in ("true", "false"):
             self.take(); return Bool(t.text == "true")
+        if t.kind is T.LBRACK:
+            self.take()
+            items: List[Node] = []
+            if not self.at(T.RBRACK):
+                items.append(self.expr())
+                while self.at(T.COMMA):
+                    self.take()
+                    items.append(self.expr())
+            self.expect(T.RBRACK)
+            return Lst(items)
         if t.kind is T.LPAR:
             self.take()
             node = self.expr()
@@ -574,6 +623,15 @@ class Semantic:
             a.ty = tt if tt == et else Ty.ANY
             return a.ty
 
+        if isinstance(node, Lst):
+            for it in node.items:
+                self._walk(it, bound, a)
+            return Ty.ANY
+
+        if isinstance(node, Let):
+            self._walk(node.value, bound, a)
+            return self._walk(node.body, bound | {node.name}, a)
+
         if isinstance(node, Call):
             a.calls.add(node.name)
             for arg in node.args:
@@ -629,6 +687,44 @@ class Semantic:
 # ═════════════════════════════════════════════
 # 4. EXECUTION over the AST
 # ═════════════════════════════════════════════
+
+#: The whole standard library, stated. A list you cannot take apart is
+#: not a list, so the three accessors come with the literal; `show` is
+#: the only way a program has of being observed from outside.
+#: Every one of them obeys the chain rule -- a result is no more
+#: trusted than the argument it came from.
+BUILTINS = ("show", "len", "head", "tail")
+
+
+def _builtin(name: str, args: List[E]) -> Optional[E]:
+    """A builtin call, or None when the name is not one."""
+    if name not in BUILTINS:
+        return None
+
+    if name == "show":
+        if len(args) != 1:
+            return e_z("show", "show takes 1 argument", Defect.MISBOUND)
+        a = args[0]
+        print(f"{a.value}  @ {a.confidence}/256")
+        return a                       # identity, so it composes
+
+    if len(args) != 1:
+        return e_z(name, f"{name} takes 1 argument", Defect.MISBOUND)
+    a = args[0]
+    if not isinstance(a.value, list):
+        return e_z(name, f"{name} needs a list, got {a.type_name()}",
+                   Defect.MISBOUND)
+
+    if name == "len":
+        return e_val("len", len(a.value), a.confidence)
+    if not a.value:
+        # An empty list has no head and no tail. That is a refusal, not
+        # an exception and not a silent empty answer.
+        return e_z(name, f"{name} of an empty list", Defect.UNBOUND)
+    if name == "head":
+        return e_val("head", a.value[0], a.confidence)
+    return e_val("tail", a.value[1:], a.confidence)
+
 
 def eval_ast(node: Node, env: Dict[str, E],
              fns: Dict[str, FnDef], depth: int = 0,
@@ -715,6 +811,13 @@ def eval_ast(node: Node, env: Dict[str, E],
     if isinstance(node, Call):
         fn = fns.get(node.name)
         if fn is None:
+            args = [eval_ast(a, env, fns, depth, limit) for a in node.args]
+            for a in args:
+                if a.is_z:
+                    return a
+            built = _builtin(node.name, args)
+            if built is not None:
+                return built
             return e_z(node.name, f"{node.name} was never defined",
                        Defect.UNBOUND)
         if depth > limit:
@@ -733,6 +836,25 @@ def eval_ast(node: Node, env: Dict[str, E],
             return r
         return e_val(node.name, r.value,
                      min([r.confidence] + [a.confidence for a in args]))
+
+    if isinstance(node, Lst):
+        vals, confs = [], []
+        for it in node.items:
+            r = eval_ast(it, env, fns, depth, limit)
+            if r.is_z:
+                return r                       # Z absorbs, T1
+            vals.append(r.value)
+            confs.append(r.confidence)
+        # the chain rule, over the elements
+        return e_val("list", vals, min(confs) if confs else E_CERTAIN)
+
+    if isinstance(node, Let):
+        bound_val = eval_ast(node.value, env, fns, depth, limit)
+        if bound_val.is_z:
+            return bound_val
+        inner = dict(env)
+        inner[node.name] = bound_val
+        return eval_ast(node.body, inner, fns, depth, limit)
 
     if isinstance(node, Prog):
         # Register every definition, then evaluate the expression if

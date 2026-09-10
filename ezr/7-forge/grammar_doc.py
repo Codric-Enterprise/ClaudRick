@@ -41,6 +41,7 @@ PRETTY = {
     "params": "parameters",
     "expr": "expression",
     "ifexpr": "conditional",
+    "letexpr": "binding",
     "compare": "comparison",
     "additive": "additive",
     "multiply": "multiplicative",
@@ -53,6 +54,7 @@ TERMINAL = {
     "%NUM": "number", "%STR": "string", "%NAME": "name",
     "%CMP": "compare-op", "%LPAR": '"("', "%RPAR": '")"',
     "%COMMA": '","', "%EQ": '"="',
+    "%LBRACK": '"["', "%RBRACK": '"]"',
 }
 
 
@@ -81,7 +83,7 @@ def token_table() -> List[Tuple[str, str]]:
     not a fact about the language.
     """
     probes = ["<", ">", "<=", ">=", "==", "!=", "+", "-", "*", "/",
-              "=", "(", ")", ","]
+              "=", "(", ")", ",", "[", "]"]
     rows: List[Tuple[str, str]] = []
     for text in probes:
         kinds = set()
@@ -96,7 +98,8 @@ def token_table() -> List[Tuple[str, str]]:
 def render() -> str:
     by = rules_by_lhs()
     order = ["program", "deflist", "fndef", "params", "expr", "ifexpr",
-             "compare", "additive", "multiply", "unary", "atom", "arglist"]
+             "letexpr", "compare", "additive", "multiply", "unary", "atom",
+             "arglist"]
 
     L: List[str] = []
     L.append("(* " + "=" * 68)

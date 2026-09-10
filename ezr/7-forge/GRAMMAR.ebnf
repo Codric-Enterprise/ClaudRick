@@ -30,10 +30,14 @@ parameters     = name
                  ;
 
 expression     = conditional
+                 | binding
                  | comparison
                  ;
 
 conditional    = "if" , expression , "then" , expression , "else" , expression
+                 ;
+
+binding        = "let" , name , "=" , expression , "in" , expression
                  ;
 
 comparison     = additive , compare-op , additive
@@ -61,6 +65,8 @@ atom           = number
                  | "(" , expression , ")"
                  | name , "(" , ")"
                  | name , "(" , arguments , ")"
+                 | "[" , "]"
+                 | "[" , arguments , "]"
                  | name
                  ;
 
@@ -70,7 +76,7 @@ arguments      = expression
 
 (* ---- lexis ----------------------------------------- *)
 
-keyword        = "def" | "else" | "false" | "if" | "then" | "true" ;
+keyword        = "def" | "else" | "false" | "if" | "in" | "let" | "then" | "true" ;
 name           = ( letter | "_" ) , { letter | digit | "_" }
                  (* and not a keyword *) ;
 number         = digit , { digit } , [ "." , digit , { digit } ] ;
@@ -86,13 +92,15 @@ comment        = "#" , { character - newline } ;
    CMP     <  >  <=  >=  ==  !=
    COMMA   ,
    EQ      =
+   LBRACK  [
    LPAR    (
    OP      +  -  *  /
+   RBRACK  ]
    RPAR    )
    NUM     a number
    STR     a string
    NAME    a name that is not a keyword
-   KW      def  else  false  if  then  true
+   KW      def  else  false  if  in  let  then  true
    EOF     end of input
 
 (* ---- settled questions ----------------------------- *)
@@ -109,9 +117,9 @@ comment        = "#" , { character - newline } ;
        May one source text carry more than one definition?
        generation 0; coverage gap: more than one definition in one namespace. Runtime: Lambda.globals holds ['double', 'triple'] simultaneously; double(4)=8, triple(4)=12. Syntax: no front end accepts 'def double(n) = n *
 
-   reserved_words = ['def', 'else', 'false', 'if', 'then', 'true']
+   reserved_words = ['def', 'else', 'false', 'if', 'in', 'let', 'then', 'true']
        Which words may an EZR program not use as a name?
-       generation 0; doctrine (PIPELINE.md, section 2): 'This is the whole language. Anything not derivable here is outside the grammar.' Thirteen of the incumbent's nineteen reserved words appear in no rule, so they rese
+       generation 0; doctrine (PIPELINE.md, section 2): 'This is the whole language. Anything not derivable here is outside the grammar.' The rule is that a word is reserved when the grammar reaches it, and nothing else -
 
    trailing_comma = False
        May an argument or parameter list end with a comma?

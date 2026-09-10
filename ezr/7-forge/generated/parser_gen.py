@@ -61,19 +61,19 @@ def _p_S(st):
 def _alt_additive_0(st):
     # additive -> multiply
     _x0 = _p_multiply(st)
-    return _act(16, [_x0])
+    return _act(18, [_x0])
 
 def _rec_additive_0(st, node):
     # additive -> additive '+' multiply
     _x0 = st.want("'+'")
     _x1 = _p_multiply(st)
-    return _act(14, [node, _x0, _x1])
+    return _act(16, [node, _x0, _x1])
 
 def _rec_additive_1(st, node):
     # additive -> additive '-' multiply
     _x0 = st.want("'-'")
     _x1 = _p_multiply(st)
-    return _act(15, [node, _x0, _x1])
+    return _act(17, [node, _x0, _x1])
 
 def _p_additive(st):
     node = _alt_additive_0(st)
@@ -92,13 +92,13 @@ def _p_additive(st):
 def _alt_arglist_0(st):
     # arglist -> expr
     _x0 = _p_expr(st)
-    return _act(30, [_x0])
+    return _act(34, [_x0])
 
 def _rec_arglist_0(st, node):
     # arglist -> arglist %COMMA expr
     _x0 = st.want('%COMMA')
     _x1 = _p_expr(st)
-    return _act(31, [node, _x0, _x1])
+    return _act(35, [node, _x0, _x1])
 
 def _p_arglist(st):
     node = _alt_arglist_0(st)
@@ -120,49 +120,62 @@ def _alt_atom_0(st):
     _x1 = st.want('%LPAR')
     _x2 = _p_arglist(st)
     _x3 = st.want('%RPAR')
-    return _act(28, [_x0, _x1, _x2, _x3])
+    return _act(30, [_x0, _x1, _x2, _x3])
 
 def _alt_atom_1(st):
     # atom -> %LPAR expr %RPAR
     _x0 = st.want('%LPAR')
     _x1 = _p_expr(st)
     _x2 = st.want('%RPAR')
-    return _act(26, [_x0, _x1, _x2])
+    return _act(28, [_x0, _x1, _x2])
 
 def _alt_atom_2(st):
     # atom -> %NAME %LPAR %RPAR
     _x0 = st.want('%NAME')
     _x1 = st.want('%LPAR')
     _x2 = st.want('%RPAR')
-    return _act(27, [_x0, _x1, _x2])
+    return _act(29, [_x0, _x1, _x2])
 
 def _alt_atom_3(st):
-    # atom -> %NUM
-    _x0 = st.want('%NUM')
-    return _act(22, [_x0])
+    # atom -> %LBRACK arglist %RBRACK
+    _x0 = st.want('%LBRACK')
+    _x1 = _p_arglist(st)
+    _x2 = st.want('%RBRACK')
+    return _act(32, [_x0, _x1, _x2])
 
 def _alt_atom_4(st):
-    # atom -> %STR
-    _x0 = st.want('%STR')
-    return _act(23, [_x0])
+    # atom -> %LBRACK %RBRACK
+    _x0 = st.want('%LBRACK')
+    _x1 = st.want('%RBRACK')
+    return _act(31, [_x0, _x1])
 
 def _alt_atom_5(st):
-    # atom -> 'true'
-    _x0 = st.want("'true'")
+    # atom -> %NUM
+    _x0 = st.want('%NUM')
     return _act(24, [_x0])
 
 def _alt_atom_6(st):
-    # atom -> 'false'
-    _x0 = st.want("'false'")
+    # atom -> %STR
+    _x0 = st.want('%STR')
     return _act(25, [_x0])
 
 def _alt_atom_7(st):
+    # atom -> 'true'
+    _x0 = st.want("'true'")
+    return _act(26, [_x0])
+
+def _alt_atom_8(st):
+    # atom -> 'false'
+    _x0 = st.want("'false'")
+    return _act(27, [_x0])
+
+def _alt_atom_9(st):
     # atom -> %NAME
     _x0 = st.want('%NAME')
-    return _act(29, [_x0])
+    return _act(33, [_x0])
 
 def _p_atom(st):
-    for _alt in (_alt_atom_0, _alt_atom_1, _alt_atom_2, _alt_atom_3, _alt_atom_4, _alt_atom_5, _alt_atom_6, _alt_atom_7,):
+    for _alt in (_alt_atom_0, _alt_atom_1, _alt_atom_2, _alt_atom_3, _alt_atom_4, _alt_atom_5, _alt_atom_6, _alt_atom_7, _alt_atom_8, _alt_atom_9,):
         _m = st.i
         try:
             node = _alt(st)
@@ -178,12 +191,12 @@ def _alt_compare_0(st):
     _x0 = _p_additive(st)
     _x1 = st.want('%CMP')
     _x2 = _p_additive(st)
-    return _act(12, [_x0, _x1, _x2])
+    return _act(14, [_x0, _x1, _x2])
 
 def _alt_compare_1(st):
     # compare -> additive
     _x0 = _p_additive(st)
-    return _act(13, [_x0])
+    return _act(15, [_x0])
 
 def _p_compare(st):
     for _alt in (_alt_compare_0, _alt_compare_1,):
@@ -227,12 +240,17 @@ def _alt_expr_0(st):
     return _act(9, [_x0])
 
 def _alt_expr_1(st):
-    # expr -> compare
-    _x0 = _p_compare(st)
+    # expr -> letexpr
+    _x0 = _p_letexpr(st)
     return _act(10, [_x0])
 
+def _alt_expr_2(st):
+    # expr -> compare
+    _x0 = _p_compare(st)
+    return _act(11, [_x0])
+
 def _p_expr(st):
-    for _alt in (_alt_expr_0, _alt_expr_1,):
+    for _alt in (_alt_expr_0, _alt_expr_1, _alt_expr_2,):
         _m = st.i
         try:
             node = _alt(st)
@@ -284,28 +302,42 @@ def _alt_ifexpr_0(st):
     _x3 = _p_expr(st)
     _x4 = st.want("'else'")
     _x5 = _p_expr(st)
-    return _act(11, [_x0, _x1, _x2, _x3, _x4, _x5])
+    return _act(13, [_x0, _x1, _x2, _x3, _x4, _x5])
 
 def _p_ifexpr(st):
     node = _alt_ifexpr_0(st)
     return node
 
+def _alt_letexpr_0(st):
+    # letexpr -> 'let' %NAME %EQ expr 'in' expr
+    _x0 = st.want("'let'")
+    _x1 = st.want('%NAME')
+    _x2 = st.want('%EQ')
+    _x3 = _p_expr(st)
+    _x4 = st.want("'in'")
+    _x5 = _p_expr(st)
+    return _act(12, [_x0, _x1, _x2, _x3, _x4, _x5])
+
+def _p_letexpr(st):
+    node = _alt_letexpr_0(st)
+    return node
+
 def _alt_multiply_0(st):
     # multiply -> unary
     _x0 = _p_unary(st)
-    return _act(19, [_x0])
+    return _act(21, [_x0])
 
 def _rec_multiply_0(st, node):
     # multiply -> multiply '*' unary
     _x0 = st.want("'*'")
     _x1 = _p_unary(st)
-    return _act(17, [node, _x0, _x1])
+    return _act(19, [node, _x0, _x1])
 
 def _rec_multiply_1(st, node):
     # multiply -> multiply '/' unary
     _x0 = st.want("'/'")
     _x1 = _p_unary(st)
-    return _act(18, [node, _x0, _x1])
+    return _act(20, [node, _x0, _x1])
 
 def _p_multiply(st):
     node = _alt_multiply_0(st)
@@ -372,12 +404,12 @@ def _alt_unary_0(st):
     # unary -> '-' unary
     _x0 = st.want("'-'")
     _x1 = _p_unary(st)
-    return _act(20, [_x0, _x1])
+    return _act(22, [_x0, _x1])
 
 def _alt_unary_1(st):
     # unary -> atom
     _x0 = _p_atom(st)
-    return _act(21, [_x0])
+    return _act(23, [_x0])
 
 def _p_unary(st):
     for _alt in (_alt_unary_0, _alt_unary_1,):

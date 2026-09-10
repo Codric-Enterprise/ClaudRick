@@ -1,6 +1,6 @@
 {
   "converged": true,
-  "generations": 67,
+  "generations": 72,
   "pairs": 20,
   "lexers": [
     "L1-regex-master",
@@ -14,7 +14,7 @@
     "P3-shunting",
     "P4-earley"
   ],
-  "programs_fuzzed": 544600,
+  "programs_fuzzed": 564600,
   "budget_reached": 25000,
   "counterexamples_carried": 46,
   "settled": {
@@ -34,11 +34,13 @@
         "else",
         "false",
         "if",
+        "in",
+        "let",
         "then",
         "true"
       ],
       "generation": 0,
-      "rationale": "doctrine (PIPELINE.md, section 2): 'This is the whole language. Anything not derivable here is outside the grammar.' Thirteen of the incumbent's nineteen reserved words appear in no rule, so they reserve names against a syntax that does not exist."
+      "rationale": "doctrine (PIPELINE.md, section 2): 'This is the whole language. Anything not derivable here is outside the grammar.' The rule is that a word is reserved when the grammar reaches it, and nothing else -- the incumbent reserved nineteen against a syntax that did not exist. Six when the core was frozen; eight now that `let ... in` is in the grammar. `let` was already in the incumbent's list, among the words the forge found unreachable, so this is that reservation finally earning itself."
     },
     "multi_definition": {
       "answer": true,
@@ -808,6 +810,61 @@
       "ratified": [],
       "promoted": 0,
       "seconds": 215.08
+    },
+    {
+      "gen": 67,
+      "cases": 4140,
+      "fuzzed": 4000,
+      "golden_failures": 0,
+      "violations": 0,
+      "divergences": 0,
+      "ratified": [],
+      "promoted": 0,
+      "seconds": 24.97
+    },
+    {
+      "gen": 68,
+      "cases": 4140,
+      "fuzzed": 4000,
+      "golden_failures": 0,
+      "violations": 0,
+      "divergences": 0,
+      "ratified": [],
+      "promoted": 0,
+      "seconds": 31.53
+    },
+    {
+      "gen": 69,
+      "cases": 4140,
+      "fuzzed": 4000,
+      "golden_failures": 0,
+      "violations": 0,
+      "divergences": 0,
+      "ratified": [],
+      "promoted": 0,
+      "seconds": 59.69
+    },
+    {
+      "gen": 70,
+      "cases": 4140,
+      "fuzzed": 4000,
+      "golden_failures": 0,
+      "violations": 0,
+      "divergences": 0,
+      "ratified": [],
+      "promoted": 0,
+      "seconds": 91.89
+    },
+    {
+      "gen": 71,
+      "cases": 4140,
+      "fuzzed": 4000,
+      "golden_failures": 0,
+      "violations": 0,
+      "divergences": 0,
+      "ratified": [],
+      "promoted": 0,
+      "seconds": 177.58
     }
   ]
 }

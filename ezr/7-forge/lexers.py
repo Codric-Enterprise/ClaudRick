@@ -37,11 +37,12 @@ from spec import SPEC
 #: Gen-0 keeps all nineteen even though the grammar reaches six.
 _NATIVE_KEYWORDS: Set[str] = {
     "if", "then", "else", "def", "let", "true", "false",
-    "anchor", "ezr", "z", "show", "expect", "ascend",
+    "anchor", "ezr", "z", "show", "expect", "ascend", "in",
     "assimilate", "learn", "equiv", "example", "to", "by",
 }
 
-PUNCT: Dict[str, str] = {"(": "LPAR", ")": "RPAR", ",": "COMMA"}
+PUNCT: Dict[str, str] = {"(": "LPAR", ")": "RPAR", ",": "COMMA",
+                         "[": "LBRACK", "]": "RBRACK"}
 
 
 def keywords() -> Set[str]:
@@ -81,6 +82,8 @@ _SPEC: List[Tuple[str, str]] = [
     ("OP",    r"[-+*/<>]"),
     ("LPAR",  r"\("),
     ("RPAR",  r"\)"),
+    ("LBRACK", r"\["),
+    ("RBRACK", r"\]"),
     ("COMMA", r","),
     ("NAME",  r"[A-Za-z_]\w*"),
 ]
@@ -238,7 +241,7 @@ def _cls(ch: str) -> str:
     if ch == ".":             return "."
     if ch in "<>=!":          return "c"   # can begin a comparison
     if ch in "+-*/":          return "o"
-    if ch in "(),":           return "p"
+    if ch in "(),[]":         return "p"
     return "?"
 
 
@@ -366,6 +369,7 @@ _OPERATORS: Dict[str, str] = {
     "<": "OP", ">": "OP",
     "+": "OP", "-": "OP", "*": "OP", "/": "OP",
     "=": "EQ", "(": "LPAR", ")": "RPAR", ",": "COMMA",
+    "[": "LBRACK", "]": "RBRACK",
 }
 
 

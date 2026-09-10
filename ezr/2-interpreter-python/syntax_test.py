@@ -191,5 +191,50 @@ ok("comparisons collapse",
 ok("arithmetic does not collapse",
    skeleton(parse1("n + 1")[0]) != skeleton(parse1("n * 1")[0]))
 
+print("\n8. LISTS, BINDINGS AND THE BUILTINS")
+from syntax import Lst, Let, BUILTINS, KEYWORDS
+
+
+def run(src, fns=None):
+    c = compile_ezr(src, {k: len(v.params) for k, v in (fns or {}).items()})
+    if not c.ok:
+        return None
+    return eval_ast(c.ast, {}, dict(fns or {}), 0, limit=99)
+
+
+ok("a list parses",              isinstance(parse1("[1, 2]")[0], Lst))
+ok("an empty list parses",       isinstance(parse1("[]")[0], Lst))
+ok("a binding parses",           isinstance(parse1("let x = 1 in x")[0], Let))
+ok("a list evaluates",           run("[1, 2, 3]").value == [1, 2, 3])
+ok("an empty list evaluates",    run("[]").value == [])
+ok("lists nest",                 run("[1, [2, 3]]").value == [1, [2, 3]])
+ok("a binding evaluates",        run("let x = 5 in x + 1").value == 6)
+ok("bindings nest",
+   run("let x = 1 in let y = 2 in x + y").value == 3)
+ok("a binding does not leak",    run("let x = 1 in x + 1").value == 2)
+ok("len works",                  run("len([1, 2, 3])").value == 3)
+ok("head works",                 run("head([9, 8])").value == 9)
+ok("tail works",                 run("tail([9, 8, 7])").value == [8, 7])
+ok("head of empty refuses",      run("head([])").is_z)
+ok("a builtin on a non-list refuses", run("len(5)").is_z)
+ok("show is the identity",       run("show(41 + 1)").value == 42)
+ok("an unclosed list is refused", compile_ezr("[1, 2").ok is False)
+ok("a trailing comma is refused", compile_ezr("[1,]").ok is False)
+ok("let is not an operand",      compile_ezr("1 + let x = 2 in x").ok is False)
+
+fns_ = definitions(compile_ezr(
+    "def total(xs) = if len(xs) == 0 then 0 "
+    "else head(xs) + total(tail(xs))").ast)
+ok("recursion over a list",      run("total([1, 2, 3, 4, 5])", fns_).value == 15)
+ok("and over an empty one",      run("total([])", fns_).value == 0)
+
+ok("the reserved set is the eight the grammar reaches",
+   KEYWORDS == {"def", "else", "false", "if", "in", "let", "then", "true"})
+ok("show is a name, not a keyword",
+   lex("show")[0][0].kind is T.NAME)
+ok("the builtins are stated",    set(BUILTINS) == {"show", "len", "head", "tail"})
+ok("a list is chained, not averaged",
+   run("[1, 2]").confidence == E_CERTAIN)
+
 print(f"\n=== Pipeline: {passed} passed, {failed} failed ===\n")
 raise SystemExit(0 if failed == 0 else 1)

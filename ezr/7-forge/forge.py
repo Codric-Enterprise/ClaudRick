@@ -112,12 +112,16 @@ DOCTRINE: Dict[str, Doctrine] = {
         "it is not a character the language rejects."),
 
     "reserved_words": Doctrine(
-        ["def", "else", "false", "if", "then", "true"],
+        ["def", "else", "false", "if", "in", "let", "then", "true"],
         "PIPELINE.md, section 2",
         "'This is the whole language. Anything not derivable here is "
-        "outside the grammar.' Thirteen of the incumbent's nineteen "
-        "reserved words appear in no rule, so they reserve names "
-        "against a syntax that does not exist."),
+        "outside the grammar.' The rule is that a word is reserved when "
+        "the grammar reaches it, and nothing else -- the incumbent "
+        "reserved nineteen against a syntax that did not exist. Six "
+        "when the core was frozen; eight now that `let ... in` is in "
+        "the grammar. `let` was already in the incumbent's list, among "
+        "the words the forge found unreachable, so this is that "
+        "reservation finally earning itself."),
 
     "chained_comparison": Doctrine(
         False, "PIPELINE.md, section 2",

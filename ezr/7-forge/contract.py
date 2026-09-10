@@ -37,7 +37,7 @@ from typing import List, Optional, Sequence, Tuple
 
 #: The canonical kinds. Every lexer emits exactly these names.
 KINDS = ("NUM", "STR", "NAME", "KW", "OP", "CMP",
-         "LPAR", "RPAR", "COMMA", "EQ", "EOF")
+         "LPAR", "RPAR", "LBRACK", "RBRACK", "COMMA", "EQ", "EOF")
 
 #: EZR's five binding defects (SEMANTICS.md 1). A front end failure
 #: classifies into one of these; it does not raise.
@@ -183,6 +183,44 @@ class Def(N):
 
 
 @dataclass
+class Lst(N):
+    """A list literal.
+
+    Its confidence is the chain rule applied to its elements: a list is
+    no more trusted than the least-trusted thing in it (SEMANTICS.md
+    2.1). That falls straight out of the existing law rather than being
+    a new rule for collections.
+    """
+    items: List[N] = field(default_factory=list)
+
+    def kids(self) -> List[N]:
+        return list(self.items)
+
+    def sexp(self) -> str:
+        inner = "".join(" " + i.sexp() for i in self.items)
+        return f"(list{inner})"
+
+
+@dataclass
+class Let(N):
+    """A local binding: `let x = v in body`.
+
+    Not mutation -- `x` names a thread that already exists, and the
+    body is evaluated with that name bound. Nothing is overwritten,
+    which is what keeps G9 true.
+    """
+    name: str
+    value: N
+    body: N
+
+    def kids(self) -> List[N]:
+        return [self.value, self.body]
+
+    def sexp(self) -> str:
+        return f"(let {self.name} {self.value.sexp()} {self.body.sexp()})"
+
+
+@dataclass
 class Prog(N):
     defs: List[Def] = field(default_factory=list)
     expr: Optional[N] = None
@@ -240,6 +278,11 @@ def unparse(node: N) -> str:
     if isinstance(node, If):
         return (f"(if {unparse(node.cond)} then {unparse(node.then)} "
                 f"else {unparse(node.els)})")
+    if isinstance(node, Lst):
+        return "[" + ", ".join(unparse(i) for i in node.items) + "]"
+    if isinstance(node, Let):
+        return (f"(let {node.name} = {unparse(node.value)} "
+                f"in {unparse(node.body)})")
     if isinstance(node, Call):
         return f"{node.name}({', '.join(unparse(a) for a in node.args)})"
     if isinstance(node, Def):
@@ -278,6 +321,10 @@ def skeleton(node: N) -> str:
     if isinstance(node, If):
         return (f"if {skeleton(node.cond)} then {skeleton(node.then)} "
                 f"else {skeleton(node.els)}")
+    if isinstance(node, Lst):
+        return f"LIST({', '.join(skeleton(i) for i in node.items)})"
+    if isinstance(node, Let):
+        return f"let V = {skeleton(node.value)} in {skeleton(node.body)}"
     if isinstance(node, Call):
         return f"CALL({', '.join(skeleton(a) for a in node.args)})"
     if isinstance(node, Def):
@@ -290,5 +337,6 @@ def skeleton(node: N) -> str:
 __all__ = [
     "KINDS", "DEFECTS", "Tok", "Fail", "LexOut",
     "N", "Num", "Str", "Bool", "Var", "Bin", "If", "Call", "Def", "Prog",
+    "Lst", "Let",
     "ParseOut", "unparse", "skeleton", "CMP_OPS", "ARITH_OPS",
 ]

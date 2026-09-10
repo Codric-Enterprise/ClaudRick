@@ -27,8 +27,8 @@ from __future__ import annotations
 
 from typing import Callable, Dict, List, Optional, Sequence, Set, Tuple
 
-from contract import (Bin, Bool, Call, Def, Fail, If, N, Num, ParseOut,
-                      Prog, Str, Var)
+from contract import (Bin, Bool, Call, Def, Fail, If, Let, Lst, N, Num,
+                      ParseOut, Prog, Str, Var)
 from spec import SPEC
 
 CMP_TEXT = {"<", ">", "<=", ">=", "==", "!="}
@@ -104,18 +104,39 @@ class _Program:
             names.append(self.want("NAME").text)
         return names
 
-    def expr_list(self) -> List[N]:
+    def expr_list(self, closer: str = "RPAR") -> List[N]:
         trail = bool(SPEC.get("trailing_comma", False))
         args: List[N] = []
-        if self.at_kind("RPAR"):
+        if self.at_kind(closer):
             return args
         args.append(self.top())
         while self.at_kind("COMMA"):
             self.take()
-            if trail and self.at_kind("RPAR"):
+            if trail and self.at_kind(closer):
                 break
             args.append(self.top())
         return args
+
+    def let_expr(self) -> N:
+        """`let x = v in body`.
+
+        At expression level, never at operand level -- the same
+        placement the conditional has, and for the same reason: it is
+        an alternative of expr in the published grammar, so it is never
+        the left or right side of an infix operator.
+        """
+        self.want("KW", "let")
+        name = self.want("NAME").text
+        self.want("EQ")
+        value = self.top()
+        self.want("KW", "in")
+        return Let(name, value, self.top())
+
+    def list_literal(self) -> N:
+        self.want("LBRACK")
+        items = self.expr_list("RBRACK")
+        self.want("RBRACK")
+        return Lst(items)
 
 
 # ═════════════════════════════════════════════
@@ -169,6 +190,8 @@ class _RD(_Program):
             t = self.expr()
             self.want("KW", "else")
             return If(c, t, self.expr())
+        if self.at_kind("KW", "let"):
+            return self.let_expr()
         return self.compare()
 
     def compare(self) -> N:
@@ -200,6 +223,8 @@ class _RD(_Program):
             self.take(); return Str(tk.text[1:-1])
         if tk.kind == "KW" and tk.text in ("true", "false"):
             self.take(); return Bool(tk.text == "true")
+        if tk.kind == "LBRACK":
+            return self.list_literal()
         if tk.kind == "LPAR":
             self.take()
             node = self.expr()
@@ -291,6 +316,8 @@ class _Pratt(_Program):
             t = self.expr(0)
             self.want("KW", "else")
             return If(c, t, self.expr(0))
+        if self.at_kind("KW", "let"):
+            return self.let_expr()
         return self.operand_expr(min_bp)
 
     def operand_expr(self, min_bp: int) -> N:
@@ -328,6 +355,10 @@ class _Pratt(_Program):
             return Str(tk.text[1:-1])
         if tk.kind == "KW" and tk.text in ("true", "false"):
             return Bool(tk.text == "true")
+        if tk.kind == "LBRACK":
+            items = self.expr_list("RBRACK")
+            self.want("RBRACK")
+            return Lst(items)
         if tk.kind == "LPAR":
             node = self.expr(0)
             self.want("RPAR")
@@ -427,6 +458,8 @@ class _Yard(_Program):
             t = self.expr()
             self.want("KW", "else")
             return If(c, t, self.expr())
+        if self.at_kind("KW", "let"):
+            return self.let_expr()
         vals: List[N] = []
         ops: List[str] = []
         want_operand = True
@@ -479,6 +512,10 @@ class _Yard(_Program):
             return Str(tk.text[1:-1])
         if tk.kind == "KW" and tk.text in ("true", "false"):
             return Bool(tk.text == "true")
+        if tk.kind == "LBRACK":
+            items = self.expr_list("RBRACK")
+            self.want("RBRACK")
+            return Lst(items)
         if tk.kind == "LPAR":
             node = self.expr()
             self.want("RPAR")
@@ -520,7 +557,11 @@ _CORE_RULES: List[Tuple[str, Tuple[str, ...], Callable]] = [
     ("params",   ("params", "%COMMA", "%NAME"),      lambda c: c[0] + [c[2].text]),
 
     ("expr",     ("ifexpr",),                        lambda c: c[0]),
+    ("expr",     ("letexpr",),                       lambda c: c[0]),
     ("expr",     ("compare",),                       lambda c: c[0]),
+
+    ("letexpr",  ("'let'", "%NAME", "%EQ", "expr", "'in'", "expr"),
+     lambda c: Let(c[1].text, c[3], c[5])),
 
     ("ifexpr",   ("'if'", "expr", "'then'", "expr", "'else'", "expr"),
      lambda c: If(c[1], c[3], c[5])),
@@ -548,6 +589,8 @@ _CORE_RULES: List[Tuple[str, Tuple[str, ...], Callable]] = [
     ("atom",     ("%NAME", "%LPAR", "%RPAR"),        lambda c: Call(c[0].text, [])),
     ("atom",     ("%NAME", "%LPAR", "arglist", "%RPAR"),
      lambda c: Call(c[0].text, c[2])),
+    ("atom",     ("%LBRACK", "%RBRACK"),              lambda c: Lst([])),
+    ("atom",     ("%LBRACK", "arglist", "%RBRACK"),   lambda c: Lst(c[1])),
     ("atom",     ("%NAME",),                         lambda c: Var(c[0].text)),
 
     ("arglist",  ("expr",),                          lambda c: [c[0]]),
