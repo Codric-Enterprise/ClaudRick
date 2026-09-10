@@ -5,11 +5,23 @@ from syntax import (
     T, Token, lex, parse, Parser, ParseError, compile_ezr,
     Num, Str, Bool, Var, BinOp, If, Call, FnDef,
     Semantic, Ty, Analysis, eval_ast,
-    skeleton, distinct_skeletons, distinct_shapes,
+    skeleton, distinct_skeletons, distinct_shapes, definitions, Prog,
+    unwrap,
 )
 from ezr import Defect, E_CERTAIN
 
 passed = failed = 0
+
+
+def parse1(src):
+    """Parse, and hand back the single node inside the program.
+
+    `parse` returns a Prog now, because the core takes a run of
+    definitions. These assertions are about the shape of one expression
+    or one definition, so they look through the wrapper.
+    """
+    node, err = parse(src)
+    return (unwrap(node) if node is not None else None), err
 
 
 def ok(name, cond):
@@ -52,47 +64,47 @@ toks6, _ = lex("line1\nline2\nline3")
 ok("line numbers tracked",  toks6[-2].line == 3)
 
 print("\n2. PARSER and AST")
-ast, err = parse("1 + 2 * 3")
+ast, err = parse1("1 + 2 * 3")
 ok("parses without error",  err is None)
 ok("multiplication binds tighter",
    isinstance(ast, BinOp) and ast.op == "+" and isinstance(ast.right, BinOp))
 
-ast2, _ = parse("(1 + 2) * 3")
+ast2, _ = parse1("(1 + 2) * 3")
 ok("parentheses override",  isinstance(ast2, BinOp) and ast2.op == "*")
 
-ast3, _ = parse("1 - 2 - 3")
+ast3, _ = parse1("1 - 2 - 3")
 ok("subtraction left-associates",
    isinstance(ast3, BinOp) and isinstance(ast3.left, BinOp))
 
-ast4, _ = parse("if n <= 1 then 1 else 2")
+ast4, _ = parse1("if n <= 1 then 1 else 2")
 ok("if parsed",             isinstance(ast4, If))
 ok("condition is a comparison",
    isinstance(ast4.cond, BinOp) and ast4.cond.op == "<=")
 
-ast5, _ = parse("f(1, 2)")
+ast5, _ = parse1("f(1, 2)")
 ok("call parsed",           isinstance(ast5, Call) and len(ast5.args) == 2)
 
-ast6, _ = parse("def sq(n) = n * n")
+ast6, _ = parse1("def sq(n) = n * n")
 ok("definition parsed",     isinstance(ast6, FnDef))
 ok("parameters captured",   ast6.params == ["n"])
 
-_, perr = parse("1 +")
+_, perr = parse1("1 +")
 ok("incomplete expression is Z", perr is not None and perr.is_z)
 ok("parse error is unbounded",   perr.defect == Defect.UNBOUNDED)
 
-_, perr2 = parse("if n then 1")
+_, perr2 = parse1("if n then 1")
 ok("missing else is caught", perr2 is not None and perr2.is_z)
 
 print("\nAST measures structure, not characters")
-a, _ = parse("n")
-b, _ = parse("n * 1")
-c, _ = parse("((n))")
+a, _ = parse1("n")
+b, _ = parse1("n * 1")
+c, _ = parse1("((n))")
 ok("size counts nodes",     a.size() == 1)
 ok("n*1 is larger than n",  b.size() > a.size())
 ok("redundant parens vanish", c.size() == a.size())
 ok("depth computed",        b.depth() == 2)
 
-d, _ = parse("if n <= 1 then 1 else n * f(n - 1)")
+d, _ = parse1("if n <= 1 then 1 else n * f(n - 1)")
 ok("nested depth",          d.depth() >= 4)
 ok("shape erases constants", "Num" in d.shape() and "Var" in d.shape())
 
@@ -145,7 +157,7 @@ ok("clean names ready",        compile_ezr("1 + 1").stage == "ready")
 
 print("\n4. EXECUTION over the AST")
 c10 = compile_ezr("def fact(n) = if n <= 1 then 1 else n * fact(n - 1)")
-fns = {c10.ast.name: c10.ast}
+fns = definitions(c10.ast)
 r = eval_ast(Call("fact", [Num(5)]), {}, fns, 0, limit=99)
 ok("fact(5) computes",       r.value == 120)
 ok("program constants are Certain", r.confidence == E_CERTAIN)
@@ -172,12 +184,12 @@ diverse = ["n * n", "(n * 3) - 2", "n + n",
 kd, _ = distinct_skeletons(diverse)
 ok("genuinely different ideas counted", kd == 4)
 
-ok("constants collapse",   skeleton(parse("1")[0]) == skeleton(parse("99")[0]))
-ok("variables collapse",   skeleton(parse("n")[0]) == skeleton(parse("x")[0]))
+ok("constants collapse",   skeleton(parse1("1")[0]) == skeleton(parse1("99")[0]))
+ok("variables collapse",   skeleton(parse1("n")[0]) == skeleton(parse1("x")[0]))
 ok("comparisons collapse",
-   skeleton(parse("n < 1")[0]) == skeleton(parse("n >= 4")[0]))
+   skeleton(parse1("n < 1")[0]) == skeleton(parse1("n >= 4")[0]))
 ok("arithmetic does not collapse",
-   skeleton(parse("n + 1")[0]) != skeleton(parse("n * 1")[0]))
+   skeleton(parse1("n + 1")[0]) != skeleton(parse1("n * 1")[0]))
 
 print(f"\n=== Pipeline: {passed} passed, {failed} failed ===\n")
 raise SystemExit(0 if failed == 0 else 1)

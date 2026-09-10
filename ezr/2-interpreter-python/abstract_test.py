@@ -85,10 +85,15 @@ ok("measure found",               fd.value.measure == "n")
 
 
 def call(lam, n):
-    try:
-        return lam.apply(lam.globals["fact"], [e_val("n", n, 200)], {}, 0)
-    except DepthExceeded:
-        return None
+    """None when the call was refused.
+
+    The ceiling is a Z now rather than an exception (G1: evaluation is
+    total), so a refusal arrives as a value. This helper keeps the
+    assertions below reading the way they did -- "blocked" still means
+    "produced no value" -- while the mechanism underneath changed.
+    """
+    out = lam.apply(lam.globals["fact"], [e_val("n", n, 200)], {}, 0)
+    return None if out.is_z else out
 
 
 ok("shallow call works unanchored",   call(L4, 3) is not None)

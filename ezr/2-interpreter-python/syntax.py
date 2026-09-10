@@ -215,6 +215,56 @@ class FnDef(Node):
 # 2. PARSER — recursive descent over tokens
 # ═════════════════════════════════════════════
 
+@dataclass
+class Prog(Node):
+    """A whole program: a run of definitions, or a single expression.
+
+    This is the ratified core's `program := definitions | expression`
+    (CORE.md 2). There is deliberately no trailing expression after the
+    definitions -- that grammar is ambiguous, and the chart parser said
+    so: `def f(n) = 1 - 1` would have two derivations, a body of
+    `1 - 1` or a body of `1` followed by the expression `- 1`.
+    """
+    defs: List[FnDef] = field(default_factory=list)
+    expr: Optional[Node] = None
+
+    def children(self) -> List[Node]:
+        kids: List[Node] = list(self.defs)
+        if self.expr is not None:
+            kids.append(self.expr)
+        return kids
+
+    def __str__(self) -> str:
+        parts = [str(d) for d in self.defs]
+        if self.expr is not None:
+            parts.append(str(self.expr))
+        return "\n".join(parts)
+
+
+def unwrap(node: Node) -> Node:
+    """The single node a program contains.
+
+    For callers that want the expression or the definition rather than
+    the `Prog` wrapping it. A program with several definitions has no
+    single node and is returned as it is.
+    """
+    if isinstance(node, Prog):
+        if node.expr is not None:
+            return node.expr
+        if len(node.defs) == 1:
+            return node.defs[0]
+    return node
+
+
+def definitions(node: Node) -> Dict[str, FnDef]:
+    """The function table a program defines, ready for eval_ast."""
+    if isinstance(node, Prog):
+        return {d.name: d for d in node.defs}
+    if isinstance(node, FnDef):
+        return {node.name: node}
+    return {}
+
+
 class Parser:
     """Grammar, stated:
 
@@ -264,10 +314,17 @@ class Parser:
         # `def f(n) = n` followed by a second definition both came back
         # clean, with the tail discarded. Found by layer 7, where all
         # sixteen front ends refuse the same texts.
+        # The ratified core takes a run of definitions, not just one.
+        # The runtime always held any number of them -- Lambda.globals
+        # is a dictionary -- and the grammar simply could not say so,
+        # which is the coverage gap CORE.md 2.2 records.
         if self.at(T.KW, "def"):
-            node = self.fndef()
+            defs: List[FnDef] = []
+            while self.at(T.KW, "def"):
+                defs.append(self.fndef())
+            node: Node = Prog(defs=defs)
         else:
-            node = self.expr()
+            node = Prog(defs=[], expr=self.expr())
         if not self.at(T.EOF):
             t = self.peek()
             raise ParseError(f"unexpected {t.text!r} at line {t.line}")
@@ -385,6 +442,7 @@ class Analysis:
     depth: int = 0
     shape: str = ""
     errors: List[str] = field(default_factory=list)
+    per_def: Dict[str, "Analysis"] = field(default_factory=dict)
 
     @property
     def clean(self) -> bool:
@@ -411,6 +469,37 @@ class Semantic:
                 bound: Optional[Set[str]] = None) -> Analysis:
         a = Analysis()
         bound = set(bound or ())
+
+        if isinstance(node, Prog):
+            # Two passes. Every name and arity is registered before any
+            # body is walked, so `def f(n) = g(n)` followed by
+            # `def g(n) = n` resolves -- a single pass would report g
+            # unbound purely because of the order they were written in.
+            for d in node.defs:
+                self.fns[d.name] = len(d.params)
+            for d in node.defs:
+                inner = self.analyse(d)
+                a.per_def[d.name] = inner
+                for msg in inner.errors:
+                    tagged = f"in {d.name}: {msg}"
+                    if tagged not in a.errors:
+                        a.errors.append(tagged)
+                a.calls |= inner.calls
+            if node.expr is not None:
+                inner = self.analyse(node.expr, bound)
+                a.ty = inner.ty
+                a.calls |= inner.calls
+                for msg in inner.errors:
+                    if msg not in a.errors:
+                        a.errors.append(msg)
+            elif len(node.defs) == 1:
+                only = a.per_def[node.defs[0].name]
+                a.ty, a.recursive, a.measure = only.ty, only.recursive, only.measure
+            a.size = node.size()
+            a.depth = node.depth()
+            a.shape = " ; ".join(d.body.shape() for d in node.defs) \
+                if node.defs else (node.expr.shape() if node.expr else "")
+            return a
 
         if isinstance(node, FnDef):
             self.fns[node.name] = len(node.params)
@@ -645,6 +734,16 @@ def eval_ast(node: Node, env: Dict[str, E],
         return e_val(node.name, r.value,
                      min([r.confidence] + [a.confidence for a in args]))
 
+    if isinstance(node, Prog):
+        # Register every definition, then evaluate the expression if
+        # there is one. A program that is only definitions has defined
+        # them and produced nothing, which is Certain and true.
+        for d in node.defs:
+            fns[d.name] = d
+        if node.expr is not None:
+            return eval_ast(node.expr, env, fns, depth, limit)
+        return e_val("prog", len(node.defs), E_CERTAIN)
+
     return e_z("eval", f"cannot evaluate {type(node).__name__}",
                Defect.MISBOUND)
 
@@ -731,6 +830,8 @@ def skeleton(node: Node) -> str:
         return f"CALL({', '.join(skeleton(a) for a in node.args)})"
     if isinstance(node, FnDef):
         return skeleton(node.body)
+    if isinstance(node, Prog):
+        return " ; ".join(skeleton(k) for k in node.children())
     return "?"
 
 
@@ -780,7 +881,7 @@ if __name__ == "__main__":
     print(f"            errors={a.errors or 'none'}")
     print(f"            shape={a.shape}")
 
-    fns = {c.ast.name: c.ast}
+    fns = definitions(c.ast)
     print("\n4. EXECUTE")
     for n in (1, 3, 5):
         r = eval_ast(Call("fact", [Num(n)]), {}, fns, 0, limit=99)

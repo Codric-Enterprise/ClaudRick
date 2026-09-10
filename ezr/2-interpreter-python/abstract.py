@@ -179,6 +179,14 @@ def a_anchor_fn(p: E) -> E:
 # Application — the chain rule
 # ═════════════════════════════════════════════
 
+#: The hard stop for anchored recursion. Python's own stack is the
+#: real constraint -- each EZR frame costs several Python frames -- so
+#: the interpreter raises its recursion limit to match and stops here
+#: well short of it, rather than letting a RecursionError escape and
+#: break G1 from underneath.
+E_HARD_DEPTH = 4000
+
+
 class DepthExceeded(Exception):
     def __init__(self, name: str, limit: int):
         self.name, self.limit = name, limit
@@ -313,9 +321,10 @@ class Lambda:
                                   for i, a in enumerate(args)], {}, 0)
             passed = (not got.is_z) and got.value == expect
         except DepthExceeded:
-            # Running out of depth is a failed Example, not a silent
-            # skip. It has to lower the function's standing like any
-            # other failure, or the depth ceiling would be free.
+            # Unreachable since the ceiling became a refusal, and kept
+            # as a guard rather than removed: running out of depth is a
+            # failed Example either way, never a silent skip, or the
+            # ceiling would be free.
             passed = False
 
         if passed:
@@ -367,11 +376,21 @@ class Lambda:
 
         # depth is earned. anchored with a measure recurses freely;
         # everything else stops at floor(pi).
+        # A ceiling is a refusal, not an exception. SEMANTICS.md G1
+        # says evaluation is total -- "no exceptions, no undefined
+        # behavior" -- and a raise that escapes `eval` makes totality a
+        # property of whoever remembered to catch it rather than of the
+        # language. The ceiling is still a checked halt (4.3); it now
+        # halts by returning Z, which is absorbing by T1 and therefore
+        # propagates exactly as the depth-exceeded case is specified to.
         earned = fp.anchor_id != 0 and c.measure is not None
         if not earned and depth > E_DEPTH_CEILING:
-            raise DepthExceeded(c.name, E_DEPTH_CEILING)
-        if depth > 4000:
-            raise DepthExceeded(c.name, 4000)
+            return e_z(c.name,
+                       f"depth ceiling {E_DEPTH_CEILING} exceeded",
+                       Defect.UNBOUNDED)
+        if depth > E_HARD_DEPTH:
+            return e_z(c.name, f"hard depth ceiling {E_HARD_DEPTH} exceeded",
+                       Defect.UNBOUNDED)
 
         if len(args) != c.arity():
             return e_z(c.name,
@@ -390,7 +409,18 @@ class Lambda:
         for pname, aval in zip(c.params, args):
             local[pname] = aval
 
-        result = self.eval(c.body, local, depth + 1, ident=c.name)
+        try:
+            result = self.eval(c.body, local, depth + 1, ident=c.name)
+        except RecursionError:
+            # The interpreter's own stack ran out before EZR's ceiling
+            # did. That is still a halt, and it still has to be a
+            # refusal: a RecursionError escaping here breaks G1 from
+            # underneath. It is also the failure an anchored function
+            # is most likely to meet, because anchoring is precisely
+            # what removes the ceiling that would have stopped it
+            # first.
+            return e_z(c.name, "interpreter stack exhausted before the "
+                               "depth ceiling", Defect.UNBOUNDED)
 
         # the chain rule: no more trusted than the weakest participant
         conf = chain([fp] + args + [result])
