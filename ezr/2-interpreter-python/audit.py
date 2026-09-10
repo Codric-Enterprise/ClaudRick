@@ -241,6 +241,27 @@ def probe_core_agreement() -> Tuple[str, str]:
     return HOLDS, f"agrees with the ratified core on {len(cases)} cases"
 
 
+def probe_builtins() -> Tuple[str, str]:
+    """The builtin set, against what CORE.md 1.2 says it is.
+
+    An undocumented builtin is understatement of exactly the kind this
+    auditor exists to catch: the language does something and no
+    document admits it.
+    """
+    from syntax import BUILTINS
+    path = os.path.join(DOCS, "CORE.md")
+    if not os.path.exists(path):
+        return UNDECIDED, "CORE.md is not where this expects it"
+    text = open(path).read()
+    documented = {b for b in BUILTINS if f"`{b}(" in text}
+    missing = set(BUILTINS) - documented
+    if missing:
+        return UNDERSTATED, (f"implemented but undocumented: "
+                             f"{', '.join(sorted(missing))}")
+    return HOLDS, (f"all {len(BUILTINS)} builtins are documented: "
+                   f"{', '.join(sorted(BUILTINS))}")
+
+
 def probe_physical_laws() -> Tuple[str, str]:
     from ezr import e_val
     from physics import Subsystem, derive_from
@@ -379,6 +400,8 @@ def probes() -> List[Probe]:
               "SEMANTICS.md T3 / third law", probe_t3_absolute_zero),
         Probe("the interpreter implements the ratified core",
               "CORE.md 1 and 2", probe_core_agreement),
+        Probe("the builtins are the four CORE.md 1.2 states",
+              "CORE.md 1.2", probe_builtins),
         Probe("the six physical laws hold",
               "physics.py", probe_physical_laws),
         Probe("an anchored function has unbounded depth",

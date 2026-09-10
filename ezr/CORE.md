@@ -84,6 +84,32 @@ kind below is one all four scanners assign.
 
 ---
 
+### 1.2 The builtins
+
+Four names the language provides, and no others. They are called like
+any function and lex as ordinary names, not keywords — `show` sat in
+the incumbent's reserved list for years, among the thirteen words
+reserved against a syntax that did not exist, and had to be *un*reserved
+to become callable.
+
+| | | |
+|---|---|---|
+| `show(x)` | prints `x` with its confidence, returns `x` unchanged | the only way a program has of being observed from outside |
+| `len(xs)` | how many | |
+| `head(xs)` | the first | `head([])` is a refusal, not an exception and not a silent empty answer |
+| `tail(xs)` | the rest | same |
+
+Each obeys the chain rule: a result is no more trusted than the
+argument it came from. `show` returns its argument so it composes
+anywhere — `show(total([1,2,3]))` is `total([1,2,3])` with a side
+effect, not a statement you have to hoist out.
+
+**They are part of the core because a list you cannot take apart is not
+a list.** Adding the literal without the accessors would have delivered
+a data structure that could be built and never used, which is not a
+feature, and the auditor now checks that the set stays exactly these
+four rather than drifting.
+
 ## 2. The seven rulings
 
 Each was open, in the sense that independent implementations answered
