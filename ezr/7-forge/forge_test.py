@@ -56,8 +56,8 @@ ok("seven questions settled",     len(SPEC.settled_questions) == 7)
 ok("a bare '<' is CMP",           SPEC.get("cmp_kind", None) == "CMP")
 ok("an unclosed string is unbounded",
    SPEC.get("unterminated_string_defect", None) == "unbounded")
-ok("six reserved words, not nineteen",
-   len(SPEC.get("reserved_words", [])) == 6)
+ok("eight reserved words, not nineteen",
+   len(SPEC.get("reserved_words", [])) == 8)
 ok("several definitions per text", SPEC.get("multi_definition", None) is True)
 ok("no chained comparison",       SPEC.get("chained_comparison", None) is False)
 ok("no trailing comma",           SPEC.get("trailing_comma", None) is False)
@@ -75,8 +75,9 @@ ok("'to' is a name again",
    all(f("to").toks[0].kind == "NAME" for f in LEXERS.values()))
 ok("'def' is still a keyword",
    all(f("def").toks[0].kind == "KW" for f in LEXERS.values()))
-ok("the reserved set is the six the grammar uses",
-   keywords() == {"def", "else", "false", "if", "then", "true"})
+ok("the reserved set is the words the grammar reaches",
+   keywords() == {"def", "else", "false", "if", "in", "let", "then",
+                  "true"})
 
 print("\n4. THE GOLDEN CORPUS, ON ALL SIXTEEN")
 bad_outcome = bad_tree = 0

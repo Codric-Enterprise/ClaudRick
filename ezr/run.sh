@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 # EZR / Tapestry — build and verify every layer
 set -u
+# Every layer below is `python3 foo.py | tail -2`, and without this the
+# pipeline's status is tail's, which is always 0. That masked a failing
+# layer completely: run.sh reported PASSED for a suite with two broken
+# assertions in it, for as long as they had been broken.
+set -o pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")"
 P=0; S=0; F=0; declare -a N
 have(){ command -v "$1" >/dev/null 2>&1; }

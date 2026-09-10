@@ -419,11 +419,28 @@ rules.
 
 ---
 
-## 8. The laws the language runs under
+## 8. The laws, and how far they reach
 
 Five of the six were already here, which is not a flourish -- it is
 what the algebra turns out to be once you write down what it does.
 `2-interpreter-python/physics.py` checks them; it did not invent them.
+
+**How far they reach, stated before the table, because the heading
+above used to overstate it.** Five of these are *properties of the
+existing algebra*: they describe what the chain rule, `obliterate` and
+the confidence bounds already do, and `physics.py` verifies that they
+still hold. They are not a layer the evaluator was rewritten to run
+under. Newton II is a *facility* -- implemented and tested, and with no
+caller in either evaluator, so nothing is yet moved by force during
+ordinary evaluation. `Subsystem` is enforced at runtime in exactly one
+place, `ultra.py`, where the accounting is the precondition for
+granting depth.
+
+That distinction matters enough to be checked rather than remembered,
+so `audit.py` now probes it: a law claimed as enforced must have a
+caller outside the tests, and one claimed as a property must verify.
+This section previously read "the laws the language runs under", which
+was true of neither category.
 
 | Law | Already in EZR as |
 |---|---|

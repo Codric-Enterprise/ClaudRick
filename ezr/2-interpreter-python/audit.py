@@ -262,6 +262,39 @@ def probe_builtins() -> Tuple[str, str]:
                    f"{', '.join(sorted(BUILTINS))}")
 
 
+def probe_law_reach() -> Tuple[str, str]:
+    """Where the laws actually apply, against where CORE.md says.
+
+    A law with no caller is a law nothing runs under, however well it
+    is tested in isolation. `probe_physical_laws` verifies the algebra
+    over a subsystem built for the occasion, which says nothing about
+    whether ordinary evaluation ever touches it -- so this looks for
+    callers instead of for correctness.
+    """
+    import glob
+    users = set()
+    for path in glob.glob(os.path.join(HERE, "*.py")):
+        base = os.path.basename(path)
+        if base in ("physics.py", "audit.py") or base.endswith("_test.py"):
+            continue
+        text = open(path).read()
+        if "from physics import" in text or "import physics" in text:
+            users.add(base)
+
+    text = open(os.path.join(DOCS, "CORE.md")).read()
+    claims_runtime = "the laws the language runs under" in text.lower()
+    if claims_runtime and not users:
+        return OVERSTATED, ("CORE.md says the language runs under the "
+                            "laws, and nothing outside the tests imports "
+                            "physics")
+    if users:
+        return HOLDS, (f"enforced at runtime in {', '.join(sorted(users))}; "
+                       f"the rest are verified properties, and CORE.md 8 "
+                       f"says so")
+    return HOLDS, ("stated as properties and a facility, not as a layer "
+                   "evaluation runs under")
+
+
 def probe_physical_laws() -> Tuple[str, str]:
     from ezr import e_val
     from physics import Subsystem, derive_from
@@ -402,6 +435,8 @@ def probes() -> List[Probe]:
               "CORE.md 1 and 2", probe_core_agreement),
         Probe("the builtins are the four CORE.md 1.2 states",
               "CORE.md 1.2", probe_builtins),
+        Probe("the laws reach as far as CORE.md 8 says",
+              "CORE.md 8", probe_law_reach),
         Probe("the six physical laws hold",
               "physics.py", probe_physical_laws),
         Probe("an anchored function has unbounded depth",
