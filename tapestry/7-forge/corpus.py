@@ -357,11 +357,20 @@ class Fuzzer:
                         for _ in range(self.r.randint(1, k)))
 
     # ── the stream the forge consumes ──
-    def batch(self, n: int) -> List[Case]:
+    def batch(self, n: int, max_depth: int = 5) -> List[Case]:
+        """`max_depth` is the ceiling on generated program nesting.
+
+        The convergence run held it at 5 throughout. Exploration cycles
+        vary it, because depth is the one knob that changes the *shape*
+        of what gets generated rather than just how much: a depth-7
+        program nests conditionals and precedence chains that a depth-3
+        program cannot express, so raising it reaches grammar the
+        earlier search never had a way to reach.
+        """
         out: List[Case] = []
         for i in range(n):
             roll = self.r.random()
-            depth = self.r.randint(1, 5)
+            depth = self.r.randint(1, max(1, max_depth))
             if roll < 0.45:
                 src, tag = self.program(depth), "wellformed"
             elif roll < 0.80:

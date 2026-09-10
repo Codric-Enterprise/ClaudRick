@@ -336,12 +336,14 @@ class Forge:
         return ACCEPT
 
     # ── a generation ──
-    def generation(self, n: int) -> GenReport:
+    def generation(self, n: int, budget: Optional[int] = None,
+                   max_depth: int = 5) -> GenReport:
         t0 = time.time()
         rep = GenReport(generation=n)
 
         fz = Fuzzer(seed=self.seed * 10_000 + n)
-        fuzz_cases = fz.batch(self.budget)
+        fuzz_cases = fz.batch(self.budget if budget is None else budget,
+                              max_depth=max_depth)
         rep.fuzzed = len(fuzz_cases)
         self.total_fuzzed += len(fuzz_cases)
 
@@ -590,6 +592,51 @@ class Forge:
         self._write_ledger(False, gen)
         return False
 
+    # ── exploration ──
+    def cycles(self, n: int, budget: int,
+               depths: Optional[List[int]] = None) -> bool:
+        """Run exactly `n` generations and stop. No early exit.
+
+        Convergence and exploration are different questions.
+        `converge()` asks "is there still anything to settle", and
+        stopping early once nothing moves is the right answer to it.
+        This asks "what has the search not looked at yet", where
+        stopping early is just a smaller search.
+
+        So every cycle is the same size — comparable samples, which
+        makes a finding rate mean something — and the seed advances
+        with the generation number, so no cycle re-walks another's
+        ground. `depths` rotates the nesting ceiling; a run that only
+        ever generates shallow programs has not tested the grammar's
+        deep end no matter how many programs it generates.
+        """
+        depths = depths or [5]
+        clean = True
+        if self.verbose:
+            print(f"\n{'=' * 78}\nTHE FORGE — {n} exploration cycles, "
+                  f"{budget:,} programs each\n"
+                  f"depth ceilings {depths}, seed base {self.seed}\n"
+                  f"{'=' * 78}\n")
+
+        for i in range(n):
+            depth = depths[i % len(depths)]
+            rep = self.generation(self.gen_offset + i, budget=budget,
+                                  max_depth=depth)
+            self.arbitrate(i, rep)
+            self.reports.append(rep)
+            if not rep.clean:
+                clean = False
+            if self.verbose:
+                print(f"cycle {i + 1:>3}/{n} depth {depth} | {rep.line()}")
+            self._write_ledger(False, i + 1)
+
+        if self.verbose:
+            print(f"\n{n} cycles complete, {self.total_fuzzed:,} programs "
+                  f"fuzzed in total, {len(self.promoted)} counterexamples "
+                  f"carried")
+        self._write_ledger(clean, n)
+        return clean
+
     def _prior_quiet_streak(self) -> int:
         """Clean generations already on the record still count. They
         were run, and rerunning them would not make them cleaner."""
@@ -647,6 +694,14 @@ if __name__ == "__main__":
     ap.add_argument("--quiet", type=int, default=3)
     ap.add_argument("--reset", action="store_true",
                     help="clear every ruling and start from unratified")
+    ap.add_argument("--cycles", type=int, default=0,
+                    help="run exactly this many exploration cycles "
+                         "instead of converging")
+    ap.add_argument("--cycle-budget", type=int, default=6_000,
+                    help="programs per exploration cycle (fixed, so "
+                         "cycles stay comparable)")
+    ap.add_argument("--depths", type=str, default="3,4,5,6,7",
+                    help="nesting ceilings to rotate through")
     ap.add_argument("--max-seconds", type=int, default=0,
                     help="stop after this long, keeping the ledger so a "
                          "later run resumes (0 = no limit)")
@@ -662,5 +717,9 @@ if __name__ == "__main__":
     forge = Forge(seed=args.seed, budget=args.budget, floor=args.floor,
                   max_gens=args.max_gens, quiet_needed=args.quiet,
                   max_seconds=args.max_seconds)
-    ok = forge.converge()
+    if args.cycles:
+        depths = [int(d) for d in args.depths.split(",") if d.strip()]
+        ok = forge.cycles(args.cycles, args.cycle_budget, depths)
+    else:
+        ok = forge.converge()
     sys.exit(0 if ok else 1)

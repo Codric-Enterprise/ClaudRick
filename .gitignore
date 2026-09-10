@@ -46,3 +46,4 @@ tapestry/0-atom-c/tapestry_test
 tapestry/1-phase-cpp/phase_test
 tapestry/1-phase-cpp/*.o
 tapestry/4-archive-sql/tapestry.db
+tapestry/7-forge/cycles-run.log
