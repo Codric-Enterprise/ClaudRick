@@ -88,7 +88,7 @@ Key design decisions:
 ├── .dockerignore
 ├── pyproject.toml            # hatchling build; pytest + ruff config
 ├── .env.example              # local env template (ANTHROPIC_API_KEY, GITHUB_TOKEN, …); copy to gitignored .env
-├── tapestry/                 # Ever / Tapestry — a separate language project (see below)
+├── ezr/                      # EZR — a separate language project (see below)
 │   ├── 0-atom-c/ 1-phase-cpp/ 2-interpreter-python/ 3-dsl-ruby/
 │   ├── 4-archive-sql/ 5-runtime-java/ 6-interface-html/
 │   ├── 7-forge/              # the language forge: 16 front ends, one core
@@ -264,42 +264,42 @@ model stack, the core-files framework, and the Claude Code app workflow):
 The prompt/command aids don't touch the ReVision app's runtime code, endpoints,
 or the server-side-key rules above.
 
-## Tapestry (`tapestry/`) — a separate project in the same repo
+## EZR (`ezr/`) — a separate project in the same repo
 
-`tapestry/` is **not part of ReVision**. It is the Ever / Tapestry language
+`ezr/` is **not part of ReVision**. It is the EZR language
 project: a multi-layer language where every value carries how much it is
 trusted (C atom → C++ phase engine → Python interpreter → Ruby DSL → SQL
 archive → HTML interface). It shares nothing with `src/revision/` — no
 imports, no endpoints, no configuration — and the two are verified by
 separate commands.
 
-- **Verify it:** `cd tapestry && ./run.sh` (needs gcc, g++, python3, ruby;
+- **Verify it:** `cd ezr && ./run.sh` (needs gcc, g++, python3, ruby;
   skips any layer whose toolchain is absent rather than failing).
-- **In a container:** `cd tapestry && docker compose run --rm verify`.
+- **In a container:** `cd ezr && docker compose run --rm verify`.
   The image verifies itself at build time.
-- **`tapestry/7-forge/`** is the language forge: four independent lexers and
+- **`ezr/7-forge/`** is the language forge: four independent lexers and
   four independent parsers, run as all sixteen pairings against a shared
   conformance corpus and seven universal laws, with a fuzz budget that
   doubles after every clean generation. Where the pairs disagree, the
   language was never specified; the forge arbitrates by published doctrine,
   then cross-stage coverage, then its own laws, then consensus, and
-  withholds below all four. `tapestry/CORE.md` records what it settled;
-  `tapestry/7-forge/GRAMMAR.ebnf` is emitted from the chart parser's rule
+  withholds below all four. `ezr/CORE.md` records what it settled;
+  `ezr/7-forge/GRAMMAR.ebnf` is emitted from the chart parser's rule
   table so it cannot drift from the code.
 - **Boundaries matter here.** Each numbered directory is a distinct language
   and toolchain. Do not let Python interpretation rules leak into the C++
   phase, or vice versa; do not add language features that `SEMANTICS.md`
   does not already imply.
 
-ReVision's own gate (`pytest`, `ruff check .`) does not cover `tapestry/`,
-and `tapestry/run.sh` does not cover ReVision. Run whichever matches what
+ReVision's own gate (`pytest`, `ruff check .`) does not cover `ezr/`,
+and `ezr/run.sh` does not cover ReVision. Run whichever matches what
 you touched.
 
 ## Notes for AI assistants
 
 - Verify claims against the actual repository before acting.
 - Run `pytest` and `ruff check .` before committing non-trivial changes to
-  ReVision; run `tapestry/run.sh` for changes under `tapestry/`.
+  ReVision; run `ezr/run.sh` for changes under `ezr/`.
 - Keep this file updated as the codebase evolves; treat documentation drift as a
   bug. When you add a top-level directory, tool, endpoint, or workflow, update
   the relevant section here in the same change.
