@@ -57,6 +57,16 @@ if have python3; then
   ( cd 2-interpreter-python && python3 notebook.py | tail -6 ) && pass "Notebook" || fail "Notebook"
 else skip "Notebook" "python3 not found"; fi
 
+echo; echo "[P] Python — the laws (thermodynamics, Newton, ultra-anchoring)"
+if have python3; then
+  ( cd 2-interpreter-python && python3 physics_test.py | tail -2 ) && pass "Physics" || fail "Physics"
+else skip "Physics" "python3 not found"; fi
+
+echo; echo "[A] Python — variance audit (documents against code)"
+if have python3; then
+  ( cd 2-interpreter-python && python3 audit.py | tail -6 ) && pass "Audit" || fail "Audit"
+else skip "Audit" "python3 not found"; fi
+
 echo; echo "[7] Python — the forge (20 front ends, one core)"
 if have python3; then
   ( cd 7-forge && python3 forge_test.py | tail -2 ) && pass "Layer 7 (Forge)" || fail "Layer 7 (Forge)"

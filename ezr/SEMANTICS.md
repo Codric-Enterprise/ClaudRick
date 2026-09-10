@@ -388,14 +388,29 @@ Named honestly, because scope depends on it.
 
 | Missing | Consequence |
 |---|---|
-| Composite data (records, lists) | `E_TYPE_LIST` is an unimplemented enum |
-| Higher-order functions | functions cannot be arguments |
+| Records | only lists so far; `E_TYPE_LIST` is implemented, records are not |
 | Pattern matching | only `if/then/else` |
 | Static type system | dynamic tag checks only |
 | Module system | one flat global namespace |
 | Transpiler back-ends | anchored bodies do not yet emit Rust/Go/TS |
-| Formal grammar (EBNF) | parsing is regex-based |
 | Soundness proof | no progress/preservation |
+
+Three rows left this table, and they were removed because
+`2-interpreter-python/audit.py` proved they were false rather than
+because anybody remembered:
+
+| Was listed missing | Actually |
+|---|---|
+| Composite data (records, lists) | lists parse, evaluate, and take their confidence from the chain rule over their elements. Records remain missing, so the row narrowed rather than went |
+| Higher-order functions | functions have always been able to be arguments: `twice(inc, 5)` is 7 and `twice(dbl, 5)` is 20. This row was never true |
+| Formal grammar (EBNF) | `7-forge/GRAMMAR.ebnf` is emitted from the chart parser's own rule table, so it cannot drift from the code |
+
+That last pair is the reason the auditor exists. A specification that
+overstates is dangerous because somebody relies on it; one that
+understates is cheaper but still false, and it hides finished work from
+whoever is deciding what to build next. Higher-order functions were
+listed as missing for as long as this document has existed and worked
+the whole time.
 
 **Transpilation is the largest gap.** The decision is that an anchored
 function's *body* travels into the target language, with its Examples as

@@ -393,7 +393,95 @@ rules.
 
 ---
 
-## 8. What the emitted grammar makes possible
+## 8. The laws the language runs under
+
+Five of the six were already here, which is not a flourish -- it is
+what the algebra turns out to be once you write down what it does.
+`2-interpreter-python/physics.py` checks them; it did not invent them.
+
+| Law | Already in EZR as |
+|---|---|
+| **Thermodynamics I** — nothing is created or destroyed | `obliterate` supersedes and archives; conservation is a law here, not a preference (VOWELS.md) |
+| **Thermodynamics II** — entropy never spontaneously falls | G3. Uncertainty is `u = (256 − c)/256`, the chain rule takes the *minimum* confidence, so `u` of a derived thread is the *maximum* `u` of its inputs. Ascend and Excel are the work done from outside |
+| **Thermodynamics III** — absolute zero is unreachable | T3. `u = 0` needs some `u_i = 0` exactly, and a product of non-zero terms is never zero, so Excel caps at 255 and `Certain` must enter from outside |
+| **Newton I** — inertia | G9. No mutation; every thread is derived, never overwritten |
+| **Newton III** — action and reaction | every supersession writes exactly one boundary marker saying where the previous best stood |
+
+**Newton II is the one genuinely new thing**, and it is marked as
+defined rather than discovered because `F = ma` had no counterpart in
+the existing rules. Inertia is accumulated evidence —
+`m = 1 + generation + ascend_points + (⌊π⌋ if anchored)` — and the same
+force moves a well-attested thread less than a fresh one. Observed: a
+force of −40 takes a fresh thread from 200 to 160, and an anchored one
+with three Ascend points from 200 to 195. A function that has survived
+three Examples and earned an anchor should not be knocked over by the
+push that flattens something defined a moment ago, and until now
+nothing in the language said so.
+
+### 8.1 The subsystem
+
+`Subsystem` is the closed accounting: every thread admitted has exactly
+one of four dispositions at every moment, and the four exhaust the
+possibilities — **created**, **utilised** (consumed deriving something
+else), **recycled** (superseded, and archived), **resident**. Nothing
+leaves without a record. That is what makes the first law checkable
+rather than merely stated, and it is why a conservation failure can
+refuse a result instead of being noticed later.
+
+### 8.2 Ultra-anchored recursion
+
+An anchor buys depth: SEMANTICS.md 4.6 gives a cleared function with a
+proven measure `limit = ∞`. **It did not actually get it.** Removing
+EZR's ceiling only exposes CPython's, and an anchored `fact` died of
+`RecursionError` around depth 300 — for reasons having nothing to do
+with EZR, in a language whose own documents promise unbounded depth.
+
+Ultra-anchoring is anchoring that can be cashed. Three things, all
+required:
+
+1. **anchored** — the existing bar, unchanged. Depth is earned.
+2. **provisioned** — the call runs in an execution context reserved to
+   deliver that depth, its own stack sized up front. A promise the
+   runtime cannot honour is not a weaker promise, it is a false one.
+3. **conserving** — every thread the recursion creates is accounted
+   for when it ends. Depth without accounting is how you lose track of
+   what a computation did; the ledger is why the depth is safe to grant.
+
+Observed: `fact(1000)` refused unprovisioned, 2,568 digits under an
+ultra-anchor. `fact(3900)` computes. `fact(5000)` refuses — **at EZR's
+own stated ceiling of 4,000, not at CPython's stack.** The limit is the
+language's now, for the language's reasons.
+
+---
+
+## 9. Finding the variances
+
+Both of the last two real bugs sat in stage 4, where the forge does not
+look. `2-interpreter-python/audit.py` is that check written down so it
+happens every run rather than when somebody thinks to look.
+
+It reads the claims out of the documents — including SEMANTICS.md
+section 7's table, row by row, as it currently stands — and tests each
+one against the code. Variance is reported in both directions:
+
+| | |
+|---|---|
+| **OVERSTATED** | the documents promise something the code does not do. The dangerous kind: somebody is relying on it. Fails the run |
+| **UNDERSTATED** | the code does something the documents deny. Cheaper, but still false, and it hides finished work from whoever is deciding what to build next. Reported, does not fail |
+| **UNDECIDED** | no probe can settle it. Said plainly rather than counted as a pass — an auditor reporting a clean bill because it could not run is worse than no auditor |
+
+It found three understatements immediately, and all three were true:
+lists, higher-order functions and the formal grammar were all listed as
+missing while working. **Higher-order functions had been listed missing
+for as long as SEMANTICS.md existed and worked the whole time.**
+Section 7 has been corrected against what the probes actually
+establish, and the auditor now reports zero overstated, zero
+understated, one undecided — the soundness proof, which no test here
+can settle.
+
+---
+
+## 10. What the emitted grammar makes possible
 
 PIPELINE.md ends by naming what stage 4 does not have:
 

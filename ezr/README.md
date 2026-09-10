@@ -73,7 +73,7 @@ bleed into each other.
 |---|---|
 | `0-atom-c` | the atom — the value that carries its own trust |
 | `1-phase-cpp` | the phase engine |
-| `2-interpreter-python` | lexer, parser, semantic pass, evaluator |
+| `2-interpreter-python` | lexer, parser, semantic pass, evaluator, the laws, the auditor |
 | `3-dsl-ruby` | the DSL surface |
 | `4-archive-sql` | the archive — nothing is deleted, only superseded |
 | `5-runtime-java` | reserved; not yet implemented |
@@ -107,8 +107,10 @@ it is load-bearing (the reserved-word finding in `CORE.md`, for one).
 
 | | |
 |---|---|
-| Layers passing | **13 / 13** |
+| Layers passing | **15 / 15** |
 | Forge assertions | **81** |
+| Physics assertions | **56** |
+| Pipeline assertions | **87** |
 | Programs fuzzed | **520,600** over 61 generations, 60 clean |
 | Front ends agreeing | **20** (4 lexers × 5 parsers — one of them generated) |
 | Counterexamples carried | 46, each one permanent |
