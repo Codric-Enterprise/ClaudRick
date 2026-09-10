@@ -1,7 +1,7 @@
 {
   "converged": true,
-  "generations": 61,
-  "pairs": 16,
+  "generations": 67,
+  "pairs": 20,
   "lexers": [
     "L1-regex-master",
     "L2-handrolled",
@@ -14,7 +14,7 @@
     "P3-shunting",
     "P4-earley"
   ],
-  "programs_fuzzed": 520600,
+  "programs_fuzzed": 544600,
   "budget_reached": 25000,
   "counterexamples_carried": 46,
   "settled": {
@@ -742,6 +742,72 @@
       "ratified": [],
       "promoted": 0,
       "seconds": 45.62
+    },
+    {
+      "gen": 61,
+      "cases": 4125,
+      "fuzzed": 4000,
+      "golden_failures": 0,
+      "violations": 0,
+      "divergences": 0,
+      "ratified": [],
+      "promoted": 0,
+      "seconds": 19.85
+    },
+    {
+      "gen": 62,
+      "cases": 4125,
+      "fuzzed": 4000,
+      "golden_failures": 0,
+      "violations": 0,
+      "divergences": 0,
+      "ratified": [],
+      "promoted": 0,
+      "seconds": 24.38
+    },
+    {
+      "gen": 63,
+      "cases": 4125,
+      "fuzzed": 4000,
+      "golden_failures": 0,
+      "violations": 0,
+      "divergences": 0,
+      "ratified": [],
+      "promoted": 0,
+      "seconds": 36.11
+    },
+    {
+      "gen": 64,
+      "cases": 4125,
+      "fuzzed": 4000,
+      "golden_failures": 0,
+      "violations": 0,
+      "divergences": 0,
+      "ratified": [],
+      "promoted": 0,
+      "seconds": 59.24
+    },
+    {
+      "gen": 65,
+      "cases": 4125,
+      "fuzzed": 4000,
+      "golden_failures": 0,
+      "violations": 0,
+      "divergences": 0,
+      "ratified": [],
+      "promoted": 0,
+      "seconds": 118.23
+    },
+    {
+      "gen": 66,
+      "cases": 4125,
+      "fuzzed": 4000,
+      "golden_failures": 0,
+      "violations": 0,
+      "divergences": 0,
+      "ratified": [],
+      "promoted": 0,
+      "seconds": 215.08
     }
   ]
 }

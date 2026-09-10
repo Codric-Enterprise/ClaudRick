@@ -78,7 +78,7 @@ bleed into each other.
 | `4-archive-sql` | the archive — nothing is deleted, only superseded |
 | `5-runtime-java` | reserved; not yet implemented |
 | `6-interface-html` | the live interpreter, in a browser |
-| `7-forge` | sixteen front ends, run against each other |
+| `7-forge` | twenty front ends, run against each other; generates a parser and repairs itself |
 
 ## Where to start reading
 
@@ -107,10 +107,10 @@ it is load-bearing (the reserved-word finding in `CORE.md`, for one).
 
 | | |
 |---|---|
-| Layers passing | **12 / 12** |
-| Forge assertions | **61** |
+| Layers passing | **13 / 13** |
+| Forge assertions | **81** |
 | Programs fuzzed | **520,600** over 61 generations, 60 clean |
-| Front ends agreeing | **16** (4 lexers × 4 parsers) |
+| Front ends agreeing | **20** (4 lexers × 5 parsers — one of them generated) |
 | Counterexamples carried | 46, each one permanent |
 
 Convergence is a statement about a search, not a proof. No

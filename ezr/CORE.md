@@ -295,7 +295,87 @@ inside the text — it just does not decide whether two front ends agree.
 
 ---
 
-## 6. Which front end is which
+## 6. The loop, closed
+
+Through section 5 the forge could find a defect, classify it, and carry
+a counterexample forever — and a person still wrote every fix. Two
+pieces close that.
+
+### 6.1 The grammar writes a parser
+
+`grammar_doc.py` emits `GRAMMAR.ebnf` *from* the parser's rule table, so
+the document cannot drift from the code. `selfgen.py` emits a working
+parser *from* those same rules, so the code cannot drift from the
+document either. The output is Python source on disk — direct left
+recursion turned into a loop that still builds a left-associated tree,
+alternatives ordered longest-first with local backtracking — and it is
+then loaded and registered as a fifth parser.
+
+**Sixteen front ends became twenty.** The generated parser is judged
+exactly like the hand-written four: same corpus, same laws, same fuzz.
+That is the entire point of it. A generated parser agreeing with four
+independently hand-written ones is evidence that the stated grammar
+really does describe what the implementations do; a generated parser
+disagreeing is a sharper finding than any other the forge can make,
+because exactly one of two things must then be wrong — the grammar is
+not what the parsers implement, or a parser is not what the grammar
+says.
+
+Observed: agreement on the whole corpus and on 24,000 fuzzed programs
+at nesting depths 3 through 8, no divergence.
+
+### 6.2 A front end repairs itself
+
+`repair.py` runs detect → localise → synthesise → verify → adopt →
+record, with nobody in the loop.
+
+**What decides the repair is not a guess.** When one front end raises,
+the others are still standing there with an answer, so the repair asks
+them. At least ⌊π⌋ = 3 agreeing and two thirds of those that answered —
+the same rule VOWELS.md uses for its oracle and section 2.1 uses for
+arbitration, pointed at the implementation rather than the
+specification. Where they do not agree it **withholds**.
+
+The repair grammar is small and stated, because an unbounded repair
+space is how a self-modifying system talks itself into anything:
+
+| | |
+|---|---|
+| **R1 totality shield** | a component that raises is made to refuse, with the defect class the others agree on — restoring G1 |
+| **R2 regenerate** | the generated parser is re-emitted from the current grammar |
+
+R1 does not claim to fix the logic that raised. It restores a *stated
+guarantee* and pins the input that exposed it permanently in the
+corpus, so the root cause stays visible and stays findable. What stops
+is the language violating its own G1 while nobody is looking.
+
+**Adoption requires that nothing else moves.** A candidate is adopted
+only if it fixes the defect *and* every input already known produces an
+identical verdict afterwards. That is what keeps a shield from becoming
+a way to make failures disappear: a candidate that alters a passing
+case is rejected, and the rejection is recorded.
+
+Nothing is deleted — a shielded component keeps the original callable
+on `_unshielded`, and `repairs.json` records what raised, what the
+witnesses agreed the answer should be, and the input that exposed it.
+
+**Two things it refuses to do**, both verified in the test suite:
+it will not repair when the survivors disagree, and it will not repair
+when the survivors *accept* the input — a shield can turn a crash into
+a refusal, but it cannot synthesise a parse tree, and pretending
+otherwise would teach the corpus a fact nobody verified.
+
+`selfheal.py` demonstrates the whole thing end to end on a real defect:
+the trie scanner's `$` sentinel, the bug the fuzzer actually found at
+generation 7, put back deliberately. Detected, localised to the right
+component, target taken from fifteen surviving witnesses, shielded,
+verified against the full regression set, adopted. It runs as part of
+`run.sh`, so the claim that the loop closes is checked rather than
+asserted.
+
+---
+
+## 7. Which front end is which
 
 Two front ends now exist, and they are not the same thing.
 
@@ -313,7 +393,7 @@ rules.
 
 ---
 
-## 7. What the emitted grammar makes possible
+## 8. What the emitted grammar makes possible
 
 PIPELINE.md ends by naming what stage 4 does not have:
 

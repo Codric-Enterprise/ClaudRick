@@ -60,7 +60,8 @@ import os
 import sys
 import time
 from dataclasses import dataclass, field
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import (Any, Callable, Dict, List, Optional,
+                    Sequence, Tuple)
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
@@ -74,6 +75,7 @@ from laws import (Run, Violation, law_agreement,                # noqa: E402
                   law_token_stream, law_total, law_unambiguous)
 from lexers import LEXERS                                       # noqa: E402
 from parsers import PARSERS                                     # noqa: E402
+from repair import RepairLedger, SelfRepair                     # noqa: E402
 from spec import SPEC                                           # noqa: E402
 
 COUNTEREXAMPLES = os.path.join(HERE, "counterexamples.json")
@@ -161,10 +163,49 @@ class Pair:
     parse: Callable
 
 
-def build_pairs() -> List[Pair]:
+_GENERATED_CACHE: Dict[str, Callable] = {}
+
+
+def all_parsers() -> Dict[str, Callable]:
+    """The four hand-written parsers, plus the one the grammar emits.
+
+    The generated parser is not a convenience. It is the witness that
+    decides whether GRAMMAR.ebnf *describes* the parsers or merely
+    resembles them: it is derived from the stated rules and nothing
+    else, so when it disagrees with the hand-written four, exactly one
+    of two things is wrong and the forge has to say which.
+
+    A generator that cannot emit is itself a finding, but it must not
+    take the rest of the matrix down with it -- the other four still
+    have something to say.
+    """
+    reg = dict(PARSERS)
+    if not _GENERATED_CACHE:
+        try:
+            import selfgen
+            _GENERATED_CACHE["P5-generated"] = selfgen.load()
+        except Exception as exc:                       # pragma: no cover
+            print(f"  ! selfgen unavailable, running on four: {exc}")
+    reg.update(_GENERATED_CACHE)
+    return reg
+
+
+#: Repairs live on disk, so a fix found in one run is still in force in
+#: the next -- the same reason ratified.json exists.
+REPAIRS = RepairLedger()
+
+
+def all_lexers() -> Dict[str, Callable]:
+    return REPAIRS.apply(LEXERS, "lex")
+
+
+def build_pairs(lexers: Optional[Dict[str, Callable]] = None,
+                parsers: Optional[Dict[str, Callable]] = None) -> List[Pair]:
+    lx = all_lexers() if lexers is None else lexers
+    ps = REPAIRS.apply(all_parsers(), "parse") if parsers is None else parsers
     return [Pair(f"{ln} x {pn}", ln, pn, lf, pf)
-            for ln, lf in LEXERS.items()
-            for pn, pf in PARSERS.items()]
+            for ln, lf in lx.items()
+            for pn, pf in ps.items()]
 
 
 # ═════════════════════════════════════════════
@@ -224,7 +265,9 @@ class Forge:
                  quiet_needed: int = 3, floor: int = 50_000,
                  max_gens: int = 60, verbose: bool = True,
                  max_seconds: int = 0):
-        self.pairs = build_pairs()
+        self.lexers = all_lexers()
+        self.parsers = REPAIRS.apply(all_parsers(), "parse")
+        self.pairs = build_pairs(self.lexers, self.parsers)
         self.seed = seed
         self.budget = budget
         self.quiet_needed = quiet_needed
@@ -412,6 +455,32 @@ class Forge:
 
         rep.seconds = time.time() - t0
         return rep
+
+    # ── self-repair ──
+    def verdict_table(self, src: str) -> Dict[str, Optional[str]]:
+        """Every front end's answer for one input; None where it raised."""
+        out: Dict[str, Optional[str]] = {}
+        for p in build_pairs(self.lexers, self.parsers):
+            r = self.run_one(p, src)
+            out[p.name] = None if r.crash else r.verdict
+        return out
+
+    def self_repair(self, inputs: Sequence[str],
+                    regression: Optional[Sequence[str]] = None,
+                    generation: int = 0, verbose: bool = True) -> Dict:
+        """Find front ends that raise, and fix them.
+
+        The regression set is what adoption is judged against: a repair
+        that changes any verdict already known is rejected, however well
+        it fixes the thing it was aimed at.
+        """
+        if regression is None:
+            regression = [c.src for c in GOLDEN] + [c.src for c in PROBES]
+        sr = SelfRepair(self.lexers, self.parsers, self.verdict_table,
+                        REPAIRS, verbose=verbose)
+        report = sr.run(inputs, regression, generation)
+        self.pairs = build_pairs(self.lexers, self.parsers)
+        return report
 
     # ── arbitration ──
     def accepts_everywhere(self, src: str) -> bool:

@@ -15,11 +15,14 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from contract import (Bin, Call, Def, If, Num, Prog, Var, skeleton,   # noqa
                       unparse)
 from corpus import ACCEPT, GOLDEN, PROBES, REFUSE_LEX, REFUSE_PARSE, Fuzzer
-from forge import DOCTRINE, FINDINGS, Forge, build_pairs
+from forge import (DOCTRINE, FINDINGS, REPAIRS, Forge, all_parsers,
+                   build_pairs)
 from grammar_doc import render, token_table
 from laws import (law_agreement, law_position, law_roundtrip,
                   law_token_stream, law_total, law_unambiguous)
 from lexers import LEXERS, keywords
+import repair as repair_mod
+import selfgen
 from parsers import PARSERS
 from spec import SPEC
 
@@ -41,8 +44,9 @@ pairs = build_pairs()
 
 print("1. THE MATRIX")
 ok("four lexers",                 len(LEXERS) == 4)
-ok("four parsers",                len(PARSERS) == 4)
-ok("sixteen front ends",          len(pairs) == 16)
+ok("four hand-written parsers",   len(PARSERS) == 4)
+ok("plus one the grammar emits",  len(all_parsers()) == 5)
+ok("twenty front ends",           len(pairs) == 20)
 ok("every pair is lexer x parser",
    all(" x " in p.name for p in pairs))
 
@@ -183,7 +187,62 @@ ok("the coverage gap is recorded against the runtime",
 ok("consensus needed pi=3 and two thirds",
    "pi=3" in SPEC.questions["trailing_comma"].rationale)
 
-print("\n10. CONTRACT")
+print("\n10. SELF-GENERATION")
+gen_src = open(selfgen.OUT_PATH).read() if os.path.exists(selfgen.OUT_PATH) \
+    else ""
+ok("a parser was emitted to disk",  len(gen_src) > 0)
+ok("it is generated, and says so",  "GENERATED. Do not edit" in gen_src)
+ok("left recursion became a loop",
+   "_rec_additive_0" in gen_src and "while True:" in gen_src)
+ok("it is registered as a witness",  "P5-generated" in all_parsers())
+gp = all_parsers()["P5-generated"]
+def gen_verdict(s):
+    return gp(LEXERS["L2-handrolled"](s).toks).canon()
+ok("it agrees on the worked example",
+   gen_verdict("def fact(n) = if n <= 1 then 1 else n * fact(n - 1)") ==
+   "(prog (def fact (n) (if (<= n 1) 1 (* n (call fact (- n 1))))))")
+ok("it agrees on left associativity",
+   gen_verdict("1 - 2 - 3") == "(prog (- (- 1 2) 3))")
+ok("it agrees on precedence",
+   gen_verdict("1 + 2 * 3") == "(prog (+ 1 (* 2 3)))")
+ok("it refuses what the others refuse",
+   gen_verdict("1 < 2 < 3").startswith("FAIL"))
+ok("regenerating is deterministic",
+   open(selfgen.generate()).read() == gen_src)
+
+print("\n11. SELF-REPAIR")
+def _boom(_s):
+    raise KeyError("injected")
+_shielded = repair_mod.shield(_boom, "lex", "misbound")
+ok("a raise becomes a refusal",
+   _shielded("x").fail.defect == "misbound")
+ok("the normal path is untouched",
+   repair_mod.shield(lambda s: "fine", "lex", "misbound")("x") == "fine")
+ok("the original is kept, not replaced",
+   _shielded._unshielded is _boom)
+ok("shields are recognisable",     repair_mod.is_shielded(_shielded))
+ok("consensus needs pi = 3",       repair_mod.PI == 3)
+
+_probe = Forge(budget=0, verbose=False)
+_probe.lexers["L4-trie"] = _boom
+_probe.pairs = build_pairs(_probe.lexers, _probe.parsers)
+_sr = repair_mod.SelfRepair(_probe.lexers, _probe.parsers,
+                            _probe.verdict_table, REPAIRS, verbose=False)
+_found = _sr.scan(["1 =$= 2"])
+ok("it localises the broken component",
+   len(_found) == 1 and _found[0].component == "L4-trie")
+ok("and takes its target from the survivors",
+   _found[0].target == "FAIL[lex/misbound]" and len(_found[0].witnesses) >= 3)
+ok("it withholds when there is no failure to copy",
+   _sr.synthesize(repair_mod.Defect("L4-trie", "lex", "1 + 1", "raises",
+                                    "x", target="(prog (+ 1 1))")) == [])
+ok("and when the witnesses do not agree",
+   _sr.synthesize(repair_mod.Defect("L4-trie", "lex", "x", "raises",
+                                    "x", target=None)) == [])
+ok("the repair ledger is on disk",
+   REPAIRS.path.endswith("repairs.json"))
+
+print("\n12. CONTRACT")
 tree = Prog([Def("f", ["n"], If(Bin("<", Var("n"), Num(1)), Num(1),
                                 Bin("*", Var("n"),
                                     Call("f", [Bin("-", Var("n"),
