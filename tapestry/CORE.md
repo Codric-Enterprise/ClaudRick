@@ -272,11 +272,22 @@ inside the text — it just does not decide whether two front ends agree.
   counterexample was found; that is not a proof that none exists.
   `undermine` in VOWELS.md returns **Z** for exactly this reason, and
   the same honesty applies here. The search that stands behind this
-  document: **250,600 programs**, generated and mutated, run through
-  all sixteen front ends, over **16 generations** with the fuzz budget
-  doubling after every clean one, ending on **15 consecutive clean
-  generations at 25,000 programs each**. `7-forge/ledger.json` is the
-  full record.
+  document: **520,600 programs**, generated and mutated, run through
+  all sixteen front ends, over **61 generations**, of which **60 were
+  clean** — the one that was not is generation 0, before any question
+  had been settled.
+
+  That search came in two parts, and they asked different things.
+  Convergence came first: 250,600 programs over 16 generations, the
+  budget doubling after every clean one, ending on 15 consecutive
+  clean generations at 25,000 each. Then 85 exploration cycles of
+  6,000 programs each, on seed bases disjoint from the convergence
+  run, rotating the fuzzer's nesting ceiling from 3 up to **8** — the
+  convergence run never generated a program deeper than 5, so the
+  grammar's deep end had gone untested no matter how many programs it
+  drew. Nothing was found: no golden failure, no law violation, no
+  divergence, and not one new counterexample promoted in any cycle.
+  `7-forge/ledger.json` is the full record.
 - **The gaps SEMANTICS.md 7 still names remain open.** Composite data,
   higher-order functions, pattern matching, a static type system, a
   module system, transpiler back-ends, a soundness proof. The formal
