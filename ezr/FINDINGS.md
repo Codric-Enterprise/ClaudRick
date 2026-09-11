@@ -175,3 +175,103 @@ Layers 5 (Java) and 6 (HTML) are not yet ported to the v2 atom.
 - φ governing the corpus
 - Self-correction. The system teaches and verifies; it does not yet
   rewrite broken source.
+
+---
+
+## 7. What a second runtime found
+
+Layer 5 is EZR implemented again, in Java. Three things surfaced that the
+nine Python front ends could not have surfaced, because they share an
+interpreter and therefore share its habits.
+
+### A guard that could never fire
+
+`2-interpreter-python/syntax.py` carried this check:
+
+```python
+if kind is T.STR and not text.endswith('"'):
+    return toks, e_z("lex", f"unterminated string at line {line}",
+                     Defect.UNBOUNDED)
+```
+
+Its regex was `"[^"\n]*"`, which only matches when a closing quote is
+present. `text` therefore always ended with `"` and the condition was
+never true. A lone `"` never matched as a string at all — it fell
+through to "unexpected character" and came back **misbound**.
+
+The forge had already ruled on this. `GRAMMAR.ebnf` records
+`unterminated_string_defect = 'unbounded'`, settled by doctrine, and all
+four forge lexers implement it:
+
+| Implementation | `"never closed` |
+|---|---|
+| L1 regex-master | `unbounded` |
+| L2 hand-rolled | `unbounded` |
+| L3 DFA | `unbounded` |
+| L4 trie | `unbounded` |
+| Java (from the grammar) | `unbounded` |
+| **`syntax.py` (the runner's lexer)** | **`misbound`** |
+
+The ruling was never carried back into the lexer the runner uses. Writing
+the sixth implementation from `GRAMMAR.ebnf` rather than from `syntax.py`
+is what exposed it, and the differential harness reported it as a split
+on the first run. Now fixed; six implementations agree.
+
+**The general shape:** a settled question is only settled where somebody
+applied it. The forge records rulings, and nothing was checking that the
+production code had adopted them.
+
+### Rendering was never specified
+
+```
+"hello"          -> hello        both runners
+["a", "b"]       -> ['a', 'b']   python
+["a", "b"]       -> [a, b]       java, before it was made to match
+```
+
+The same value renders two ways depending on nesting. That came from
+formatting a list through CPython's `repr`, which quotes its elements —
+inherited, not chosen, the same class of accident as `"ab" * 2` returning
+`"abab"` until stage 3 started refusing it.
+
+Arbitration **withholds**: no document specifies rendering, no law
+settles it, and two implementations is below the ⌊π⌋ = 3 consensus
+needs. So the incumbent stands, Java reproduces it, and the question is
+recorded here rather than decided by whoever wrote the second runtime.
+
+**Open.** Either answer is defensible — one keeps a value's rendering
+independent of where it sits, the other keeps `["1"]` distinguishable
+from `[1]`. What is not defensible is having both at once and calling it
+specified.
+
+### "Equivalently" was carrying a rounding convention
+
+SEMANTICS.md §2.2 states `u(a⊕b) = u(a)×u(b)` and adds "Equivalently
+`c = a + b − ⌊ab/256⌋`. Verified identical across the full grid:
+1089/1089."
+
+True — under the **ceiling**, and only under the ceiling:
+
+| Reading of `256·(1−u_a·u_b)` | Cells agreeing, of 1089 |
+|---|---|
+| `floor` | 582 |
+| `round` | 835 |
+| **`ceil`** | **1089** |
+
+`corroborate(120, 120)` is 183.75 exactly; the integer form gives 184.
+The claim stands. The word "equivalently" was doing work that a reader
+reaching for `floor` would get wrong on 507 cells, so the convention is
+now pinned by an assertion in `RuntimeTest.java` instead of waiting to be
+rediscovered.
+
+### What the layer is checked against
+
+| | |
+|---|---|
+| `RuntimeTest.java` | 98 assertions against SEMANTICS.md |
+| `differential.py` | 108 programs through both runners as processes |
+| Agreement | 108 of 108 on value, exit code, stage and defect |
+| Wording | 12 cases differ in prose; not a divergence |
+
+Agreement over a corpus is not a proof. It means no counterexample was
+found where the corpus looked.

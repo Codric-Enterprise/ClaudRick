@@ -18,6 +18,7 @@ test suites do not notice.
 |---|---|---|
 | `2-interpreter-python/ezrun.py` | **the core** — lists, `let`, `show`, `len`/`head`/`tail`, recursion | `syntax.py`'s AST pipeline |
 | `2-interpreter-python/ezr.py <file>` | the **directive** language — `tax = 40`, `expect`, `learn` | the `EZR` class in `ezr.py` |
+| `5-runtime-java/ezr` | **the core again**, in Java — same language, same exit codes | `com.codric.ezr` |
 | `6-interface-html/ezr-live.html` | the directive language again, in JS | hand-written, self-contained |
 
 A core-language program fed to `ezr.py` or the browser returns
@@ -54,6 +55,33 @@ failing layers for several commits.
 Worth probing: `head([])` (refusal, exit 1), `len(5)` (wrong type),
 a missing file and a directory (sentences, not tracebacks), `-d 2`
 (depth ceiling), a file with neither `main()` nor `--call`.
+
+## Driving the Java runtime
+
+```bash
+cd 5-runtime-java
+./build.sh                                   # javac; needs a JDK
+./ezr ../examples/sum.ezr                    # 15  @ 256/256
+./ezr -e 'let x = 5 in x + 1'                # 6   @ 256/256
+echo 'def main() = 6 * 7' | ./ezr -          # 42  @ 256/256
+```
+
+Same exit codes as `ezrun.py`: 0 a value, 1 a refusal, 2 uncompilable.
+
+**Gotcha:** if the environment sets `JAVA_TOOL_OPTIONS`, the JVM prints
+`Picked up JAVA_TOOL_OPTIONS: ...` to stderr on every single start, which
+corrupts any byte comparison. Setting it empty does not help — the banner
+still prints, with an empty value. It has to be *removed*:
+`env -u JAVA_TOOL_OPTIONS java ...`. The `./ezr` wrapper already does
+this; a raw `java -cp out` invocation does not.
+
+**A change to the core language is not verified until both runners
+agree.** `python3 differential.py` runs one corpus through `ezrun.py` and
+`./ezr` as processes and compares the value, the exit code, which stage
+refused, and which binding defect. It does *not* compare the wording —
+two runners have different names for themselves and different phrasing
+for the same refusal, and holding them to identical prose tests the error
+messages rather than the language.
 
 ## Driving the browser interface
 

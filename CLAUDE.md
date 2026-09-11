@@ -90,8 +90,9 @@ Key design decisions:
 ├── .env.example              # local env template (ANTHROPIC_API_KEY, GITHUB_TOKEN, …); copy to gitignored .env
 ├── ezr/                      # EZR — a separate language project (see below)
 │   ├── 0-atom-c/ 1-phase-cpp/ 2-interpreter-python/ 3-dsl-ruby/
-│   ├── 4-archive-sql/ 5-runtime-java/ 6-interface-html/
-│   ├── 7-forge/              # the language forge: 16 front ends, one core
+│   ├── 4-archive-sql/ 6-interface-html/
+│   ├── 5-runtime-java/       # the core again, in Java, + a differential harness
+│   ├── 7-forge/              # the language forge: 20 front ends, one core
 │   ├── CORE.md               # the core the forge settled on, and why
 │   ├── SEMANTICS.md PIPELINE.md VOWELS.md   # the seed's own specs
 │   └── run.sh                # verifies every layer, including the forge
@@ -269,16 +270,17 @@ or the server-side-key rules above.
 `ezr/` is **not part of ReVision**. It is the EZR language
 project: a multi-layer language where every value carries how much it is
 trusted (C atom → C++ phase engine → Python interpreter → Ruby DSL → SQL
-archive → HTML interface). It shares nothing with `src/revision/` — no
-imports, no endpoints, no configuration — and the two are verified by
-separate commands.
+archive → Java runtime → HTML interface). It shares nothing with
+`src/revision/` — no imports, no endpoints, no configuration — and the
+two are verified by separate commands.
 
-- **Verify it:** `cd ezr && ./run.sh` (needs gcc, g++, python3, ruby;
-  skips any layer whose toolchain is absent rather than failing).
+- **Verify it:** `cd ezr && ./run.sh` — 17 layers (needs gcc, g++,
+  python3, ruby, and a JDK; skips any layer whose toolchain is absent
+  rather than failing).
 - **In a container:** `cd ezr && docker compose run --rm verify`.
   The image verifies itself at build time.
 - **`ezr/7-forge/`** is the language forge: four independent lexers and
-  four independent parsers, run as all sixteen pairings against a shared
+  five independent parsers, run as all twenty pairings against a shared
   conformance corpus and seven universal laws, with a fuzz budget that
   doubles after every clean generation. Where the pairs disagree, the
   language was never specified; the forge arbitrates by published doctrine,
@@ -286,6 +288,14 @@ separate commands.
   withholds below all four. `ezr/CORE.md` records what it settled;
   `ezr/7-forge/GRAMMAR.ebnf` is emitted from the chart parser's rule
   table so it cannot drift from the code.
+- **`ezr/5-runtime-java/`** is a second implementation of the core, in a
+  language that shares no interpreter, type system or habits with the
+  Python one. It is checked twice, as two separate layers: `RuntimeTest`
+  against `SEMANTICS.md`, and `differential.py` running one corpus
+  through both the Python runner and the Java runner as processes and
+  comparing value, exit code, refusing stage and binding defect. A
+  divergence there is a finding about the language, not a bug report
+  against one side. It found three, recorded in `ezr/FINDINGS.md` §7.
 - **Boundaries matter here.** Each numbered directory is a distinct language
   and toolchain. Do not let Python interpretation rules leak into the C++
   phase, or vice versa; do not add language features that `SEMANTICS.md`

@@ -24,14 +24,16 @@ the ceiling lifts: `fact(100)` computes, and every result comes back at
 ## Running it in VS Code
 
 Open this folder as the workspace root. Then **⇧⌘B** (or **Ctrl+Shift+B**)
-runs the default build task, which verifies all twelve layers.
+runs the default build task, which runs the .ezr file you have open.
+**Tasks: Run Task -> verify everything** runs all seventeen layers.
 
 Everything else is in the command palette under **Tasks: Run Task**:
 
 | Task | What it does |
 |---|---|
-| **verify everything** | All twelve layers — C, C++, Python, Ruby, SQL, forge |
-| **forge tests** | Layer 7 alone: 61 assertions over all sixteen front ends |
+| **run the current .ezr file** | the default build task |
+| **verify everything** | All seventeen layers — C, C++, Python, Java, Ruby, SQL, forge |
+| **forge tests** | Layer 7 alone: every lexer/parser pairing over the shared corpus |
 | **forge — converge** | Run until nothing is left to settle |
 | **forge — exploration cycles** | N cycles at fixed budget, rotating fuzz depth |
 | **re-emit GRAMMAR.ebnf** | Regenerate the grammar from the parser's own rules |
@@ -79,9 +81,11 @@ produced **Z**), `2` for input it would not compile.
 ### From a terminal instead
 
 ```bash
-./run.sh                                  # everything, 15 layers
+./run.sh                                  # everything, 17 layers
 cd 7-forge && python3 forge_test.py       # the forge alone
 cd 2-interpreter-python && python3 audit.py   # documents against code
+cd 5-runtime-java && ./ezr ../examples/sum.ezr    # the same program, in Java
+cd 5-runtime-java && python3 differential.py      # both runners, one corpus
 docker compose run --rm verify            # everything, in a container
 ```
 
@@ -103,7 +107,7 @@ bleed into each other.
 | `2-interpreter-python` | lexer, parser, semantic pass, evaluator, the laws, the auditor |
 | `3-dsl-ruby` | the DSL surface |
 | `4-archive-sql` | the archive — nothing is deleted, only superseded |
-| `5-runtime-java` | reserved; not yet implemented |
+| `5-runtime-java` | the runtime — EZR implemented again, in Java, and checked against the Python one |
 | `6-interface-html` | the live interpreter, in a browser (the directive language) |
 | `examples` | programs you can actually run |
 | `7-forge` | twenty front ends, run against each other; generates a parser and repairs itself |
@@ -119,7 +123,7 @@ bleed into each other.
    parser's own rule table so it cannot drift from the code.
 4. **`VOWELS.md`** — the operator families, and the self-generating
    loop.
-5. **`7-forge/README.md`** — how sixteen front ends get used to find
+5. **`7-forge/README.md`** — how twenty front ends get used to find
    out what the language never actually specified.
 
 ## A note on the name
@@ -135,11 +139,13 @@ it is load-bearing (the reserved-word finding in `CORE.md`, for one).
 
 | | |
 |---|---|
-| Layers passing | **15 / 15** |
+| Layers passing | **17 / 17** |
 | Forge assertions | **81** |
+| Java runtime assertions | **98** |
+| Differential (Python runner vs Java runner) | **108 / 108 agree** |
 | Physics assertions | **56** |
 | Pipeline assertions | **87** |
-| Programs fuzzed | **520,600** over 61 generations, 60 clean |
+| Programs fuzzed | **564,600** over 72 generations |
 | Front ends agreeing | **20** (4 lexers × 5 parsers — one of them generated) |
 | Counterexamples carried | 46, each one permanent |
 
