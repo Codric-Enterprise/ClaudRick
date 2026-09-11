@@ -82,6 +82,19 @@ if have python3; then
   ( cd 7-forge && python3 selfheal.py | tail -3 ) && pass "Self-repair" || fail "Self-repair"
 else skip "Self-repair" "python3 not found"; fi
 
+echo; echo "[5] Java — the runtime (a second implementation of the core)"
+if have javac && have java; then
+  ( cd 5-runtime-java && ./build.sh >/dev/null \
+    && env -u JAVA_TOOL_OPTIONS java -cp out com.codric.ezr.RuntimeTest | tail -2 ) \
+    && pass "Layer 5 (Java)" || fail "Layer 5 (Java)"
+else skip "Layer 5 (Java)" "javac not found (Debian: apt install default-jdk)"; fi
+
+echo; echo "[5b] Differential — the Python runner against the Java one"
+if have javac && have java && have python3; then
+  ( cd 5-runtime-java && python3 differential.py | tail -2 ) \
+    && pass "Differential" || fail "Differential"
+else skip "Differential" "needs both python3 and a JDK"; fi
+
 echo; echo "[3] Ruby — the DSL"
 if have ruby; then
   ( cd 3-dsl-ruby && ruby ezr.rb | tail -2 ) && pass "Layer 3 (Ruby)" || fail "Layer 3 (Ruby)"

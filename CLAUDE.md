@@ -64,7 +64,7 @@ Key design decisions:
 │   └── README.md             # explains the whole .claude/ setup
 ├── docs/claude-playbook.md   # full Claude tips + command reference (source of the above)
 ├── docs/claude-2026-cheatsheet.md # 2026 sheets: 5 surfaces, model stack, core files, app workflow
-├── docs/commands-pack.md     # all 83 commands: slash form + paste-ready prompt
+├── docs/commands-pack.md     # paste-ready prompt for each command (78 of the 84 in .claude/commands/)
 ├── docs/prompt-library.md    # saved prompts that worked well, maintained by the prompt-library skill
 ├── docs/command-console.html # interactive searchable console (shareable artifact)
 ├── mastery-system/index.html # "Mastery Protocol" — standalone 6-levels tool (model tree, prompt formula, core files)
@@ -83,6 +83,8 @@ Key design decisions:
 ├── .github/workflows/ci.yml           # ruff check + ruff format --check + pytest (3.11-3.13) + docker build
 ├── .github/workflows/deploy-pages.yml # publishes mastery-system/ to GitHub Pages on push to main
 ├── .github/workflows/security.yml     # pip-audit (root) + npm audit (power-pack/); push/PR + weekly Mon 06:00 UTC cron
+│   # NOTE: a 4th check, CodeQL "Analyze (ruby)", also runs on every PR. It is GitHub
+│   # default setup (repo settings), NOT a workflow in this tree — you will not find a file for it.
 ├── .devcontainer/devcontainer.json    # generic universal devcontainer (no repo-specific setup)
 ├── Dockerfile                # stdlib-only image; binds 0.0.0.0:8000; HEALTHCHECK /healthz
 ├── .dockerignore
@@ -90,10 +92,14 @@ Key design decisions:
 ├── .env.example              # local env template (ANTHROPIC_API_KEY, GITHUB_TOKEN, …); copy to gitignored .env
 ├── ezr/                      # EZR — a separate language project (see below)
 │   ├── 0-atom-c/ 1-phase-cpp/ 2-interpreter-python/ 3-dsl-ruby/
-│   ├── 4-archive-sql/ 5-runtime-java/ 6-interface-html/
-│   ├── 7-forge/              # the language forge: 16 front ends, one core
+│   ├── 4-archive-sql/ 6-interface-html/
+│   ├── 5-runtime-java/       # the core again, in Java, + a differential harness
+│   ├── 7-forge/              # the language forge: 20 front ends, one core
+│   ├── examples/             # runnable .ezr programs — start here
 │   ├── CORE.md               # the core the forge settled on, and why
 │   ├── SEMANTICS.md PIPELINE.md VOWELS.md   # the seed's own specs
+│   ├── FINDINGS.md           # what was computed, not asserted (research.py corroborates it)
+│   ├── .claude/skills/verify/  # directory-scoped skill: how to drive EZR's surfaces
 │   └── run.sh                # verifies every layer, including the forge
 ├── README.md
 └── .gitignore
@@ -137,6 +143,8 @@ Uses a **src layout**: importable code is under `src/`; `pyproject.toml` sets
 ## Development workflows
 
 - **Run tests:** `pytest`
+- **One test file / one test:** `pytest tests/test_server.py`,
+  `pytest tests/test_server.py::test_healthz`, or `pytest -k ratelimit`
 - **Lint:** `ruff check .`
 - **Format:** `ruff format .`
 - **Run the app:** `revision [--host H --port P --model M]`, or without install
@@ -149,6 +157,22 @@ Uses a **src layout**: importable code is under `src/`; `pyproject.toml` sets
 > Note: in some environments `pytest`/`ruff` are standalone binaries, not in the
 > interpreter's site-packages. If `python -m pytest` says "No module named
 > pytest", call `pytest` / `ruff` directly.
+
+### EZR's loop (separate from ReVision's — see the EZR section)
+
+```bash
+cd ezr && ./run.sh                     # all 17 layers; ~minutes
+cd ezr/2-interpreter-python && python3 syntax_test.py    # one layer, seconds
+cd ezr/7-forge && python3 forge_test.py
+cd ezr/5-runtime-java && ./build.sh && ./ezr ../examples/sum.ezr
+cd ezr/5-runtime-java && python3 differential.py         # both runners, one corpus
+```
+
+`run.sh` has no flag to select a layer — run that layer's own test file
+directly. Each `*_test.py` is a plain script that reports its own tally and
+calls `raise SystemExit`, not a pytest module. `testpaths = ["tests"]`, so
+`pytest` never looks under `ezr/`; pointing it there deliberately does not
+just collect nothing, it dies with `INTERNALERROR> SystemExit: 0`.
 
 ## Conventions
 
@@ -269,16 +293,17 @@ or the server-side-key rules above.
 `ezr/` is **not part of ReVision**. It is the EZR language
 project: a multi-layer language where every value carries how much it is
 trusted (C atom → C++ phase engine → Python interpreter → Ruby DSL → SQL
-archive → HTML interface). It shares nothing with `src/revision/` — no
-imports, no endpoints, no configuration — and the two are verified by
-separate commands.
+archive → Java runtime → HTML interface). It shares nothing with
+`src/revision/` — no imports, no endpoints, no configuration — and the
+two are verified by separate commands.
 
-- **Verify it:** `cd ezr && ./run.sh` (needs gcc, g++, python3, ruby;
-  skips any layer whose toolchain is absent rather than failing).
+- **Verify it:** `cd ezr && ./run.sh` — 17 layers (needs gcc, g++,
+  python3, ruby, and a JDK; skips any layer whose toolchain is absent
+  rather than failing).
 - **In a container:** `cd ezr && docker compose run --rm verify`.
   The image verifies itself at build time.
 - **`ezr/7-forge/`** is the language forge: four independent lexers and
-  four independent parsers, run as all sixteen pairings against a shared
+  five independent parsers, run as all twenty pairings against a shared
   conformance corpus and seven universal laws, with a fuzz budget that
   doubles after every clean generation. Where the pairs disagree, the
   language was never specified; the forge arbitrates by published doctrine,
@@ -286,6 +311,14 @@ separate commands.
   withholds below all four. `ezr/CORE.md` records what it settled;
   `ezr/7-forge/GRAMMAR.ebnf` is emitted from the chart parser's rule
   table so it cannot drift from the code.
+- **`ezr/5-runtime-java/`** is a second implementation of the core, in a
+  language that shares no interpreter, type system or habits with the
+  Python one. It is checked twice, as two separate layers: `RuntimeTest`
+  against `SEMANTICS.md`, and `differential.py` running one corpus
+  through both the Python runner and the Java runner as processes and
+  comparing value, exit code, refusing stage and binding defect. A
+  divergence there is a finding about the language, not a bug report
+  against one side. It found three, recorded in `ezr/FINDINGS.md` §7.
 - **Boundaries matter here.** Each numbered directory is a distinct language
   and toolchain. Do not let Python interpretation rules leak into the C++
   phase, or vice versa; do not add language features that `SEMANTICS.md`
@@ -294,6 +327,26 @@ separate commands.
 ReVision's own gate (`pytest`, `ruff check .`) does not cover `ezr/`,
 and `ezr/run.sh` does not cover ReVision. Run whichever matches what
 you touched.
+
+## Two gotchas that cost real time
+
+**The format-on-write hook ignores ruff's own exclusion.** `.claude/settings.json`
+has a `PostToolUse` hook matched on `Write|Edit` that runs
+`ruff check --fix --select I` and `ruff format` on any `.py` path it is handed.
+It has no path filter, and passing ruff an explicit file path overrides
+`pyproject.toml`'s `extend-exclude = ["ezr"]` (ruff only honours exclusions for
+explicit paths when given `--force-exclude`). So editing any file under `ezr/`
+with Write/Edit silently reformats it — re-sorting imports and exploding the
+hand-aligned tables that layer uses. A two-line fix to `syntax.py` came back as
+a 331-line diff this way. Either add `--force-exclude` to the hook, or make
+edits under `ezr/` through Bash (`python3`/`sed`), which the hook does not match.
+
+**`JAVA_TOOL_OPTIONS` corrupts the Java runtime's output.** When the environment
+sets it, the JVM prints `Picked up JAVA_TOOL_OPTIONS: ...` to stderr on every
+start, which breaks the byte comparison `ezr/5-runtime-java/differential.py`
+depends on. Setting it empty does **not** help — the banner still prints with an
+empty value. It has to be removed: `env -u JAVA_TOOL_OPTIONS java ...`. The
+`ezr/5-runtime-java/ezr` wrapper already does this; a raw `java -cp out` does not.
 
 ## Notes for AI assistants
 

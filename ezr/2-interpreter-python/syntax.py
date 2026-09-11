@@ -56,7 +56,12 @@ KEYWORDS = {"def", "else", "false", "if", "in", "let", "then", "true"}
 
 SPEC = [
     (T.NUM,   r'\d+\.\d+|\d+'),
-    (T.STR,   r'"[^"\n]*"'),
+    # Closed form first, then the unclosed one. Without the second
+    # alternative a lone opening quote never matches as a string at all,
+    # it falls through to "unexpected character", and the guard below can
+    # never fire. The forge settled that an unclosed string is
+    # `unbounded`; this is what lets that answer reach the runner.
+    (T.STR,   r'"[^"\n]*"|"[^"\n]*'),
     (T.CMP,   r'<=|>=|==|!='),
     (T.EQ,    r'='),
     (T.OP,    r'[-+*/<>]'),
@@ -108,7 +113,9 @@ def lex(src: str) -> Tuple[List[Token], Optional[E]]:
         text = m.group()
         if kind is T.NAME and text in KEYWORDS:
             kind = T.KW
-        if kind is T.STR and not text.endswith('"'):
+        # A bare `"` both starts and ends with a quote, so the length
+        # has to be checked too or the one-character case slips through.
+        if kind is T.STR and (len(text) < 2 or not text.endswith('"')):
             return toks, e_z("lex", f"unterminated string at line {line}",
                              Defect.UNBOUNDED)
 
