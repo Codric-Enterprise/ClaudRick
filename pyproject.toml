@@ -33,6 +33,11 @@ pythonpath = ["src"]
 line-length = 100
 target-version = "py311"
 src = ["src", "tests"]
+# ezr/ is a separate project vendored into this repo (see CLAUDE.md).
+# It keeps its own conventions and is verified by ezr/run.sh, not by
+# this gate; reformatting it would also break fidelity to the Ever V3.0
+# source it was seeded from.
+extend-exclude = ["ezr"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM"]
