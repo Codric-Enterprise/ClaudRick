@@ -262,6 +262,48 @@ def probe_builtins() -> Tuple[str, str]:
                    f"{', '.join(sorted(BUILTINS))}")
 
 
+def probe_runner() -> Tuple[str, str]:
+    """Can the core language be run at all, from a command line?
+
+    This is the probe that would have caught the thing no test did.
+    Lists, `let` and the builtins were implemented, agreed on by twenty
+    front ends and covered by 87 assertions, and reachable only by
+    importing `syntax` and calling `compile_ezr` by hand -- `ezr.py`
+    runs a different language entirely. A feature you can only use by
+    importing the implementation is not shipped, and every test in the
+    suite passed the whole time.
+
+    So this one shells out. It is the only probe here that leaves the
+    process, and that is the point: it asks what a user gets.
+    """
+    import subprocess
+    runner = os.path.join(HERE, "ezrun.py")
+    if not os.path.exists(runner):
+        return OVERSTATED, ("no runner for the core language: the "
+                            "features are reachable only by importing "
+                            "syntax.py")
+    checks = [("-e", "[1, 2, 3]", "[1, 2, 3]"),
+              ("-e", "let x = 5 in x + 1", "6"),
+              ("-e", "len([1, 2])", "2")]
+    for flag, src, want in checks:
+        try:
+            out = subprocess.run([sys.executable, runner, flag, src],
+                                 capture_output=True, text=True, timeout=60)
+        except (OSError, subprocess.SubprocessError) as exc:
+            return UNDECIDED, f"could not run the runner: {exc}"
+        if want not in out.stdout:
+            return OVERSTATED, (f"{flag} {src!r} gave {out.stdout.strip()!r} "
+                                f"{out.stderr.strip()[:60]!r}, wanted {want!r}")
+    return HOLDS, (f"the core runs from a command line: "
+                   f"{len(checks)} programs through ezrun.py")
+
+
+def probe_integer_arithmetic() -> Tuple[str, str]:
+    if _accepts("5 % 2") or _accepts("5 // 2"):
+        return UNDERSTATED, "an integer operator parses"
+    return HOLDS, "no modulo and no integer division, as stated"
+
+
 def probe_law_reach() -> Tuple[str, str]:
     """Where the laws actually apply, against where CORE.md says.
 
@@ -349,6 +391,7 @@ def _gap_table():
         "module system": probe_module_system,
         "formal grammar": probe_formal_grammar,
         "transpiler": probe_transpiler,
+        "integer arithmetic": probe_integer_arithmetic,
     }
 
 
@@ -435,6 +478,8 @@ def probes() -> List[Probe]:
               "CORE.md 1 and 2", probe_core_agreement),
         Probe("the builtins are the four CORE.md 1.2 states",
               "CORE.md 1.2", probe_builtins),
+        Probe("the core language can be run from a command line",
+              "CORE.md 1 / ezrun.py", probe_runner),
         Probe("the laws reach as far as CORE.md 8 says",
               "CORE.md 8", probe_law_reach),
         Probe("the six physical laws hold",

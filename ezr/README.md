@@ -50,11 +50,38 @@ Pylance analyses from the workspace root and would mark every one of
 those imports unresolved. `python.analysis.extraPaths` tells it where
 to look. The code is fine without it; only the editor needs telling.
 
+### Running a program
+
+```bash
+cd 2-interpreter-python
+python3 ezrun.py ../examples/sum.ezr              # 15  @ 256/256
+python3 ezrun.py ../examples/largest.ezr          # 42  @ 256/256
+python3 ezrun.py -e 'let x = 5 in x + 1'          # 6   @ 256/256
+echo '[1, 2, 3]' | python3 ezrun.py -             # read from stdin
+```
+
+`program := definitions | expression`, and there is deliberately no
+trailing expression -- that grammar is ambiguous and the chart parser
+proved it. So a file of definitions has to say what to run: define
+`main()`, or pass `--call 'expr'`.
+
+```bash
+python3 ezrun.py ../examples/largest.ezr --call 'largest([3, 9, 2])'
+```
+
+Exit codes are `0` for a value, `1` for a refusal (the program ran and
+produced **Z**), `2` for input it would not compile.
+
+> `ezr.py <file>` is a **different** language -- the directive surface
+> (`tax = 40`, `expect`, `learn`) that `6-interface-html` also speaks.
+> It will not run the programs above.
+
 ### From a terminal instead
 
 ```bash
-./run.sh                                  # everything, 12 layers
+./run.sh                                  # everything, 15 layers
 cd 7-forge && python3 forge_test.py       # the forge alone
+cd 2-interpreter-python && python3 audit.py   # documents against code
 docker compose run --rm verify            # everything, in a container
 ```
 
@@ -77,7 +104,8 @@ bleed into each other.
 | `3-dsl-ruby` | the DSL surface |
 | `4-archive-sql` | the archive — nothing is deleted, only superseded |
 | `5-runtime-java` | reserved; not yet implemented |
-| `6-interface-html` | the live interpreter, in a browser |
+| `6-interface-html` | the live interpreter, in a browser (the directive language) |
+| `examples` | programs you can actually run |
 | `7-forge` | twenty front ends, run against each other; generates a parser and repairs itself |
 
 ## Where to start reading

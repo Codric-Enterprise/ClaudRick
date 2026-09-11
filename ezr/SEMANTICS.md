@@ -388,6 +388,7 @@ Named honestly, because scope depends on it.
 
 | Missing | Consequence |
 |---|---|
+| Integer arithmetic | no modulo and no integer division, so divisibility cannot be written -- `n / d * d == n` looks like a test for it and is always true, because `/` is float division. FizzBuzz is not expressible in the core |
 | Records | only lists so far; `E_TYPE_LIST` is implemented, records are not |
 | Pattern matching | only `if/then/else` |
 | Static type system | dynamic tag checks only |
