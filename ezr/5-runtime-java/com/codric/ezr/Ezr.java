@@ -151,7 +151,9 @@ public final class Ezr {
 
         // a bare expression runs as it stands
         if (ast instanceof Ast.Prog p && p.expr() != null) {
-            return report(new Eval(fns, depth, trust).run(p.expr()), quiet);
+            Eval ev = new Eval(fns, depth, trust);
+            Particle r = ev.run(p.expr());
+            return report(r, quiet, lift(r, ev, fns, trust, earned.tally));
         }
 
         // otherwise: --call wins, else main(), else say what is defined
@@ -173,11 +175,13 @@ public final class Ezr {
         }
         Ast body = (entryParse.ast() instanceof Ast.Prog ep && ep.expr() != null)
                  ? ep.expr() : entryParse.ast();
-        return report(new Eval(fns, depth, trust).run(body), quiet);
+        Eval ev = new Eval(fns, depth, trust);
+        Particle r = ev.run(body);
+        return report(r, quiet, lift(r, ev, fns, trust, earned.tally));
     }
 
     /** A Trust, or the exit code that says why there isn't one. */
-    private record Earned(Trust trust, int code) { }
+    private record Earned(Trust trust, Map<String, int[]> tally, int code) { }
 
     /**
      * Turn Examples into confidence and anchors into earned depth.
@@ -187,6 +191,36 @@ public final class Ezr {
      * than as things a program says about itself — so they arrive the way a
      * verification harness would supply them, from outside the program.
      */
+    /** The requirement clause for a thread short of the execute floor. */
+    static String needs(int passing, int total) {
+        int k = Laws.witnessesNeeded(passing, total);
+        if (k < 0) {
+            return "no number of further witnesses within reason clears "
+                 + Particle.EXECUTE_FLOOR + " from " + passing + " of " + total;
+        }
+        if (k == 0) return "nothing further is needed";
+        return k + " more passing Example" + (k > 1 ? "s" : "")
+             + " clears " + Particle.EXECUTE_FLOOR;
+    }
+
+    /**
+     * The requirement clause for a function that cannot be anchored.
+     * {@link Semantic#movements} has just computed how every parameter
+     * moves; a refusal reading "no decreasing measure" is that computation
+     * with its useful half thrown away. This puts it back.
+     */
+    static String whyNoMeasure(Ast.Def fn) {
+        var moves = Semantic.movements(fn);
+        if (moves == null) {
+            return fn.name() + " does not call itself, so it has no measure "
+                 + "to prove and needs no anchor";
+        }
+        var parts = new ArrayList<String>();
+        moves.forEach((k, v) -> parts.add(k + " " + v));
+        return "anchoring needs one parameter that strictly decreases in "
+             + "every self-call; here " + String.join("; ", parts);
+    }
+
     static Earned earn(Map<String, Eval.Fn> fns, List<String> examples,
                        List<String> anchors, int depth, String where) {
         Trust trust = Trust.none();
@@ -199,7 +233,7 @@ public final class Ezr {
             if (cut < 0) {
                 System.err.println("ezr: --example '" + spec
                                    + "': expected 'call = value'");
-                return new Earned(null, EXIT_BAD_INPUT);
+                return new Earned(null, null, EXIT_BAD_INPUT);
             }
             String callSrc = spec.substring(0, cut).trim();
             String wantSrc = spec.substring(cut + 1).trim();
@@ -209,13 +243,13 @@ public final class Ezr {
                 System.err.println("ezr: --example '" + spec
                                    + "': " + (!cc.ok() ? callSrc : wantSrc)
                                    + " does not compile");
-                return new Earned(null, EXIT_BAD_INPUT);
+                return new Earned(null, null, EXIT_BAD_INPUT);
             }
             String name = calledName(cc.ast());
             if (name == null || !fns.containsKey(name)) {
                 System.err.println("ezr: --example '" + spec
                                    + "': names no defined function");
-                return new Earned(null, EXIT_BAD_INPUT);
+                return new Earned(null, null, EXIT_BAD_INPUT);
             }
 
             // Checked at the confidence earned so far, which is how the
@@ -248,7 +282,7 @@ public final class Ezr {
                         + " was already given "
                         + Particle.renderValue(prior) + " as its answer. "
                         + "Evidence that contradicts itself is not evidence.");
-                    return new Earned(null, EXIT_BAD_INPUT);
+                    return new Earned(null, null, EXIT_BAD_INPUT);
                 }
                 continue;
             }
@@ -265,29 +299,35 @@ public final class Ezr {
             if (fn == null) {
                 System.err.println("ezr: --anchor " + name
                                    + ": not defined in " + where);
-                return new Earned(null, EXIT_BAD_INPUT);
+                return new Earned(null, null, EXIT_BAD_INPUT);
             }
             int conf = trust.of(name);
             if (conf < Particle.EXECUTE_FLOOR) {
                 // [ANCHOR-FN] wants a cleared thread. Anchoring an
                 // unverified function would grant depth on no evidence.
+                // The refusal carries the requirement: the same rule that
+                // produced `conf` also answers how much more it takes.
+                int[] pt = tally.getOrDefault(name, new int[2]);
                 System.err.println("ezr: --anchor " + name + ": refused, "
                     + conf + "/256 is below the execute floor ("
-                    + Particle.EXECUTE_FLOOR + "). Give it Examples first.");
-                return new Earned(null, EXIT_REFUSED);
+                    + Particle.EXECUTE_FLOOR + "). " + needs(pt[0], pt[1]) + ".");
+                return new Earned(null, null, EXIT_REFUSED);
             }
             Ast.Def def = new Ast.Def(fn.name(), fn.params(), fn.body());
             if (Semantic.measure(def) == null && recursive(def)) {
                 // [ANCHOR-BOT], the rule that keeps the language honest: a
-                // function can sit at 240/256 and still loop forever.
-                System.err.println("ezr: --anchor " + name + ": refused, no "
-                    + "decreasing measure — confidence proves trust, not "
-                    + "termination.");
-                return new Earned(null, EXIT_REFUSED);
+                // function can sit at 240/256 and still loop forever. Saying
+                // only that is the refusal at its least useful, though — the
+                // search that just failed knows which parameter went the
+                // wrong way.
+                System.err.println("ezr: --anchor " + name + ": refused, "
+                    + "confidence proves trust, not termination. "
+                    + whyNoMeasure(def) + ".");
+                return new Earned(null, null, EXIT_REFUSED);
             }
             trust.anchor(name);
         }
-        return new Earned(trust, EXIT_OK);
+        return new Earned(trust, tally, EXIT_OK);
     }
 
     /** The first '=' that is not part of ==, <=, >= or !=. */
@@ -328,10 +368,54 @@ public final class Ezr {
         };
     }
 
+    /**
+     * What would turn this refusal into an answer, or "" if nothing here
+     * can say.
+     *
+     * <p>Only the depth ceiling is answered, because it is the only runtime
+     * refusal whose cure is a thing the language already models. {@code 1/0}
+     * has no requirement to state — no evidence makes dividing by zero work,
+     * and inventing a suggestion for it would be worse than silence.
+     */
+    static String lift(Particle result, Eval ev, Map<String, Eval.Fn> fns,
+                       Trust trust, Map<String, int[]> tally) {
+        if (!result.isZ() || result.reason == null
+                || !result.reason.contains("depth ceiling")) return "";
+        String name = ev.ceilingName();
+        Eval.Fn fn = (name == null) ? null : fns.get(name);
+        if (fn == null) return "";
+        if (trust.isAnchored(name)) {
+            return name + " is anchored already and still ran out of depth at "
+                 + Trust.HARD_DEPTH + "; its measure decreases too slowly "
+                 + "for this input";
+        }
+        Ast.Def def = new Ast.Def(fn.name(), fn.params(), fn.body());
+        String measure = Semantic.measure(def);
+        if (measure == null) return whyNoMeasure(def);
+        int conf = trust.of(name);
+        if (conf < Particle.EXECUTE_FLOOR) {
+            int[] pt = (tally == null) ? new int[2]
+                     : tally.getOrDefault(name, new int[2]);
+            return name + " decreases " + measure + " in every self-call, so "
+                 + "it can be anchored — but anchoring needs the execute "
+                 + "floor first, and it sits at " + conf + "/256. "
+                 + needs(pt[0], pt[1]) + ", then pass -a " + name;
+        }
+        return name + " decreases " + measure + " in every self-call and sits "
+             + "at " + conf + "/256, above the floor. Pass -a " + name
+             + " to buy the depth";
+    }
+
     /** Render the result the way ezrun.py does, and pick the exit code. */
-    static int report(Particle result, boolean quiet) {
+    static int report(Particle result, boolean quiet, String requirement) {
         if (result.isZ()) {
             System.err.println("Z(" + result.defect + ") — " + result.reason);
+            if (!requirement.isEmpty()) {
+                // A refusal states what the language will not do. This states
+                // what would make it willing — the same computation read the
+                // other way round.
+                System.err.println("       to lift it: " + requirement);
+            }
             return EXIT_REFUSED;
         }
         if (quiet) {

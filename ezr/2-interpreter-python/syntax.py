@@ -1375,6 +1375,61 @@ class Semantic:
                 return p
         return None
 
+    @staticmethod
+    def movements(fn: FnDef) -> Optional[Dict[str, List[str]]]:
+        """How each parameter moves in every self-call.
+
+        The same walk `_measure` does -- this one keeps what it learned
+        instead of collapsing it to a yes or a no. `_measure` searches
+        the parameters, finds that none strictly decreases, and returns
+        None: at that instant it knows `i` went *up* by one and `n`
+        never moved, and it throws both away. That discarded half is the
+        only part a person can act on, so it is computed here and
+        carried into the refusal.
+
+        Returns None when the function does not call itself, since there
+        is then no measure question to answer.
+        """
+        calls: List[Call] = []
+
+        def collect(n: Node) -> None:
+            if isinstance(n, Call) and n.name == fn.name:
+                calls.append(n)
+            for c in n.children():
+                collect(c)
+
+        collect(fn.body)
+        if not calls:
+            return None
+
+        out: Dict[str, List[str]] = {}
+        for idx, name in enumerate(fn.params):
+            how = set()
+            for call in calls:
+                if idx >= len(call.args):
+                    how.add("not passed")
+                    continue
+                arg = call.args[idx]
+                if isinstance(arg, Var) and arg.name == name:
+                    how.add("unchanged")
+                elif isinstance(arg, BinOp) and isinstance(arg.left, Var) \
+                        and arg.left.name == name and isinstance(arg.right, Num):
+                    v = arg.right.value
+                    if arg.op == "-" and v > 0:
+                        how.add(f"decreases by {v:g}")
+                    elif arg.op == "+" and v > 0:
+                        how.add(f"increases by {v:g}")
+                    elif arg.op == "/" and v > 1:
+                        how.add(f"divides by {v:g}")
+                    elif arg.op == "*" and v > 1:
+                        how.add(f"multiplies by {v:g}")
+                    else:
+                        how.add(f"changes by {arg.op} {v:g}")
+                else:
+                    how.add("not a simple step")
+            out[name] = sorted(how)
+        return out
+
 
 # ═════════════════════════════════════════════
 # 4. EXECUTION over the AST

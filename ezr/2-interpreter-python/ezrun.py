@@ -67,7 +67,7 @@ import sys
 from typing import Dict, List, Optional
 
 from ever import E, E_CERTAIN, E_EXECUTE_FLOOR, E_INTAKE
-from syntax import (Call, FnDef, Program, Semantic, Trust,
+from syntax import (Call, E_HARD_DEPTH, FnDef, Program, Semantic, Trust,
                     compile_ever, eval_ast)
 
 EXIT_OK = 0
@@ -142,10 +142,15 @@ def _report_compile(c, where: str) -> None:
         print(f"ezrun: {where}: semantic: {msg}", file=sys.stderr)
 
 
-def _show(result: E, quiet: bool) -> None:
+def _show(result: E, quiet: bool, requirement: str = "") -> None:
     if result.is_z:
         defect = result.defect.name.lower() if result.defect else "unknown"
         print(f"Z({defect}) — {result.reason}", file=sys.stderr)
+        if requirement:
+            # A refusal states what the language will not do. This line
+            # states what would make it willing, which is the same
+            # computation read the other way round.
+            print(f"       to lift it: {requirement}", file=sys.stderr)
         return
     if quiet:
         print(result.value)
@@ -167,6 +172,61 @@ def confidence_from_examples(passed: int, total: int) -> int:
     u = ((E_CERTAIN - E_INTAKE) / E_CERTAIN) ** passed if passed else 1.0
     c = int(E_CERTAIN * (1.0 - u) * (passed / total))
     return max(0, min(E_CERTAIN - 1, c))
+
+
+def witnesses_needed(passed: int, total: int,
+                     target: int = E_EXECUTE_FLOOR,
+                     cap: int = 64) -> Optional[int]:
+    """[EXAMPLE], solved for the missing evidence instead of the score.
+
+    `confidence_from_examples` runs the rule forwards: given p of t
+    witnesses, here is what you are worth. This runs the same rule
+    backwards: you are worth 120 and you need 128, so how many more
+    passing witnesses is that? The answer is 1, and that is a sentence
+    somebody can act on -- unlike "below the execute floor", which is
+    the same fact with the actionable half deleted.
+
+    Nothing is inverted analytically because nothing needs to be: the
+    forward rule is monotone in k and saturates one short of CERTAIN, so
+    walking k up from 0 finds the least sufficient k or establishes
+    there is none. A failure already recorded cannot be withdrawn, so
+    the answer accounts for it -- 1 of 9 needs eight more, not one.
+
+    None means the target is unreachable from here within `cap` further
+    witnesses, which is itself worth saying plainly.
+    """
+    for k in range(cap + 1):
+        if confidence_from_examples(passed + k, total + k) >= target:
+            return k
+    return None
+
+
+def _needs(passed: int, total: int) -> str:
+    """The requirement clause for a thread short of the execute floor."""
+    k = witnesses_needed(passed, total)
+    if k is None:
+        return (f"no number of further witnesses within reason clears "
+                f"{E_EXECUTE_FLOOR} from {passed} of {total}")
+    if k == 0:
+        return "nothing further is needed"
+    return (f"{k} more passing Example{'s' if k > 1 else ''} clears "
+            f"{E_EXECUTE_FLOOR}")
+
+
+def _why_no_measure(fn) -> str:
+    """The requirement clause for a function that cannot be anchored.
+
+    Semantic.movements has just computed how every parameter moves. A
+    refusal that says "no decreasing measure" is that computation with
+    its useful half thrown away; this puts it back.
+    """
+    moves = Semantic.movements(fn)
+    if moves is None:
+        return (f"{fn.name} does not call itself, so it has no measure "
+                f"to prove and needs no anchor")
+    parts = [f"{k} {', '.join(v)}" for k, v in moves.items()]
+    return ("anchoring needs one parameter that strictly decreases in "
+            "every self-call; here " + "; ".join(parts))
 
 
 def _split_example(text: str) -> Optional[tuple]:
@@ -260,21 +320,61 @@ def _earn(fns, examples: List[str], anchors: List[str], depth: int,
         if conf < E_EXECUTE_FLOOR:
             # [ANCHOR-FN] requires a cleared thread. Anchoring an
             # unverified function would grant depth on no evidence.
+            # The refusal carries the requirement: the same rule that
+            # produced `conf` also answers how much more it would take.
+            p_t = tally.get(name, [0, 0])
             print(f"ezrun: --anchor {name}: refused, {conf}/256 is below "
-                  f"the execute floor ({E_EXECUTE_FLOOR}). Give it "
-                  f"Examples first.", file=sys.stderr)
+                  f"the execute floor ({E_EXECUTE_FLOOR}). "
+                  f"{_needs(p_t[0], p_t[1])}.", file=sys.stderr)
             return None, EXIT_REFUSED
         measure = Semantic._measure(fn) if _recursive(fn) else ""
         if measure is None:
             # [ANCHOR-BOT], the rule that keeps the language honest: a
-            # function can sit at 240/256 and still loop forever.
-            print(f"ezrun: --anchor {name}: refused, no decreasing measure "
-                  f"-- confidence proves trust, not termination.",
+            # function can sit at 240/256 and still loop forever. Saying
+            # only that is the refusal at its least useful, though --
+            # the search that just failed knows exactly which parameter
+            # went the wrong way.
+            print(f"ezrun: --anchor {name}: refused, confidence proves "
+                  f"trust, not termination. {_why_no_measure(fn)}.",
                   file=sys.stderr)
             return None, EXIT_REFUSED
         trust.anchored.add(name)
 
-    return trust, EXIT_OK
+    return (trust, tally), EXIT_OK
+
+
+def _lift(result: E, fns, trust: Trust, tally: Dict[str, List[int]]) -> str:
+    """What would turn this refusal into an answer, or "" if nothing here
+    can say.
+
+    Only the depth ceiling is answered for now, because it is the only
+    runtime refusal whose cure is a thing the language already models.
+    `1 / 0` has no requirement to state -- there is no evidence that
+    makes dividing by zero work, and inventing a suggestion for it would
+    be worse than silence.
+    """
+    if not result.is_z or "depth ceiling" not in (result.reason or ""):
+        return ""
+    fn = fns.get(result.ident)
+    if fn is None:
+        return ""
+    if result.ident in trust.anchored:
+        return (f"{result.ident} is anchored already and still ran out of "
+                f"depth at {E_HARD_DEPTH}; its measure decreases too slowly "
+                f"for this input")
+    measure = Semantic._measure(fn)
+    if measure is None:
+        return _why_no_measure(fn)
+    conf = trust.of(result.ident)
+    if conf < E_EXECUTE_FLOOR:
+        p_t = tally.get(result.ident, [0, 0])
+        return (f"{result.ident} decreases {measure} in every self-call, so "
+                f"it can be anchored -- but anchoring needs the execute "
+                f"floor first, and it sits at {conf}/256. "
+                f"{_needs(p_t[0], p_t[1])}, then pass -a {result.ident}")
+    return (f"{result.ident} decreases {measure} in every self-call and "
+            f"sits at {conf}/256, above the floor. Pass -a {result.ident} "
+            f"to buy the depth")
 
 
 def _called_name(ast) -> Optional[str]:
@@ -302,15 +402,16 @@ def run(src: str, call: Optional[str] = None, depth: int = 100,
     fns = definitions(c.ast)
     arity = {k: len(v.params) for k, v in fns.items()}
 
-    trust, code = _earn(fns, examples or [], anchors or [], depth, where)
-    if trust is None:
+    earned, code = _earn(fns, examples or [], anchors or [], depth, where)
+    if earned is None:
         return code
+    trust, tally = earned
 
     # A program that ends in an expression is its own entry point.
     node = entry_node(c.ast) if call is None else None
     if node is not None:
         result = eval_ast(node, {}, dict(fns), 0, depth, trust)
-        _show(result, quiet)
+        _show(result, quiet, _lift(result, fns, trust, tally))
         # A Z is a refusal on this path too. Returning OK here meant
         # `ezrun -e 'head([])'` printed Z and exited 0, so anything
         # scripting it read a refusal as a success.
@@ -338,7 +439,7 @@ def run(src: str, call: Optional[str] = None, depth: int = 100,
         return EXIT_BAD_INPUT
 
     result = eval_ast(cc.ast, {}, dict(fns), 0, depth, trust)
-    _show(result, quiet)
+    _show(result, quiet, _lift(result, fns, trust, tally))
     return EXIT_REFUSED if result.is_z else EXIT_OK
 
 

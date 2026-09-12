@@ -237,6 +237,52 @@ public final class Semantic {
         return null;
     }
 
+    /**
+     * How each parameter moves in every self-call, as a printable phrase.
+     *
+     * <p>The same walk {@link #measure} does — this one keeps what it
+     * learned instead of collapsing it to a name or a null. When measure
+     * returns null it knows, at that instant, that {@code i} went <em>up</em>
+     * by one and {@code n} never moved, and it discards both. That
+     * discarded half is the only part a person can act on.
+     *
+     * <p>Returns null when the function does not call itself: there is then
+     * no measure question to answer.
+     */
+    public static java.util.LinkedHashMap<String, String> movements(Ast.Def fn) {
+        List<Ast.Call> calls = new ArrayList<>();
+        collectSelfCalls(fn.body(), fn.name(), calls);
+        if (calls.isEmpty()) return null;
+
+        var out = new java.util.LinkedHashMap<String, String>();
+        List<String> params = fn.params();
+        for (int idx = 0; idx < params.size(); idx++) {
+            var how = new java.util.TreeSet<String>();
+            for (Ast.Call call : calls) {
+                if (idx >= call.args().size()) { how.add("not passed"); continue; }
+                how.add(movement(call.args().get(idx), params.get(idx)));
+            }
+            out.put(params.get(idx), String.join(", ", how));
+        }
+        return out;
+    }
+
+    private static String movement(Ast arg, String param) {
+        if (arg instanceof Ast.Var v && v.name().equals(param)) return "unchanged";
+        if (arg instanceof Ast.Bin b
+                && b.left() instanceof Ast.Var v && v.name().equals(param)
+                && b.right() instanceof Ast.Num k) {
+            double d = k.value();
+            String n = Particle.renderValue(d);
+            if (b.op().equals("-") && d > 0) return "decreases by " + n;
+            if (b.op().equals("+") && d > 0) return "increases by " + n;
+            if (b.op().equals("/") && d > 1) return "divides by " + n;
+            if (b.op().equals("*") && d > 1) return "multiplies by " + n;
+            return "changes by " + b.op() + " " + n;
+        }
+        return "not a simple step";
+    }
+
     private static boolean decreases(Ast arg, String param) {
         if (!(arg instanceof Ast.Bin b)) return false;
         if (!(b.left() instanceof Ast.Var v) || !v.name().equals(param)) return false;

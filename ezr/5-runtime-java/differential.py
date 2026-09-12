@@ -276,9 +276,10 @@ def main() -> int:
     for f in sorted((ROOT / "examples").glob("*.ezr")):
         compare(f.name, py(str(f)), java(str(f)))
 
-    print("  evidence and earned depth (11)")
+    print("  evidence, earned depth, and what lifts a refusal (15)")
     FACT = "def fact(n) = if n <= 1 then 1 else n * fact(n - 1)"
     LOOP = "def loop(n) = if n < 0 then 0 else loop(n)"
+    UP = "def up(a, i, n) = if i >= n then 0 else i + up(a, i + 1, n)"
     E1, E2, E3 = "fact(1) = 1", "fact(2) = 2", "fact(3) = 6"
     for label, src, extra in [
         ("no evidence", FACT, ["--call", "fact(3)"]),
@@ -305,6 +306,17 @@ def main() -> int:
          ["--call", "fact(3)", "-x", E1, "-x", "fact( 1 ) = 1"]),
         ("evidence contradicting itself", FACT,
          ["--call", "fact(3)", "-x", E1, "-x", "fact(1) = 99"]),
+        # Refusals that carry the requirement lifting them. The harness
+        # compares the language, not the prose -- but a split in WHICH
+        # requirement is named would be a real divergence, and these are
+        # the cases where the two could drift apart.
+        ("ceiling names the evidence owed", FACT, ["-d", "3", "--call", "fact(20)"]),
+        ("ceiling names only the anchor", FACT,
+         ["-d", "3", "--call", "fact(20)", "-x", E1, "-x", E2]),
+        ("ceiling on an unanchorable function", UP,
+         ["-d", "3", "--call", "up(0, 0, 9)"]),
+        ("following the advice succeeds", FACT,
+         ["-d", "3", "--call", "fact(20)", "-x", E1, "-x", E2, "-a", "fact"]),
     ]:
         compare(label, py("-", *extra, stdin=src),
                 java("-", *extra, stdin=src))

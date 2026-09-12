@@ -262,7 +262,7 @@ processes and compares value, exit code, refusing stage and binding
 defect:
 
 ```
-124 programs, 93 agreed, 31 diverged
+128 programs, 97 agreed, 31 diverged
 ```
 
 Every one of the 31 is the same fork, not 31 separate bugs:
@@ -315,7 +315,7 @@ corpus is for:
 | one call, two answers | refused, exit 2 | **60/256, exit 0** |
 
 Three cases were added to the differential corpus so it reaches this
-ground: 124 programs, 93 agreed. The corpus had never reached it because
+ground: 128 programs, 97 agreed. The corpus had never reached it because
 every evidence case in it was already distinct.
 
 ### 7.6 `ezrun` cannot run any file in `examples/`
@@ -336,3 +336,93 @@ in the subset both lineages share, so it runs under `ezrun` and under
 the Java runtime and they agree — which is also what makes it a usable
 demonstration of [DEF], [EXAMPLE] and [ANCHOR] rather than a description
 of one.
+
+### 7.7 Every refusal was a solved equation with the answer thrown away
+
+The confidence algebra runs forwards: given evidence, here is what a
+result is worth; below the floor, or without a proven measure, refuse.
+Every one of those refusals is computed from a rule that is just as
+solvable the other way round, and the machinery was discarding the
+solution at the moment it had it.
+
+`Semantic._measure` searches the parameters for one that strictly
+decreases. When it returns `None` it knows, at that instant, that `i`
+went *up* by one and `n` never moved — and returns a bare `None`.
+`confidence_from_examples(1, 1)` returns 120 and the caller compares it
+to 128; the same monotone rule answers "one more witness" and nobody
+asked. So the language could say what it would not do, and never what
+would make it willing.
+
+Both directions now exist and are the same rule:
+
+| forwards | backwards |
+|---|---|
+| `confidence_from_examples(p, t)` -> score | `witnesses_needed(p, t, target)` -> k |
+| `Semantic._measure(fn)` -> name or None | `Semantic.movements(fn)` -> how each moves |
+
+Nothing is inverted analytically because nothing needs to be: the
+forward rule is monotone in k and saturates one short of CERTAIN, so
+walking k up from 0 finds the least sufficient k or establishes there is
+none. A failure already recorded cannot be withdrawn, so the answer
+accounts for it — 1 of 9 needs eight more, not one.
+
+Measured, following the language's own instructions:
+
+```
+$ ezrun fact.ever -d 3 --call 'fact(20)'
+Z(unbounded) — depth ceiling 3 exceeded
+       to lift it: fact decreases n in every self-call, so it can be
+       anchored -- but anchoring needs the execute floor first, and it
+       sits at 120/256. 2 more passing Examples clears 128, then -a fact
+
+$ ... -x 'fact(1) = 1' -x 'fact(2) = 2'
+Z(unbounded) — depth ceiling 3 exceeded
+       to lift it: fact decreases n in every self-call and sits at
+       183/256, above the floor. Pass -a fact to buy the depth
+
+$ ... -x 'fact(1) = 1' -x 'fact(2) = 2' -a fact
+2432902008176640000  @ 183/256                               exit 0
+```
+
+Three steps, each one the refusal naming its own cure, ending in the
+answer. Mirrored in the Java runtime in the same change (`Laws
+.witnessesNeeded`, `Semantic.movements`, `Ezr.lift`) and guarded by four
+differential cases, so the two runners cannot drift on *which*
+requirement they name.
+
+A refusal with no cure stays silent. `1 / 0` gets no suggestion, because
+no evidence makes dividing by zero work and inventing one would be worse
+than saying nothing.
+
+### 7.8 `weekly_sales.ever` has never computed its total, for a reason its own comment denies
+
+v4.10's shipped example says its summing function is "(anchored, so it
+isn't capped at 3 levels)". It is not anchored. `sum_from(xs, i)`
+recurses on `i + 1`, and anchoring needs a parameter that strictly
+*decreases*, so it stays at floor(pi) = 3 and a five-element list
+overruns it.
+
+The program reports `total = z [0/256]`, which reads as the intended
+lesson — one `z` reading poisons the sum. Measured with that reading
+replaced by a number:
+
+```
+let thu = 500        (420 + 610 + 380 + 500 + 705 = 2615)
+total = z [0/256]
+```
+
+Still `z`. The `z` was never about the missing reading. Counting the
+other way round is the whole fix:
+
+```
+def up(a, i, n) = if i >= n then 0 else a[i] + up(a, i + 1, n)
+def down(a, i)  = if i < 0 then 0 else a[i] + down(a, i - 1)
+
+up(xs, 0, 6)   ->  z [0/256]
+down(xs, 5)    ->  63 [256/256]
+```
+
+**Not fixed** — it is a v4.10 example and rewriting it is the owner's
+call. `examples/readings.ever` counts down and says why in a comment,
+and 7.7's guidance names the parameter that went the wrong way when
+asked through `ezrun`.
