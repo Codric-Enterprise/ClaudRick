@@ -37,7 +37,11 @@ src = ["src", "tests"]
 # It keeps its own conventions and is verified by ezr/run.sh, not by
 # this gate; reformatting it would also break fidelity to the Ever V3.0
 # source it was seeded from.
-extend-exclude = ["ezr"]
+# Vendored standalone projects: each ships its own pyproject.toml,
+# its own test suite and its own conventions. ReVision's lint rules
+# are not theirs, and reformatting them here would fork them from
+# upstream for no gain.
+extend-exclude = ["ezr", "everconf"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM"]
