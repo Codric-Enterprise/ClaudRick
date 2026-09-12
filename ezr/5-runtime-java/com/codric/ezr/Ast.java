@@ -82,6 +82,50 @@ public sealed interface Ast {
      * calls the skeleton. Two candidate solutions with the same skeleton are
      * one idea in different hats, and one idea cannot corroborate itself.
      */
+    /**
+     * A faithful, canonical re-rendering of a node — unlike
+     * {@link #skeleton}, which deliberately erases literal values.
+     *
+     * <p>Used to tell one Example's witness from another. `f(1,2)` and
+     * `f( 1 , 2 )` must render the same (they are one witness stated
+     * twice) and `f(1)` and `f(2)` must not (they are two witnesses),
+     * which is exactly the distinction skeleton throws away: under it
+     * both are {@code CALL(K, K)}.
+     *
+     * <p>Numbers go through {@link Particle#renderValue} so a whole
+     * double renders as {@code 1} rather than {@code 1.0}, matching how
+     * every other surface in this runtime prints one.
+     */
+    static String render(Ast n) {
+        return switch (n) {
+            case Num  x -> Particle.renderValue(x.value());
+            case Str  x -> "\"" + x.value() + "\"";
+            case Bool x -> x.value() ? "true" : "false";
+            case Var  x -> x.name();
+            case Bin  x -> "(" + render(x.left()) + " " + x.op() + " "
+                           + render(x.right()) + ")";
+            case If   x -> "if " + render(x.cond()) + " then " + render(x.then())
+                           + " else " + render(x.otherwise());
+            case Call x -> x.name() + "(" + joinRenders(x.args()) + ")";
+            case Def  x -> "def " + x.name() + "(" + String.join(", ", x.params())
+                           + ") = " + render(x.body());
+            case Let  x -> "let " + x.name() + " = " + render(x.value())
+                           + " in " + render(x.body());
+            case Lst  x -> "[" + joinRenders(x.items()) + "]";
+            case Prog x -> x.expr() == null ? joinRenders(x.defs())
+                                            : render(x.expr());
+        };
+    }
+
+    private static String joinRenders(List<? extends Ast> xs) {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < xs.size(); i++) {
+            if (i > 0) sb.append(", ");
+            sb.append(render(xs.get(i)));
+        }
+        return sb.toString();
+    }
+
     static String skeleton(Ast n) {
         return switch (n) {
             case Num  x -> "K";

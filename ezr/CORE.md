@@ -14,8 +14,8 @@ authority. Nothing here was decided by preference.
 > now carries two lineages: this core, and the v4.10 surface specified by
 > `SEMANTICS.md` (statement `let x = v`, records, loops, indexing,
 > externs). They agree on the confidence algebra and split on the grammar.
-> `5-runtime-java/differential.py` measures the split exactly: 121
-> programs, 90 agreed, 31 diverged, every divergence being `let ... in`,
+> `5-runtime-java/differential.py` measures the split exactly: 124
+> programs, 93 agreed, 31 diverged, every divergence being `let ... in`,
 > list literals, or the `len`/`head`/`tail` builtins. Read this file for
 > what the forge settled; read `SEMANTICS.md` for what runs.
 

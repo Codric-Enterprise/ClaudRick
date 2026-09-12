@@ -262,7 +262,7 @@ processes and compares value, exit code, refusing stage and binding
 defect:
 
 ```
-121 programs, 90 agreed, 31 diverged
+124 programs, 93 agreed, 31 diverged
 ```
 
 Every one of the 31 is the same fork, not 31 separate bugs:
@@ -301,6 +301,22 @@ call's own AST rendering, so `f(1,2)` and `f( 1 , 2 )` are correctly one
 witness and `f(1)` and `f(2)` are correctly two. The same call given two
 different answers is refused outright rather than silently resolved:
 evidence that contradicts itself is not evidence.
+
+Fixing one runner and not the other would only have moved the defect, so
+the Java runtime was mirrored in the same change — `Ast.render`, a
+faithful re-rendering to sit beside `Ast.skeleton`, which deliberately
+erases literal values and under which `f(1)` and `f(2)` are both
+`CALL(K)`. Before the mirror the two split exactly here, which is what a
+corpus is for:
+
+| | python | java |
+|---|---|---|
+| the same case ×3 | 120/256 | **217/256** |
+| one call, two answers | refused, exit 2 | **60/256, exit 0** |
+
+Three cases were added to the differential corpus so it reaches this
+ground: 124 programs, 93 agreed. The corpus had never reached it because
+every evidence case in it was already distinct.
 
 ### 7.6 `ezrun` cannot run any file in `examples/`
 

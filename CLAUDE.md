@@ -180,7 +180,7 @@ cd ezr/5-runtime-java && python3 differential.py         # RED, and deliberately
 **neither drives `7-forge/` or `5-runtime-java/`** — both still pass their
 own suites (81 and 98 assertions), but nothing runs them for you.
 
-`differential.py` is red on purpose: 121 programs, 90 agreed, **31
+`differential.py` is red on purpose: 124 programs, 93 agreed, **31
 diverged**. Every divergence is the same fork — `let ... in`, list
 literals, and the `len`/`head`/`tail` builtins are in the Java runtime
 and the forge's `CORE.md`, and are not in the language `syntax.py`'s

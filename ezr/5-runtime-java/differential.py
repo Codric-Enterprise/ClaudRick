@@ -276,7 +276,7 @@ def main() -> int:
     for f in sorted((ROOT / "examples").glob("*.ezr")):
         compare(f.name, py(str(f)), java(str(f)))
 
-    print("  evidence and earned depth (8)")
+    print("  evidence and earned depth (11)")
     FACT = "def fact(n) = if n <= 1 then 1 else n * fact(n - 1)"
     LOOP = "def loop(n) = if n < 0 then 0 else loop(n)"
     E1, E2, E3 = "fact(1) = 1", "fact(2) = 2", "fact(3) = 6"
@@ -296,6 +296,15 @@ def main() -> int:
         ("anchor without measure", LOOP,
          ["--call", "loop(-1)", "-x", "loop(-1) = 0", "-x", "loop(-2) = 0",
           "-x", "loop(-3) = 0", "-a", "loop"]),
+        # Witness independence. Both runners once counted the same case
+        # three times as three witnesses (120 -> 183 -> 217), and the
+        # corpus did not reach it because every case here was distinct.
+        ("the same witness 3x", FACT,
+         ["--call", "fact(3)", "-x", E1, "-x", E1, "-x", E1]),
+        ("whitespace is not a witness", FACT,
+         ["--call", "fact(3)", "-x", E1, "-x", "fact( 1 ) = 1"]),
+        ("evidence contradicting itself", FACT,
+         ["--call", "fact(3)", "-x", E1, "-x", "fact(1) = 99"]),
     ]:
         compare(label, py("-", *extra, stdin=src),
                 java("-", *extra, stdin=src))

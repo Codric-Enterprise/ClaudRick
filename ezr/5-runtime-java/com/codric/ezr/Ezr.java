@@ -191,6 +191,8 @@ public final class Ezr {
                        List<String> anchors, int depth, String where) {
         Trust trust = Trust.none();
         Map<String, int[]> tally = new LinkedHashMap<>();
+        // canonical call source -> the answer already claimed for it
+        Map<String, Object> seen = new LinkedHashMap<>();
 
         for (String spec : examples) {
             int cut = splitPoint(spec);
@@ -226,6 +228,31 @@ public final class Ezr {
             boolean ok = !got.isZ() && !want.isZ()
                 && (got.value == null ? want.value == null
                                       : got.value.equals(want.value));
+
+            // [EXAMPLE] multiplies uncertainty across INDEPENDENT
+            // witnesses, and the same case stated twice is one witness,
+            // not two. Before this check it was two, in both runners:
+            // `-x 'fact(1) = 1'` three times took fact from 120 to 183
+            // to 217, exactly as three distinct cases would — real
+            // confidence bought with no new evidence, which is the one
+            // thing T2 says the algebra must never allow. Keyed on the
+            // AST's own rendering, so `f(1,2)` and `f( 1 , 2 )` are
+            // correctly the same witness and `f(1)` and `f(2)` are not.
+            String key = Ast.render(body(cc.ast()));
+            if (seen.containsKey(key)) {
+                Object prior = seen.get(key);
+                boolean same = prior == null ? want.value == null
+                                             : prior.equals(want.value);
+                if (!same) {
+                    System.err.println("ezr: --example '" + spec + "': " + key
+                        + " was already given "
+                        + Particle.renderValue(prior) + " as its answer. "
+                        + "Evidence that contradicts itself is not evidence.");
+                    return new Earned(null, EXIT_BAD_INPUT);
+                }
+                continue;
+            }
+            seen.put(key, want.value);
 
             int[] t = tally.computeIfAbsent(name, k -> new int[2]);
             if (ok) t[0]++;
