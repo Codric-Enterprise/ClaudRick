@@ -7,7 +7,7 @@ sys.set_int_max_str_digits(200000)
 
 from abstract import E_HARD_DEPTH, Lambda, a_anchor_fn
 from audit import HOLDS, OVERSTATED, UNDERSTATED, run as run_audit
-from ezr import E_CERTAIN, E_ZERO, e_val, excel
+from ever import E_CERTAIN, E_ZERO, e_val, excel
 from physics import (LAWS, Disposition, Subsystem, acceleration, derive_from,
                      entropy, inertia, push, temperature)
 from ultra import DEFAULT_STACK_MB, deep, qualifies, run_ultra, ultra_anchor

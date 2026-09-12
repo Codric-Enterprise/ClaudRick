@@ -1380,15 +1380,57 @@ class Semantic:
 # 4. EXECUTION over the AST
 # ═════════════════════════════════════════════
 
+#: The hard stop, mirroring abstract.py. "Unbounded" means not bounded
+#: by the pi ceiling, never "will not be stopped".
+E_HARD_DEPTH = 4000
+
+
+@dataclass
+class Trust:
+    """How far each definition is believed, and which have earned depth.
+
+    Runtime state, deliberately not a field on FnDef: what a function
+    *says* is syntax and lives on the node; how far it is *believed* is
+    evidence, and evidence accumulates outside the parse tree.
+
+    A name absent from `confidence` sits at E_INTAKE, per [DEF]: a
+    definition enters below the execute floor because it is a claim, not
+    a verification -- exactly as a literal enters at CERTAIN because the
+    author wrote it and there is nothing left to verify.
+    """
+
+    confidence: Dict[str, int] = field(default_factory=dict)
+    #: Anchored with a proven measure, so [ANCHOR-REC] grants depth.
+    anchored: Set[str] = field(default_factory=set)
+
+    def of(self, name: str) -> int:
+        return self.confidence.get(name, E_INTAKE)
+
+    def limit_for(self, name: str, default: int) -> int:
+        """Depth is earned. An anchored function with a measure recurses
+        to the hard ceiling; everything else keeps the caller's limit."""
+        return E_HARD_DEPTH if name in self.anchored else default
+
+
 def eval_ast(node: Node, env: Dict[str, E],
              fns: Dict[str, FnDef], depth: int = 0,
-             limit: int = 3) -> E:
+             limit: int = 3, trust: Optional[Trust] = None) -> E:
     """Stage 4, walking a tree instead of a string.
 
     Same semantics as abstract.py: chain by min, Z absorbs, a Z
     condition spans both branches, branches are lazy under a known
-    condition.
+    condition -- and, since `trust` exists, a result is floored by how
+    far the function that produced it is believed.
+
+    That last clause was missing. [APP] is min(c_f, c_args, c_result)
+    and only the last two terms were computed, so every answer came back
+    at 256/256 however unverified the code behind it. abstract.py's
+    Lambda had it right the whole time; nothing compared the two, and
+    the 25-suite gate passed with the two evaluators 136 points apart on
+    the worked example in SEMANTICS.md section 8.
     """
+    if trust is None:
+        trust = Trust()
     if isinstance(node, Num):
         v = int(node.value) if node.value == int(node.value) else node.value
         return e_val("lit", v, E_CERTAIN)
@@ -1403,10 +1445,10 @@ def eval_ast(node: Node, env: Dict[str, E],
             e_z(node.name, f"{node.name} was never bound", Defect.UNBOUND)
 
     if isinstance(node, BinOp):
-        a = eval_ast(node.left, env, fns, depth, limit)
+        a = eval_ast(node.left, env, fns, depth, limit, trust)
         if a.is_z:
             return a
-        b = eval_ast(node.right, env, fns, depth, limit)
+        b = eval_ast(node.right, env, fns, depth, limit, trust)
         if b.is_z:
             return b
         conf = min(a.confidence, b.confidence)
@@ -1435,16 +1477,16 @@ def eval_ast(node: Node, env: Dict[str, E],
         return e_val("op", v, conf)
 
     if isinstance(node, If):
-        cond = eval_ast(node.cond, env, fns, depth, limit)
+        cond = eval_ast(node.cond, env, fns, depth, limit, trust)
         if not cond.is_z:
             taken = node.then if cond.value else node.els
-            r = eval_ast(taken, env, fns, depth, limit)
+            r = eval_ast(taken, env, fns, depth, limit, trust)
             if r.is_z:
                 return r
             return e_val("if", r.value, min(cond.confidence, r.confidence))
         # unknown condition: both arms, then span
-        a = eval_ast(node.then, env, fns, depth, limit)
-        b = eval_ast(node.els, env, fns, depth, limit)
+        a = eval_ast(node.then, env, fns, depth, limit, trust)
+        b = eval_ast(node.els, env, fns, depth, limit, trust)
         if a.is_z or b.is_z:
             return e_z("if", "condition unknown and a branch is Z",
                        Defect.UNBOUND)
@@ -1467,10 +1509,13 @@ def eval_ast(node: Node, env: Dict[str, E],
         if fn is None:
             return e_z(node.name, f"{node.name} was never defined",
                        Defect.UNBOUND)
-        if depth > limit:
-            return e_z(node.name, f"depth ceiling {limit} exceeded",
+        # depth is earned: [ANCHOR-REC] lifts the ceiling for an anchored
+        # function with a proven measure, and for nothing else.
+        ceiling = trust.limit_for(node.name, limit)
+        if depth > ceiling:
+            return e_z(node.name, f"depth ceiling {ceiling} exceeded",
                        Defect.UNBOUNDED)
-        args = [eval_ast(a, env, fns, depth, limit) for a in node.args]
+        args = [eval_ast(a, env, fns, depth, limit, trust) for a in node.args]
         for a in args:
             if a.is_z:
                 return a
@@ -1478,11 +1523,15 @@ def eval_ast(node: Node, env: Dict[str, E],
             return e_z(node.name, f"expected {len(fn.params)} argument(s), "
                                   f"got {len(args)}", Defect.MISBOUND)
         local = dict(zip(fn.params, args))
-        r = eval_ast(fn.body, local, fns, depth + 1, limit)
+        r = eval_ast(fn.body, local, fns, depth + 1, limit, trust)
         if r.is_z:
             return r
+        # [APP]: min(c_f, c_args, c_result). The c_f term is the one that
+        # was missing -- a result is only as trustworthy as the function
+        # that produced it, which is the whole point of the language.
         return e_val(node.name, r.value,
-                     min([r.confidence] + [a.confidence for a in args]))
+                     min([trust.of(node.name), r.confidence]
+                         + [a.confidence for a in args]))
 
     return e_z("eval", f"cannot evaluate {type(node).__name__}",
                Defect.MISBOUND)

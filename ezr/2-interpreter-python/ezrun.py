@@ -7,7 +7,7 @@ The core language had no runner. `ezr.py <file>` exists and runs a
 `learn`) that the browser interface also speaks. Lists, `let`, `show`
 and the builtins live in the AST pipeline in `syntax.py`, and until
 this file the only way to reach any of them was to import the module
-and call `compile_ezr` by hand. A language feature you can only use by
+and call `compile_ever` by hand. A language feature you can only use by
 importing the implementation is not shipped.
 
     ezrun.py program.ezr                  run it
@@ -49,13 +49,27 @@ import argparse
 import sys
 from typing import Dict, List, Optional
 
-from ezr import E, E_CERTAIN, E_EXECUTE_FLOOR, E_INTAKE
-from syntax import (Call, Prog, Semantic, Trust, compile_ezr,
-                    definitions, eval_ast)
+from ever import E, E_CERTAIN, E_EXECUTE_FLOOR, E_INTAKE
+from syntax import (Call, FnDef, Program, Semantic, Trust,
+                    compile_ever, eval_ast)
 
 EXIT_OK = 0
 EXIT_REFUSED = 1        # the program ran and produced Z
 EXIT_BAD_INPUT = 2      # could not read it, or it did not compile
+
+
+def definitions(node) -> Dict[str, object]:
+    """The function table a program defines.
+
+    v3.0's syntax.py exported this; v4.10's does not, so the runner
+    carries it. Kept tiny and local rather than added to syntax.py:
+    which functions a *runner* wants to call is a runner's business.
+    """
+    if isinstance(node, Program):
+        return {d.name: d for d in node.defs if isinstance(d, FnDef)}
+    if isinstance(node, FnDef):
+        return {node.name: node}
+    return {}
 
 
 def _read(path: str) -> Optional[str]:
@@ -149,8 +163,8 @@ def _earn(fns, examples: List[str], anchors: List[str], depth: int,
                   file=sys.stderr)
             return None, EXIT_BAD_INPUT
         call_src, want_src = parts
-        cc = compile_ezr(call_src, {k: len(v.params) for k, v in fns.items()})
-        wc = compile_ezr(want_src)
+        cc = compile_ever(call_src, {k: len(v.params) for k, v in fns.items()})
+        wc = compile_ever(want_src)
         if not cc.ok or not wc.ok:
             bad = call_src if not cc.ok else want_src
             print(f"ezrun: --example {spec!r}: {bad!r} does not compile",
@@ -203,7 +217,7 @@ def _earn(fns, examples: List[str], anchors: List[str], depth: int,
 
 
 def _called_name(ast) -> Optional[str]:
-    node = ast.expr if isinstance(ast, Prog) and ast.expr is not None else ast
+    node = ast.expr if isinstance(ast, Program) and ast.expr is not None else ast
     return node.name if isinstance(node, Call) else None
 
 
@@ -219,7 +233,7 @@ def run(src: str, call: Optional[str] = None, depth: int = 100,
         quiet: bool = False, where: str = "<input>",
         examples: Optional[List[str]] = None,
         anchors: Optional[List[str]] = None) -> int:
-    c = compile_ezr(src)
+    c = compile_ever(src)
     if not c.ok:
         _report_compile(c, where)
         return EXIT_BAD_INPUT
@@ -232,7 +246,7 @@ def run(src: str, call: Optional[str] = None, depth: int = 100,
         return code
 
     # A program that is one expression is its own entry point.
-    if isinstance(c.ast, Prog) and c.ast.expr is not None and call is None:
+    if isinstance(c.ast, Program) and c.ast.expr is not None and call is None:
         result = eval_ast(c.ast, {}, dict(fns), 0, depth, trust)
         _show(result, quiet)
         # A Z is a refusal on this path too. Returning OK here meant
@@ -254,7 +268,7 @@ def run(src: str, call: Optional[str] = None, depth: int = 100,
                   file=sys.stderr)
             return EXIT_BAD_INPUT
 
-    cc = compile_ezr(entry, arity)
+    cc = compile_ever(entry, arity)
     if not cc.ok:
         _report_compile(cc, f"--call {entry!r}")
         return EXIT_BAD_INPUT

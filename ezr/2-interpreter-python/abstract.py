@@ -63,6 +63,12 @@ from ever import (
 
 E_DEPTH_CEILING = 3          # floor(pi). unverified recursion stops here.
 
+#: The hard stop for anchored recursion. Was a bare 4000 at the one
+#: place it is checked; named because physics_test.py and audit.py
+#: both need to state it, and a magic number stated in three places
+#: is a number that will disagree with itself.
+E_HARD_DEPTH = 4000
+
 
 # ═════════════════════════════════════════════
 # Closures
@@ -370,8 +376,8 @@ class Lambda:
         earned = fp.anchor_id != 0 and c.measure is not None
         if not earned and depth > E_DEPTH_CEILING:
             raise DepthExceeded(c.name, E_DEPTH_CEILING)
-        if depth > 4000:
-            raise DepthExceeded(c.name, 4000)
+        if depth > E_HARD_DEPTH:
+            raise DepthExceeded(c.name, E_HARD_DEPTH)
 
         if len(args) != c.arity():
             return e_z(c.name,

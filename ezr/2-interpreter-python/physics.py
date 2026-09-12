@@ -54,7 +54,7 @@ from dataclasses import dataclass, field, replace
 from enum import Enum
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
-from ezr import (E, E_ASCEND_POINTS, E_CERTAIN, E_ZERO, State, excel)
+from ever import (E, E_ASCEND_POINTS, E_CERTAIN, E_ZERO, State, excel)
 
 #: floor(pi), the same constant the rest of the language uses.
 PI = E_ASCEND_POINTS

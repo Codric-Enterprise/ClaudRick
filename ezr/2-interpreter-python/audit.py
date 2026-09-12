@@ -118,7 +118,7 @@ def probe_g1_pipeline() -> Tuple[str, str]:
 
 
 def probe_t3_absolute_zero() -> Tuple[str, str]:
-    from ezr import E_CERTAIN, excel
+    from ever import E_CERTAIN, excel
     worst = max(excel(a, b) for a in range(0, 256, 5) for b in range(0, 256, 5))
     if worst >= E_CERTAIN:
         return OVERSTATED, f"excel reached {worst}, and Certain is {E_CERTAIN}"
@@ -127,7 +127,7 @@ def probe_t3_absolute_zero() -> Tuple[str, str]:
 
 
 def probe_g9_no_mutation() -> Tuple[str, str]:
-    from ezr import e_val
+    from ever import e_val
     from physics import push
     th = e_val("subject", 1, 200)
     before = (th.confidence, th.generation, th.reason)
@@ -139,7 +139,7 @@ def probe_g9_no_mutation() -> Tuple[str, str]:
 
 
 def probe_g3_entropy() -> Tuple[str, str]:
-    from ezr import e_val
+    from ever import e_val
     from physics import entropy
     from abstract import chain
     a, b = e_val("a", 1, 200), e_val("b", 1, 120)
@@ -338,7 +338,7 @@ def probe_law_reach() -> Tuple[str, str]:
 
 
 def probe_physical_laws() -> Tuple[str, str]:
-    from ezr import e_val
+    from ever import e_val
     from physics import Subsystem, derive_from
     s = Subsystem("audit")
     a = s.admit(e_val("a", 1, 200))
