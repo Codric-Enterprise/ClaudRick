@@ -64,6 +64,36 @@ public final class Laws {
      *                counts as a failure, or the ceiling would be free.
      * @param total   how many Examples were offered.
      */
+    /**
+     * [EXAMPLE], solved for the missing evidence instead of the score.
+     *
+     * <p>{@link #fromExamples} runs the rule forwards: given p of t
+     * witnesses, here is what you are worth. This runs it backwards: you
+     * are worth 120 and need 128, so how many more passing witnesses is
+     * that? The answer is 1, and that is a sentence somebody can act on —
+     * unlike "below the execute floor", which is the same fact with the
+     * actionable half deleted.
+     *
+     * <p>Nothing is inverted analytically because nothing needs to be: the
+     * forward rule is monotone in k and saturates one short of CERTAIN, so
+     * walking k up from 0 finds the least sufficient k or establishes there
+     * is none. A failure already recorded cannot be withdrawn, so the
+     * answer accounts for it — 1 of 9 needs eight more, not one.
+     *
+     * @return the least k, or -1 when the target is out of reach within cap
+     */
+    public static int witnessesNeeded(int passing, int total, int target, int cap) {
+        for (int k = 0; k <= cap; k++) {
+            if (fromExamples(passing + k, total + k) >= target) return k;
+        }
+        return -1;
+    }
+
+    /** {@link #witnessesNeeded} at the execute floor, within 64 witnesses. */
+    public static int witnessesNeeded(int passing, int total) {
+        return witnessesNeeded(passing, total, Particle.EXECUTE_FLOOR, 64);
+    }
+
     public static int fromExamples(int passing, int total) {
         if (total <= 0) return Particle.ZERO;
         double unit = (Particle.CERTAIN - Particle.INTAKE) / (double) Particle.CERTAIN;

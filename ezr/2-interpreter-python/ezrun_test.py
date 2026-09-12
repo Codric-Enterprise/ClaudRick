@@ -149,7 +149,58 @@ out, err, rc = run("-", "--call", "loop(-1)",
                    "-x", "loop(-1) = 0", "-x", "loop(-2) = 0",
                    "-x", "loop(-3) = 0", "-a", "loop", stdin=LOOP)
 ok("confidence proves trust, not termination",
-   "no decreasing measure" in err and rc == 1)
+   "confidence proves trust, not termination" in err
+   and "strictly decreases in every self-call" in err and rc == 1)
+
+print("\nRefusals carry the requirement that lifts them")
+# The same algebra read backwards. Forward it answers "what are you
+# worth"; backwards it answers "what are you missing" -- and the second
+# is the only half a person can act on.
+from ezrun import witnesses_needed                             # noqa: E402
+ok("0 of 0 needs 2 witnesses", witnesses_needed(0, 0) == 2)
+ok("1 of 1 needs 1 more",      witnesses_needed(1, 1) == 1)
+ok("2 of 3 needs 1 more",      witnesses_needed(2, 3) == 1)
+ok("1 of 9 needs 8 more",      witnesses_needed(1, 9) == 8)
+ok("already clear needs none", witnesses_needed(3, 3) == 0)
+
+out, err, rc = run("-", "-d", "3", "--call", "fact(20)", stdin=FACT)
+ok("the ceiling says how to earn past it",
+   "2 more passing Examples clears 128" in err
+   and "then pass -a fact" in err and rc == 1)
+
+out, err, rc = run("-", "-d", "3", "--call", "fact(20)",
+                   "-x", E1, "-x", E2, stdin=FACT)
+ok("once over the floor it says only anchor it",
+   "sits at 183/256, above the floor" in err
+   and "Pass -a fact" in err and rc == 1)
+
+# Following its own advice has to actually work, or the advice is a
+# nicer-sounding dead end.
+out, err, rc = run("-", "-d", "3", "--call", "fact(20)",
+                   "-x", E1, "-x", E2, "-a", "fact", stdin=FACT)
+ok("and doing what it says succeeds",
+   out.strip() == "2432902008176640000  @ 183/256" and rc == 0)
+
+UP = "def up(a, i, n) = if i >= n then 0 else i + up(a, i + 1, n)"
+out, err, rc = run("-", "-d", "3", "--call", "up(0, 0, 9)", stdin=UP)
+ok("a function that cannot be anchored is told which way its parameters go",
+   "i increases by 1" in err and "n unchanged" in err and rc == 1)
+
+out, err, rc = run("-", "--call", "loop(-1)", "-x", "loop(-1) = 0",
+                   "-x", "loop(-2) = 0", "-x", "loop(-3) = 0",
+                   "-a", "loop", stdin=LOOP)
+ok("an anchor refusal names the parameter that never moves",
+   "n unchanged" in err and rc == 1)
+
+out, err, rc = run("-", "-d", "3", "--call", "fact(3)", "-a", "fact",
+                   stdin=FACT)
+ok("anchoring below the floor says how far short it is",
+   "2 more passing Examples clears 128" in err and rc == 1)
+
+# 1 / 0 has no requirement to state. Inventing one would be worse than
+# silence, so the line is absent rather than vague.
+out, err, rc = run("-e", "1 / 0 + 1")
+ok("a refusal with no cure stays quiet", "to lift it" not in err)
 
 print("\n[APP] — c_f on the real path (runtime.run_source)")
 # The runner above drives syntax.py's eval_ast. `ever run` drives

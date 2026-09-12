@@ -38,6 +38,22 @@ public final class Eval {
     private final Trust trust;
     private final StringBuilder shown = new StringBuilder();
 
+    /**
+     * The function whose call last hit the depth ceiling, or null.
+     *
+     * <p>A Particle carries no identity — deliberately, since the value
+     * domain is shared with the C atom and adding a field there would
+     * ripple everywhere. But a refusal that cannot say *which* function ran
+     * out of depth cannot say how to buy more, so the name is recorded
+     * here, where only the runner reads it. Nothing in the evaluator
+     * branches on it and no Particle changes shape, so the two runtimes
+     * still agree byte for byte on the refusal itself.
+     */
+    private String ceilingName = null;
+
+    /** @see #ceilingName */
+    public String ceilingName() { return ceilingName; }
+
     public Eval(Map<String, Fn> fns, int limit) {
         this(fns, limit, Trust.none());
     }
@@ -241,6 +257,7 @@ public final class Eval {
         // proven measure, and for nothing else: depth is earned.
         int ceiling = trust.limitFor(c.name(), limit);
         if (depth > ceiling) {
+            ceilingName = c.name();
             return Particle.z(Defect.UNBOUNDED, "depth ceiling " + ceiling + " exceeded");
         }
         List<Particle> args = new ArrayList<>();
