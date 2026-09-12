@@ -59,6 +59,13 @@ EXPRESSIONS = [
     "7 / 2",
     "9 / 3",
     "1000000 * 1000000",
+    # past 2^53, where a long cast and scientific notation both start
+    # lying. Nothing in the corpus reached here until anchoring made
+    # deep recursion cheap enough to produce numbers this big.
+    "1000000000000000 * 1000",
+    "1000000000000000000 + 1",
+    "0 - 1000000000000000000",
+    "1000000000000000000 * 10",
     # precedence and associativity, where independent parsers usually split
     "1 + 2 + 3",
     "1 - 2 + 3",
@@ -268,6 +275,39 @@ def main() -> int:
     print(f"  the examples ({len(list((ROOT / 'examples').glob('*.ezr')))})")
     for f in sorted((ROOT / "examples").glob("*.ezr")):
         compare(f.name, py(str(f)), java(str(f)))
+
+    print("  evidence and earned depth (11)")
+    FACT = "def fact(n) = if n <= 1 then 1 else n * fact(n - 1)"
+    LOOP = "def loop(n) = if n < 0 then 0 else loop(n)"
+    E1, E2, E3 = "fact(1) = 1", "fact(2) = 2", "fact(3) = 6"
+    for label, src, extra in [
+        ("no evidence", FACT, ["--call", "fact(3)"]),
+        ("1 example", FACT, ["--call", "fact(3)", "-x", E1]),
+        ("2 examples", FACT, ["--call", "fact(3)", "-x", E1, "-x", E2]),
+        ("3 examples", FACT,
+         ["--call", "fact(3)", "-x", E1, "-x", E2, "-x", E3]),
+        ("a failing example", FACT,
+         ["--call", "fact(3)", "-x", E1, "-x", E2, "-x", "fact(3) = 99"]),
+        ("anchored buys depth", FACT,
+         ["-d", "3", "--call", "fact(20)", "-x", E1, "-x", E2, "-x", E3,
+          "-a", "fact"]),
+        ("anchor unverified", FACT,
+         ["-d", "3", "--call", "fact(3)", "-a", "fact"]),
+        ("anchor without measure", LOOP,
+         ["--call", "loop(-1)", "-x", "loop(-1) = 0", "-x", "loop(-2) = 0",
+          "-x", "loop(-3) = 0", "-a", "loop"]),
+        # Witness independence. Both runners once counted the same case
+        # three times as three witnesses (120 -> 183 -> 217), and the
+        # corpus did not reach it because every case here was distinct.
+        ("the same witness 3x", FACT,
+         ["--call", "fact(3)", "-x", E1, "-x", E1, "-x", E1]),
+        ("whitespace is not a witness", FACT,
+         ["--call", "fact(3)", "-x", E1, "-x", "fact( 1 ) = 1"]),
+        ("evidence contradicting itself", FACT,
+         ["--call", "fact(3)", "-x", E1, "-x", "fact(1) = 99"]),
+    ]:
+        compare(label, py("-", *extra, stdin=src),
+                java("-", *extra, stdin=src))
 
     print(f"  depth limits")
     for d in ("1", "3", "5", "50"):

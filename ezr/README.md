@@ -1,156 +1,103 @@
-# EZR
+# Ever
 
-A language where every value carries **how much it is trusted**.
+A programming language where every value carries how much you can
+trust it — and an unmeasured input poisons whatever it touches
+instead of quietly becoming a plausible wrong number.
 
-A binding does not just hold `7`. It holds `7` at some confidence out of
-256, in some state, with a record of why it is trusted that much — and
-nothing executes below a stated floor. Uncertainty is not a comment or
-a convention here; it is part of the value, and it propagates through
-every operation by rules that are written down and tested.
+```
+def sum_from(xs, i) = if i < 0 then 0 else xs[i] + sum_from(xs, i - 1)
 
-```ezr
-def fact(n) = if n <= 1 then 1 else n * fact(n - 1)
+let sales = [420, 610, 380, z, 705]   # Thursday was never recorded
+ever total = sum_from(sales, 4)
+
+show total
+```
+```
+total = z [0/256]
 ```
 
-Unanchored, that function is capped at depth ⌊π⌋ = 3 — it can compute
-`fact(3)` and refuses `fact(8)`, because confidence is evidence about
-*correctness* and correctness is not termination. Give it three passing
-Examples and it earns 217/256. Anchor it with a decreasing measure and
-the ceiling lifts: `fact(100)` computes, and every result comes back at
-217/256, floored by the function that produced it.
+Not 2115 with Thursday quietly skipped. The whole computation
+correctly refuses to guess — and with a real Thursday number in place
+of `z`, the same program correctly gives `2670`, not another `z`
+hiding an unrelated architectural limit. Every claim in this README
+was run, not just written down; see the bottom section.
 
----
+## Try the idea in 30 seconds — no install of the language required
 
-## Running it in VS Code
-
-Open this folder as the workspace root. Then **⇧⌘B** (or **Ctrl+Shift+B**)
-runs the default build task, which runs the .ezr file you have open.
-**Tasks: Run Task -> verify everything** runs all seventeen layers.
-
-Everything else is in the command palette under **Tasks: Run Task**:
-
-| Task | What it does |
-|---|---|
-| **run the current .ezr file** | the default build task |
-| **verify everything** | All seventeen layers — C, C++, Python, Java, Ruby, SQL, forge |
-| **forge tests** | Layer 7 alone: every lexer/parser pairing over the shared corpus |
-| **forge — converge** | Run until nothing is left to settle |
-| **forge — exploration cycles** | N cycles at fixed budget, rotating fuzz depth |
-| **re-emit GRAMMAR.ebnf** | Regenerate the grammar from the parser's own rules |
-| **run the pipeline demo** | Lexer → parser → semantic pass → execution |
-| **serve the live interpreter** | Then open `http://localhost:8088/ezr-live.html` |
-
-Three debug configurations are set up too (**F5**), including one that
-debugs whichever Python file you have open.
-
-### Why `.vscode/settings.json` sets `extraPaths`
-
-Each numbered directory is its own toolchain, and the Python layers
-import their siblings directly — `from ezr import E, State`. That
-resolves at runtime because the working directory is that layer, but
-Pylance analyses from the workspace root and would mark every one of
-those imports unresolved. `python.analysis.extraPaths` tells it where
-to look. The code is fine without it; only the editor needs telling.
-
-### Running a program
+The same rule, as a plain Python library:
 
 ```bash
-cd 2-interpreter-python
-python3 ezrun.py ../examples/sum.ezr              # 15  @ 256/256
-python3 ezrun.py ../examples/largest.ezr          # 42  @ 256/256
-python3 ezrun.py -e 'let x = 5 in x + 1'          # 6   @ 256/256
-echo '[1, 2, 3]' | python3 ezrun.py -             # read from stdin
+pip install ./everconf
+```
+```python
+from everconf import C, UNKNOWN, mse
+
+preds  = [C(0.9), C(0.2), C(0.6)]
+actual = [C(1), C(0), UNKNOWN]        # one label never recorded
+
+mse(preds, actual)   # UNKNOWN — not the mse of the two points you had
 ```
 
-`program := definitions | expression`, and there is deliberately no
-trailing expression -- that grammar is ambiguous and the chart parser
-proved it. So a file of definitions has to say what to run: define
-`main()`, or pass `--call 'expr'`.
+A model evaluated against partly-missing labels doesn't get to report
+a loss number as if it saw the whole dataset. See
+[`everconf/README.md`](everconf/README.md).
+
+## Try the full language
 
 ```bash
-python3 ezrun.py ../examples/largest.ezr --call 'largest([3, 9, 2])'
+pip install -e 2-interpreter-python
+ever run examples/train_logistic.ever
 ```
 
-Exit codes are `0` for a value, `1` for a refusal (the program ran and
-produced **Z**), `2` for input it would not compile.
+That example trains a real 1D logistic regression by gradient descent
+— sigmoid, mse, indexing, anchored recursion — checked bit-for-bit
+against an independent from-scratch implementation. Make one training
+label `z` and the entire trained weight correctly comes back unknown,
+not a number quietly learned from the data that was there.
 
-> `ezr.py <file>` is a **different** language -- the directive surface
-> (`tax = 40`, `expect`, `learn`) that `6-interface-html` also speaks.
-> It will not run the programs above.
+Five other examples in [`examples/`](examples/): a grade calculator, a
+compound-interest projection, calling real compiled C code through
+FFI (`sqrt`, `pow`, `sin` — actual `libm`, not reimplementations, and
+capped at 120/256 trust because Ever can't audit what foreign code
+did), and more.
 
-### From a terminal instead
+## What's actually in here
 
-```bash
-./run.sh                                  # everything, 17 layers
-cd 7-forge && python3 forge_test.py       # the forge alone
-cd 2-interpreter-python && python3 audit.py   # documents against code
-cd 5-runtime-java && ./ezr ../examples/sum.ezr    # the same program, in Java
-cd 5-runtime-java && python3 differential.py      # both runners, one corpus
-docker compose run --rm verify            # everything, in a container
-```
+- **The language** — parser, semantic pass, evaluator, REPL, CLI.
+  [`2-interpreter-python/`](2-interpreter-python/README.md)
+- **Five verified compile targets** — Go, Rust, R, Kotlin, JavaScript.
+  Every one checked against its own real compiler, matched
+  value-for-value and confidence-for-confidence against the
+  reference. Not "should work" — compiled, run, diffed.
+  [`2-interpreter-python/emit.py`](2-interpreter-python/emit.py)
+- **`everconf`** — the confidence-value core, as a standalone Python
+  library. [`everconf/`](everconf/README.md)
+- **Edapt** — the same "forgive, don't guess" discipline pointed at
+  Python, JavaScript, Go, Rust, and Java: fixes common mistakes,
+  refuses to invent structure it can't verify.
+  [`edapt/`](edapt/)
+- **A native C runtime** — the original interpreter layer, C99,
+  ASAN-clean. [`0-atom-c/`](0-atom-c/)
 
-`run.sh` skips any layer whose toolchain is missing rather than
-failing, so it is useful even without gcc or ruby installed. The
-container image verifies itself at build time.
+## What this is not
 
----
+Not the first system to propagate uncertainty through computation —
+NULL in SQL and NaN in floating point do the mechanically same thing,
+and `Uncertain<T>` (Bornholt et al., Microsoft Research) and Julia's
+`Measurements.jl` do it with real statistical rigor: distributions,
+not a single int. Ever trades that rigor for a number anyone can read
+at a glance, and takes the simplification further than the rigorous
+versions bothered to: into recursion depth, into foreign function
+calls, into training loops.
 
-## The layers
+Not production-ready for anything that isn't a demonstration.
 
-Each directory is a distinct language and toolchain, and they do not
-bleed into each other.
+## Verification discipline
 
-| | |
-|---|---|
-| `0-atom-c` | the atom — the value that carries its own trust |
-| `1-phase-cpp` | the phase engine |
-| `2-interpreter-python` | lexer, parser, semantic pass, evaluator, the laws, the auditor |
-| `3-dsl-ruby` | the DSL surface |
-| `4-archive-sql` | the archive — nothing is deleted, only superseded |
-| `5-runtime-java` | the runtime — EZR implemented again, in Java, and checked against the Python one |
-| `6-interface-html` | the live interpreter, in a browser (the directive language) |
-| `examples` | programs you can actually run |
-| `7-forge` | twenty front ends, run against each other; generates a parser and repairs itself |
+Every claim above is checked before it ships:
+`python3 tests/run_all.py` (25/25), `python3 tests/test_backends.py`
+(60/60 across five languages), `python3 tests/test_edapt.py` (32/32),
+`pytest everconf/tests/` (47/47). Nothing in this README describes
+behavior that wasn't run and confirmed.
 
-## Where to start reading
-
-1. **`CORE.md`** — the core the forge settled on, and who settled each
-   question. Start here.
-2. **`SEMANTICS.md`** — the operational semantics. Every rule is
-   implemented and exercised; where the spec and the implementation
-   disagree, the spec is wrong and gets fixed.
-3. **`7-forge/GRAMMAR.ebnf`** — the grammar, emitted from the chart
-   parser's own rule table so it cannot drift from the code.
-4. **`VOWELS.md`** — the operator families, and the self-generating
-   loop.
-5. **`7-forge/README.md`** — how twenty front ends get used to find
-   out what the language never actually specified.
-
-## A note on the name
-
-The language is **EZR**. In code it is `ezr` — module names, the
-`Lang.EZR` tag, `compile_ezr`, `EzrError`. It was called Ever through
-V3.0, and the documents describe that history in the past tense where
-it is load-bearing (the reserved-word finding in `CORE.md`, for one).
-
----
-
-## What is verified
-
-| | |
-|---|---|
-| Layers passing | **17 / 17** |
-| Forge assertions | **81** |
-| Java runtime assertions | **98** |
-| Differential (Python runner vs Java runner) | **108 / 108 agree** |
-| Physics assertions | **56** |
-| Pipeline assertions | **87** |
-| Programs fuzzed | **564,600** over 72 generations |
-| Front ends agreeing | **20** (4 lexers × 5 parsers — one of them generated) |
-| Counterexamples carried | 46, each one permanent |
-
-Convergence is a statement about a search, not a proof. No
-counterexample was found; that is not the same as none existing, and
-`CORE.md` says so at more length.
-
-*Codric Enterprise*
+Codric Enterprise · Ricky (Dreid) · 2026

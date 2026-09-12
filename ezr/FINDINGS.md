@@ -1,4 +1,4 @@
-# EZR / Tapestry — Research Findings
+# Ever / Tapestry — Research Findings
 
 Codric Enterprise · Ricky (Dreid) · 2026
 
@@ -66,7 +66,7 @@ excel(256, 256) → 256
 
 ### Where thermodynamics stops being a good analogy
 
-The Third Law says absolute zero is unreachable in finite steps. EZR's Z
+The Third Law says absolute zero is unreachable in finite steps. Ever's Z
 is reachable instantly, by contagion. The analogy holds for the First Law
 (conservation) and breaks for the Third. Worth saying plainly rather than
 stretching the metaphor.
@@ -152,7 +152,7 @@ formal reason Certain must come from outside the corpus.
 | 4 · SQL — the archive | 56 |
 | **total** | **275** |
 
-Layer 3 (Ruby) is written and inspected clean at 228/256 by EZR's own
+Layer 3 (Ruby) is written and inspected clean at 228/256 by Ever's own
 Ruby checker, but has not been executed — no Ruby toolchain in the build
 container. It runs on macOS.
 
@@ -178,100 +178,161 @@ Layers 5 (Java) and 6 (HTML) are not yet ported to the v2 atom.
 
 ---
 
-## 7. What a second runtime found
+## 7. Three evaluators, one rule, three answers
 
-Layer 5 is EZR implemented again, in Java. Three things surfaced that the
-nine Python front ends could not have surfaced, because they share an
-interpreter and therefore share its habits.
+Everything in this section was produced by running the code, not by
+reading it. Each claim names the command that produces it.
 
-### A guard that could never fire
+### 7.1 [APP] dropped its c_f term in two of the three evaluators
 
-`2-interpreter-python/syntax.py` carried this check:
+SEMANTICS.md §4.3 gives application as `min(c_f, c_args, c_result)`.
+Three evaluators implement it and only one had all three terms:
 
-```python
-if kind is T.STR and not text.endswith('"'):
-    return toks, e_z("lex", f"unterminated string at line {line}",
-                     Defect.UNBOUNDED)
-```
+| evaluator | file | c_f present |
+|---|---|---|
+| `Lambda` | `abstract.py` | yes |
+| `eval_ast` | `syntax.py` | **no** |
+| `eval_confidence` | `runtime.py` | **no** |
 
-Its regex was `"[^"\n]*"`, which only matches when a closing quote is
-present. `text` therefore always ended with `"` and the condition was
-never true. A lone `"` never matched as a string at all — it fell
-through to "unexpected character" and came back **misbound**.
-
-The forge had already ruled on this. `GRAMMAR.ebnf` records
-`unterminated_string_defect = 'unbounded'`, settled by doctrine, and all
-four forge lexers implement it:
-
-| Implementation | `"never closed` |
-|---|---|
-| L1 regex-master | `unbounded` |
-| L2 hand-rolled | `unbounded` |
-| L3 DFA | `unbounded` |
-| L4 trie | `unbounded` |
-| Java (from the grammar) | `unbounded` |
-| **`syntax.py` (the runner's lexer)** | **`misbound`** |
-
-The ruling was never carried back into the lexer the runner uses. Writing
-the sixth implementation from `GRAMMAR.ebnf` rather than from `syntax.py`
-is what exposed it, and the differential harness reported it as a split
-on the first run. Now fixed; six implementations agree.
-
-**The general shape:** a settled question is only settled where somebody
-applied it. The forge records rulings, and nothing was checking that the
-production code had adopted them.
-
-### Rendering was never specified
+`runtime.py` is the one `ever run` uses. Its own docstring named the
+omission and called it an honest approximation, but the consequence was
+not stated: nothing anywhere read `ScopeEntry.confidence` for an `SK.FN`
+entry, so a function's confidence was a field that could be written and
+never read. Measured before the fix, on that exact path:
 
 ```
-"hello"          -> hello        both runners
-["a", "b"]       -> ['a', 'b']   python
-["a", "b"]       -> [a, b]       java, before it was made to match
+def dbl(n) = n * 2        with dbl's scope entry forced to 1/256
+dbl(21)  ->  42 @ 256/256          [APP] wants min(1, 256) = 1
 ```
 
-The same value renders two ways depending on nesting. That came from
-formatting a list through CPython's `repr`, which quotes its elements —
-inherited, not chosen, the same class of accident as `"ab" * 2` returning
-`"abab"` until stage 3 started refusing it.
+Both are now complete. The 26-suite gate is unchanged by the
+`runtime.py` fix, and that is the point: it is a no-op for every program
+that does not set a function's confidence, and it is what makes earned
+confidence mean anything at all. Guarded by `ezrun_test.py`, which fails
+in exactly one assertion if the term is removed again.
 
-Arbitration **withholds**: no document specifies rendering, no law
-settles it, and two implementations is below the ⌊π⌋ = 3 consensus
-needs. So the incumbent stands, Java reproduces it, and the question is
-recorded here rather than decided by whoever wrote the second runtime.
+### 7.2 The two evaluators still disagree about [DEF], by 136 points
 
-**Open.** Either answer is defensible — one keeps a value's rendering
-independent of where it sits, the other keeps `["1"]` distinguishable
-from `[1]`. What is not defensible is having both at once and calling it
-specified.
+`eval_ast` enters an undefined name at `E_INTAKE` (120), per [DEF]: a
+definition is a claim, not a verification, and 120 is below the execute
+floor of 128. `runtime.run_source` registers functions at `EV_CERTAIN`
+(256) via `EvScope.set_fn`'s default. Three runners, one program, one
+outlier:
 
-### "Equivalently" was carrying a rounding convention
+```
+def dbl(n) = n * 2
+def main() = dbl(21)
 
-SEMANTICS.md §2.2 states `u(a⊕b) = u(a)×u(b)` and adds "Equivalently
-`c = a + b − ⌊ab/256⌋`. Verified identical across the full grid:
-1089/1089."
+ezrun.py            (syntax.py eval_ast)   42 @ 120/256
+5-runtime-java/ezr  (Java, CORE.md)        42 @ 120/256
+ever run            (runtime.run_source)   42 @ 256/256
+```
 
-True — under the **ceiling**, and only under the ceiling:
+The Java runtime matters here because it shares no code, no type system
+and no habits with either Python evaluator, and it was written against
+`CORE.md` rather than against `runtime.py`. Two independent
+implementations reading the rule the same way, and the third differing
+by 136 points, is the shape of a defect rather than of a disagreement.
 
-| Reading of `256·(1−u_a·u_b)` | Cells agreeing, of 1089 |
+**Not fixed.** Aligning the runtime path on 120 would change the
+confidence printed by every program that calls a function, which is a
+decision about the language rather than a repair to it.
+
+### 7.3 run.sh could not report a failing layer
+
+Every layer in `run.sh` ran as
+
+```
+( cd DIR && test | tail -2 ) && pass "L" || fail "L"
+```
+
+The subshell's status is the pipeline's, which is `tail`'s, which is 0
+whatever the test did. Measured: `vowels_test.py` patched to
+`raise SystemExit(1)` was reported `PASSED`. The only failure the script
+could ever surface was one where `cd` itself failed before the pipe —
+which is why a missing `3-dsl-ruby/` showed up and a failing test would
+not have. Fixed with `set -o pipefail`; the same deliberately-broken run
+then reported `FAILED Vowels` and exit 1, with every other layer still
+passing.
+
+### 7.4 The tree carries two lineages, and the split is measurable
+
+`5-runtime-java/differential.py` runs one corpus through both runners as
+processes and compares value, exit code, refusing stage and binding
+defect:
+
+```
+124 programs, 93 agreed, 31 diverged
+```
+
+Every one of the 31 is the same fork, not 31 separate bugs:
+
+| cause | count |
 |---|---|
-| `floor` | 582 |
-| `round` | 835 |
-| **`ceil`** | **1089** |
+| list literals (`cannot evaluate ListLit`) | 7 |
+| `len` / `head` / `tail` (`never defined`) | 9 |
+| `let ... in` is not v4.10 grammar | 9 |
+| other parse splits | 6 |
 
-`corroborate(120, 120)` is 183.75 exactly; the integer form gives 184.
-The claim stands. The word "equivalently" was doing work that a reader
-reaching for `floor` would get wrong on 507 cells, so the convention is
-now pinned by an assertion in `RuntimeTest.java` instead of waiting to be
-rediscovered.
+The Java runtime and `7-forge/` implement `CORE.md`; `eval_ast`
+implements a subset of `SEMANTICS.md`. Both sides pass their own suites
+(98 and 81 assertions, 26 gate suites). A divergence here is a finding
+about two lineages sharing a tree, and which one the project keeps is an
+owner's decision, not something to settle by editing one side to match
+the other.
 
-### What the layer is checked against
+### 7.5 A witness repeated was counted as a second witness
 
-| | |
+[EXAMPLE] multiplies uncertainty across independent witnesses:
+`u_f = ((256-120)/256)^p`, then `c_f = floor(256 * (1 - u_f) * p/t)`.
+Independence is the load-bearing word, and `ezrun`'s `--example` did
+not check it. Measured, before the fix:
+
+```
+-x 'growth(100, 0) = 100'                          120/256
+-x 'growth(100, 0) = 100'  (the same case twice)    183/256
+-x 'growth(100, 0) = 100'  (the same case thrice)   217/256
+```
+
+Identical to what three *distinct* cases buy — real confidence for no
+new evidence, which is the one thing T2 (corroboration creates nothing)
+says the algebra must never permit. Examples are now keyed on the
+call's own AST rendering, so `f(1,2)` and `f( 1 , 2 )` are correctly one
+witness and `f(1)` and `f(2)` are correctly two. The same call given two
+different answers is refused outright rather than silently resolved:
+evidence that contradicts itself is not evidence.
+
+Fixing one runner and not the other would only have moved the defect, so
+the Java runtime was mirrored in the same change — `Ast.render`, a
+faithful re-rendering to sit beside `Ast.skeleton`, which deliberately
+erases literal values and under which `f(1)` and `f(2)` are both
+`CALL(K)`. Before the mirror the two split exactly here, which is what a
+corpus is for:
+
+| | python | java |
+|---|---|---|
+| the same case ×3 | 120/256 | **217/256** |
+| one call, two answers | refused, exit 2 | **60/256, exit 0** |
+
+Three cases were added to the differential corpus so it reaches this
+ground: 124 programs, 93 agreed. The corpus had never reached it because
+every evidence case in it was already distinct.
+
+### 7.6 `ezrun` cannot run any file in `examples/`
+
+Nine example programs, nine refusals, measured one by one:
+
+| file | ezrun says |
 |---|---|
-| `RuntimeTest.java` | 98 assertions against SEMANTICS.md |
-| `differential.py` | 108 programs through both runners as processes |
-| Agreement | 108 of 108 on value, exit code, stage and defect |
-| Wording | 12 cases differ in prose; not a divergence |
+| `*.ever` (5 files) | `Z(misbound) — cannot evaluate Show` |
+| `largest.ezr`, `readings.ezr`, `trust.ezr` | `parse: unexpected let` |
+| `sum.ezr` | `Z(misbound) — cannot evaluate ListLit` |
 
-Agreement over a corpus is not a proof. It means no counterexample was
-found where the corpus looked.
+Not a fault in the runner: it is 7.4 seen from the directory listing.
+The `.ever` examples are written in the v4.10 statement surface and the
+`.ezr` examples in the forge's core, and `eval_ast` implements neither
+in full. `examples/earned_trust.ever` was added as one program that sits
+in the subset both lineages share, so it runs under `ezrun` and under
+the Java runtime and they agree — which is also what makes it a usable
+demonstration of [DEF], [EXAMPLE] and [ANCHOR] rather than a description
+of one.

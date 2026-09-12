@@ -1,5 +1,5 @@
 /*
- * tapestry.c — EZR / Tapestry, the atom and the six A-operators
+ * tapestry.c — Ever / Tapestry, the atom and the six A-operators
  * Codric Enterprise · Ricky (Dreid) · 2026
  */
 
@@ -246,7 +246,7 @@ e_particle a_assimilate(const e_particle *p, e_lang to) {
         return e_z_defect(p->ident, "misbound particle does not translate",
                           E_DEFECT_MISBOUND);
 
-    if (p->lang == to) return *p;
+    if (p->lang == (int32_t)to) return *p;
 
     e_particle q = *p;
     q.lang       = to;
@@ -370,7 +370,7 @@ e_particle a_autodidact(const e_particle *history, int n, const char *about) {
         if (!e_is_cleared(&history[i])) {
             if (history[i].defect != E_DEFECT_NONE) {
                 if (common == E_DEFECT_NONE) common = history[i].defect;
-                if (history[i].defect == common) defect_count++;
+                if (history[i].defect == (int32_t)common) defect_count++;
             }
             continue;
         }
@@ -585,7 +585,7 @@ const char *e_lang_name(e_lang l) {
         case E_LANG_GO:     return "Go";
         case E_LANG_TS:     return "TypeScript";
         case E_LANG_SWIFT:  return "Swift";
-        case E_LANG_EVER:   return "EZR";
+        case E_LANG_EVER:   return "Ever";
         default:            return "Unknown";
     }
 }

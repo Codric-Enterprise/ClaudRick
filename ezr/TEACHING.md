@@ -1,4 +1,4 @@
-# EZR — Code for Dummies
+# Ever — Code for Dummies
 
 **Same engine. Same numbers. Different words.**
 
@@ -8,7 +8,7 @@ Codric Enterprise · Ricky (Dreid) · 2026
 
 ## The one thing that had to change
 
-EZR's core mechanic was **withholding**. Below 128 it refused. A
+Ever's core mechanic was **withholding**. Below 128 it refused. A
 beginner pastes their first attempt, sees `withheld: 18/256`, and closes
 the laptop.
 
@@ -18,7 +18,7 @@ beginner-hostile, and it was load-bearing.
 **HTML won because it never punishes you.** Write broken HTML and the
 page still renders. Forget a closing tag and the browser guesses. You are
 never blocked. That is the property worth copying, and it does not
-require giving up anything EZR already does.
+require giving up anything Ever already does.
 
 ### Learn mode and Ship mode
 
@@ -32,7 +32,7 @@ experience.
 | **Ship** | the floor is enforced, exactly as before. |
 
 Same engine, same math, same archive. One flag. Learn mode is arguably
-*more* faithful to EZR's philosophy than the hard floor was: the whole
+*more* faithful to Ever's philosophy than the hard floor was: the whole
 premise is that confidence is a scale rather than pass/fail, and a
 pass/fail gate had been bolted on top of the scale.
 
@@ -42,7 +42,7 @@ pass/fail gate had been bolted on top of the scale.
 
 ### 1. One thing at a time
 
-Twelve problems at once is how people quit. EZR finds all of them,
+Twelve problems at once is how people quit. Ever finds all of them,
 archives all of them, and shows **one** — with a quiet count of what
 remains.
 
@@ -77,7 +77,7 @@ wording takes the blame rather than assigning it:
 
 ## Before and after
 
-EZR used to say:
+Ever used to say:
 
 ```
 CONFIDENT @ 18/256
@@ -139,7 +139,7 @@ missing `noopener`, and the rest.
 Every review leads with what the person did right, in words they'd use
 themselves:
 
-| EZR's internal pattern | What the beginner reads |
+| Ever's internal pattern | What the beginner reads |
 |---|---|
 | `parameters typed` | you said what goes in — that helps a lot |
 | `RAII ownership` | cleanup is handled for you here — good choice |
@@ -160,7 +160,7 @@ And clean code is **recognised**, not met with silence:
 "View Source" turned the entire web into a tutorial: you learned by
 looking at other people's work.
 
-EZR's archive is the same mechanism. Every fix taught is available to
+Ever's archive is the same mechanism. Every fix taught is available to
 everyone who hits the same error. It is the teaching engine and the moat
 in one piece — and it was already built.
 
@@ -168,7 +168,7 @@ in one piece — and it was already built.
 
 ## Zero install
 
-`ezr-start.html` is a single file. No framework, no CDN, no build step,
+`ever-start.html` is a single file. No framework, no CDN, no build step,
 no account. Open it from a USB stick on a library computer with no
 internet and it works.
 
@@ -202,7 +202,7 @@ end.
 ## What did not change
 
 The engine. The E-thread still threads into all seven languages. The
-A-atom is untouched. The I-O-U loop still runs. EZR is still a language
+A-atom is untouched. The I-O-U loop still runs. Ever is still a language
 that sits alongside C and SQL and can be threaded into either.
 
 Only the words changed.

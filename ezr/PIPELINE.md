@@ -1,4 +1,4 @@
-# EZR — The Four Stages
+# Ever — The Four Stages
 
 **Codric Enterprise · Ricky (Dreid) · 2026**
 
@@ -15,7 +15,7 @@
  4. Execution Engine ────────► ( Interpreter OR Compiler )
 ```
 
-EZR was at stage 4 without stages 1–3. It walked **strings**. That
+Ever was at stage 4 without stages 1–3. It walked **strings**. That
 worked, and it cost three specific things.
 
 ---
@@ -39,10 +39,10 @@ and a source position. Evaluation being total is a property of the whole
 pipeline or it is not a property at all.
 
 ```
-compile_ezr("a $ b")      → stage "lex",      Z(misbound)
-compile_ezr("1 +")        → stage "parse",    Z(unbounded)
-compile_ezr("def f(n)=x") → stage "semantic", ["unbound name 'x'"]
-compile_ezr("1 + 1")      → stage "ready"
+compile_ever("a $ b")      → stage "lex",      Z(misbound)
+compile_ever("1 +")        → stage "parse",    Z(unbounded)
+compile_ever("def f(n)=x") → stage "semantic", ["unbound name 'x'"]
+compile_ever("1 + 1")      → stage "ready"
 ```
 
 ---
@@ -83,7 +83,7 @@ n * 1       → 3 nodes      ← ultracode can now see this is larger
 ## 3. Semantic analyzer
 
 Scope resolution, arity checking and type inference, **before a single
-value is computed**. EZR used to discover an unbound name at evaluation
+value is computed**. Ever used to discover an unbound name at evaluation
 time. That is not wrong, but it is late: a defect only surfaced on the
 input that reached it. Now the binding is checked whether or not that
 branch ever runs.

@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""abstract_test.py — EZR / Tapestry, abstraction layer verification."""
+"""abstract_test.py — Ever / Tapestry, abstraction layer verification."""
 
 from abstract import (
     Lambda, Closure, DepthExceeded, branch, chain, find_measure,
     a_anchor_fn, e_fn, E_DEPTH_CEILING,
 )
-from ezr import (
+from ever import (
     e_val, e_z, e_equiv, State, Defect,
     E_CERTAIN, E_EXECUTE_FLOOR, E_INTAKE, E_PI_WIDTH_WARN,
     E_PI_WIDTH_ENUMERATE,
@@ -22,7 +22,7 @@ def ok(name, cond):
         failed += 1; print(f"  \u2717 {name}")
 
 
-print("\n=== EZR — the abstraction layer ===\n")
+print("\n=== Ever — the abstraction layer ===\n")
 
 print("Functions are threads")
 L = Lambda()
@@ -85,15 +85,10 @@ ok("measure found",               fd.value.measure == "n")
 
 
 def call(lam, n):
-    """None when the call was refused.
-
-    The ceiling is a Z now rather than an exception (G1: evaluation is
-    total), so a refusal arrives as a value. This helper keeps the
-    assertions below reading the way they did -- "blocked" still means
-    "produced no value" -- while the mechanism underneath changed.
-    """
-    out = lam.apply(lam.globals["fact"], [e_val("n", n, 200)], {}, 0)
-    return None if out.is_z else out
+    try:
+        return lam.apply(lam.globals["fact"], [e_val("n", n, 200)], {}, 0)
+    except DepthExceeded:
+        return None
 
 
 ok("shallow call works unanchored",   call(L4, 3) is not None)

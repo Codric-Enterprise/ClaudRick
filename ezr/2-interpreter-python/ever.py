@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """
-ezr.py — EZR / Tapestry, the interpreter
+ever.py — Ever / Tapestry, the interpreter
 
-This is the part that makes EZR a language you write in rather than a
+This is the part that makes Ever a language you write in rather than a
 checker you run over other people's code.
 
-Every value in an EZR program is a thread: a name, the thing it holds,
+Every value in an Ever program is a thread: a name, the thing it holds,
 and how much that binding is trusted. The program is the weave. Nothing
 executes below the floor, and nothing reaches Certain without earning it.
 
@@ -52,7 +52,7 @@ class Defect(IntEnum):
 
 class Lang(IntEnum):
     C = 0; CPP = 1; PYTHON = 2; RUBY = 3; SQL = 4; JAVA = 5; HTML = 6
-    RUST = 7; GO = 8; TS = 9; SWIFT = 10; EZR = 11
+    RUST = 7; GO = 8; TS = 9; SWIFT = 10; EVER = 11
 
 
 DEFECT_NAME = {d: d.name.lower() for d in Defect}
@@ -72,7 +72,7 @@ class E:
     confidence: int = 0
     lo: int = 0
     hi: int = 0
-    lang: Lang = Lang.EZR
+    lang: Lang = Lang.EVER
     anchor_id: int = 0
     generation: int = 0
     ascend_points: int = 0
@@ -142,7 +142,7 @@ def e_z(ident: str, reason: str = "unverified",
     return E(ident=ident, state=State.Z, defect=defect, reason=reason)
 
 
-def e_val(ident: str, value: Any, conf: int, lang: Lang = Lang.EZR) -> E:
+def e_val(ident: str, value: Any, conf: int, lang: Lang = Lang.EVER) -> E:
     if conf <= E_ZERO:
         return e_z(ident, "confidence collapsed to zero")
     if conf >= E_CERTAIN:
@@ -152,7 +152,7 @@ def e_val(ident: str, value: Any, conf: int, lang: Lang = Lang.EZR) -> E:
              confidence=conf, lo=conf, hi=conf, lang=lang)
 
 
-def e_equiv(ident: str, lo: int, hi: int, lang: Lang = Lang.EZR) -> E:
+def e_equiv(ident: str, lo: int, hi: int, lang: Lang = Lang.EVER) -> E:
     if lo > hi:
         lo, hi = hi, lo
     mid = (lo + hi) // 2
@@ -167,7 +167,7 @@ def e_equiv(ident: str, lo: int, hi: int, lang: Lang = Lang.EZR) -> E:
 NOTHING_WORDS = {"null", "nil", "None", "NULL", "undefined", "nullptr", "Z"}
 
 
-def a_any(ident: str, literal: str, from_lang: Lang = Lang.EZR) -> E:
+def a_any(ident: str, literal: str, from_lang: Lang = Lang.EVER) -> E:
     """ANY — lift any language's literal into a thread."""
     s = (literal or "").strip()
     if not s:
@@ -379,12 +379,12 @@ def combine(a: E, b: E, op: str, ident: str) -> E:
 # The interpreter
 # ═════════════════════════════════════════════
 
-class EzrError(Exception):
+class EverError(Exception):
     pass
 
 
-class EZR:
-    """Executes EZR source. The weave."""
+class Ever:
+    """Executes Ever source. The weave."""
 
     def __init__(self, trace: bool = False):
         self.threads: Dict[str, E] = {}
@@ -396,14 +396,14 @@ class EZR:
 
     # ── the loom ──
 
-    def run(self, source: str) -> "EZR":
+    def run(self, source: str) -> "Ever":
         for lineno, raw in enumerate(source.split("\n"), start=1):
             line = raw.split("#")[0].strip()
             if not line:
                 continue
             try:
                 self._exec(line, lineno)
-            except EzrError as e:
+            except EverError as e:
                 self.output.append(f"  line {lineno}: {e}")
         return self
 
@@ -447,7 +447,7 @@ class EZR:
             name = m.group(1)
             p = self.threads.get(name)
             if p is None:
-                raise EzrError(f"{name} was never bound")
+                raise EverError(f"{name} was never bound")
             ev = e_val(f"{name}_evidence", p.value, int(m.group(2)))
             self._record(a_ascend(p, ev))
             return
@@ -458,9 +458,9 @@ class EZR:
             name, lang = m.group(1), m.group(2).upper()
             p = self.threads.get(name)
             if p is None:
-                raise EzrError(f"{name} was never bound")
+                raise EverError(f"{name} was never bound")
             if lang not in Lang.__members__:
-                raise EzrError(f"unknown language {lang}")
+                raise EverError(f"unknown language {lang}")
             self._record(a_assimilate(p, Lang[lang]))
             return
 
@@ -509,7 +509,7 @@ class EZR:
                     f"{p.state.name}{mark}]")
             return
 
-        raise EzrError(f"cannot parse: {line}")
+        raise EverError(f"cannot parse: {line}")
 
     # ── expressions ──
 
@@ -524,7 +524,7 @@ class EZR:
 
     def _atom(self, tok: str, ident: str) -> E:
         # PROGRAM CONSTANTS are Certain about their value. A literal in
-        # EZR source carries no uncertainty about what it is; the author
+        # Ever source carries no uncertainty about what it is; the author
         # wrote it. Uncertainty belongs to data from outside and to
         # whether functions are correct.
         if re.fullmatch(r'-?\d+', tok):
@@ -568,7 +568,7 @@ class EZR:
 # ═════════════════════════════════════════════
 
 DEMO = '''
-# EZR — a language where every value carries how much it is trusted
+# Ever — a language where every value carries how much it is trusted
 
 anchor total = 500              # pinned; survives translation intact
 let    rate  = 0.08
@@ -607,8 +607,8 @@ if __name__ == "__main__":
     else:
         src, title = DEMO, "demo"
 
-    print(f"\n\u2550\u2550\u2550 EZR \u00b7 {title} \u2550\u2550\u2550")
-    ev = EZR().run(src)
+    print(f"\n\u2550\u2550\u2550 Ever \u00b7 {title} \u2550\u2550\u2550")
+    ev = Ever().run(src)
     for line in ev.output:
         print(line)
     print(ev.report())

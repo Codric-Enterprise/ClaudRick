@@ -92,17 +92,20 @@ Key design decisions:
 ├── .dockerignore
 ├── pyproject.toml            # hatchling build; pytest + ruff config
 ├── .env.example              # local env template (ANTHROPIC_API_KEY, GITHUB_TOKEN, …); copy to gitignored .env
-├── ezr/                      # EZR — a separate language project (see below)
+├── ezr/                      # Ever / Tapestry — a separate language project (see below)
 │   ├── 0-atom-c/ 1-phase-cpp/ 2-interpreter-python/ 3-dsl-ruby/
 │   ├── 4-archive-sql/ 6-interface-html/
 │   ├── 5-runtime-java/       # the core again, in Java, + a differential harness
 │   ├── 7-forge/              # the language forge: 20 front ends, one core
+│   ├── tests/                # run_all.py — the 26-suite gate ezr/CLAUDE.md names
 │   ├── examples/             # runnable .ezr programs — start here
-│   ├── CORE.md               # the core the forge settled on, and why
-│   ├── SEMANTICS.md PIPELINE.md VOWELS.md   # the seed's own specs
+│   ├── edapt/ archive/       # adaptive layer; repair archive
+│   ├── CLAUDE.md             # ezr's own rules — read it before touching ezr/
+│   ├── CORE.md               # the core the forge settled on (the 5-runtime-java language)
+│   ├── SEMANTICS.md PIPELINE.md VOWELS.md ABI.md   # the specs `ever run` follows
 │   ├── FINDINGS.md           # what was computed, not asserted (research.py corroborates it)
 │   ├── .claude/skills/verify/  # directory-scoped skill: how to drive EZR's surfaces
-│   └── run.sh                # verifies every layer, including the forge
+│   └── run.sh                # 22 layers. NOT 7-forge or 5-runtime-java — see below
 ├── README.md
 └── .gitignore
 ```
@@ -163,12 +166,27 @@ Uses a **src layout**: importable code is under `src/`; `pyproject.toml` sets
 ### EZR's loop (separate from ReVision's — see the EZR section)
 
 ```bash
-cd ezr && ./run.sh                     # all 17 layers; ~minutes
+cd ezr && python3 tests/run_all.py     # the gate ezr/CLAUDE.md names: 26 suites
+cd ezr && ./run.sh                     # 22 layers, a superset in breadth; ~minutes
 cd ezr/2-interpreter-python && python3 syntax_test.py    # one layer, seconds
-cd ezr/7-forge && python3 forge_test.py
-cd ezr/5-runtime-java && ./build.sh && ./ezr ../examples/sum.ezr
-cd ezr/5-runtime-java && python3 differential.py         # both runners, one corpus
+cd ezr/2-interpreter-python && python3 ezrun_test.py     # the runner + [EXAMPLE]/[ANCHOR]
+cd ezr/7-forge && python3 forge_test.py                  # 81 assertions; not in run.sh
+cd ezr/5-runtime-java && ./build.sh \
+  && env -u JAVA_TOOL_OPTIONS java -cp out com.codric.ezr.RuntimeTest   # 98; not in run.sh
+cd ezr/5-runtime-java && python3 differential.py         # RED, and deliberately so
 ```
+
+`run.sh` and `run_all.py` overlap but neither contains the other, and
+**neither drives `7-forge/` or `5-runtime-java/`** — both still pass their
+own suites (81 and 98 assertions), but nothing runs them for you.
+
+`differential.py` is red on purpose: 124 programs, 93 agreed, **31
+diverged**. Every divergence is the same fork — `let ... in`, list
+literals, and the `len`/`head`/`tail` builtins are in the Java runtime
+and the forge's `CORE.md`, and are not in the language `syntax.py`'s
+`eval_ast` evaluates. That is a finding about two lineages sharing a
+tree, not a bug in either runner, and it is an owner's decision to
+settle. Do not "fix" it by editing one side to match the other.
 
 `run.sh` has no flag to select a layer — run that layer's own test file
 directly. Each `*_test.py` is a plain script that reports its own tally and
@@ -299,9 +317,10 @@ archive → Java runtime → HTML interface). It shares nothing with
 `src/revision/` — no imports, no endpoints, no configuration — and the
 two are verified by separate commands.
 
-- **Verify it:** `cd ezr && ./run.sh` — 17 layers (needs gcc, g++,
-  python3, ruby, and a JDK; skips any layer whose toolchain is absent
-  rather than failing).
+- **Verify it:** `cd ezr && ./run.sh` — 22 layers (needs gcc, g++,
+  python3 and ruby; skips any layer whose toolchain is absent rather
+  than failing). `ezr/CLAUDE.md` names `python3 tests/run_all.py` (26
+  suites) as the gate to be green before and after a change; run both.
 - **In a container:** `cd ezr && docker compose run --rm verify`.
   The image verifies itself at build time.
 - **`ezr/7-forge/`** is the language forge: four independent lexers and

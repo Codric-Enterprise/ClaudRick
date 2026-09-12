@@ -1,7 +1,7 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
 
-# ezr.rb — EZR / Tapestry, Layer 3 (Ruby)
+# ever.rb — Ever / Tapestry, Layer 3 (Ruby)
 #
 # The DSL. The writable surface of the weave.
 #

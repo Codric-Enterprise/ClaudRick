@@ -3,12 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>EZR \u2014 Start Here</title>
+<title>Ever \u2014 Start Here</title>
 <!--
-  ezr-start.html \u2014 EZR / Tapestry
+  ever-start.html \u2014 Ever / Tapestry
   For somebody opening their first file.
 
-  Same engine as the rest of EZR. Same rules, same numbers. Different
+  Same engine as the rest of Ever. Same rules, same numbers. Different
   words, and one thing at a time.
 
   Hand written. No framework, no CDN, no install. Works offline.
@@ -134,13 +134,13 @@ function detect(code) {
   if (/\b(end|puts|require|attr_accessor|attr_reader)\b/.test(s) ||
       /\bdo\s*\|/.test(s)) return "Ruby";
   /* A bare C function with no include directive. Found by cross-checking
-     Layer 6 against Layer 2: both agreed on "EZR", and both were wrong. */
+     Layer 6 against Layer 2: both agreed on "Ever", and both were wrong. */
   if (/^\s*(?:static\s+|const\s+|unsigned\s+)*(int|char|float|double|long|short|void|size_t)\s*\*?\s*\w+\s*\([^;]*\)\s*\{/m.test(s))
     return "C";
   if (/^\s*def\s+\w+\s*\(.*\)\s*(->.*)?:/m.test(s)) return "Python";
   if (/^\s*(import|from)\s+\w+/m.test(s) && s.indexOf(":") !== -1)
     return "Python";
-  return "EZR";
+  return "Ever";
 }
 
 function F(kind, message, weight, fix) {
@@ -151,7 +151,7 @@ var VOID_TAGS = ["area","base","br","col","embed","hr","img","input",
                  "link","meta","param","source","track","wbr"];
 
 /* Script, style and comment bodies are not markup. Found by running
-   EZR against its own interface: an <img> inside a JavaScript string is
+   Ever against its own interface: an <img> inside a JavaScript string is
    sample data, not an image. A false positive that reaches Z is worse
    than a missed finding, because it teaches the corpus a lie. */
 function markupOnly(code) {

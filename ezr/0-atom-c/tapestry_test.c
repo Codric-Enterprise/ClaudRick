@@ -1,5 +1,5 @@
 /*
- * tapestry_test.c — EZR / Tapestry verification
+ * tapestry_test.c — Ever / Tapestry verification
  * Proves the atom carries T, and that the six A-operators hold.
  */
 
@@ -22,7 +22,7 @@ static e_particle halve(const e_particle *p) {
 }
 
 int main(void) {
-    printf("\n=== EZR / Tapestry — the atom carries T ===\n\n");
+    printf("\n=== Ever / Tapestry — the atom carries T ===\n\n");
 
     printf("Scale unchanged from v1\n");
     ok("Certain is 256",            E_CERTAIN == 256);

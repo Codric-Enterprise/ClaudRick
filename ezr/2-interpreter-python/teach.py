@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """
-teach.py — EZR / Tapestry, the teaching layer
+teach.py — Ever / Tapestry, the teaching layer
 
 Same engine. Same numbers. Different words.
 
-EZR's checker says:
+Ever's checker says:
 
     CONFIDENT @ 18/256
     3 errors · defects: unbounded, misbound
@@ -31,7 +31,7 @@ import re
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Tuple
 
-from ezr import E_CERTAIN, E_EXECUTE_FLOOR
+from ever import E_CERTAIN, E_EXECUTE_FLOOR
 from checker import Translator, ELang, Finding, classify
 
 
@@ -405,7 +405,7 @@ def find_lesson(message: str) -> Optional[Lesson]:
 FRIENDLY_LANG = {
     ELang.C: "C", ELang.CPP: "C++", ELang.PYTHON: "Python",
     ELang.RUBY: "Ruby", ELang.SQL: "SQL", ELang.JAVA: "Java",
-    ELang.HTML: "HTML", ELang.EZR: "EZR",
+    ELang.HTML: "HTML", ELang.EVER: "Ever",
 }
 
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-vowels.py — EZR / Tapestry, the vowel operator families
+vowels.py — Ever / Tapestry, the vowel operator families
 
     A   operates on trust        Any Assimilate Anchor Ascend
                                  Apply2All Auto-Didact
@@ -31,7 +31,7 @@ import re
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
-from ezr import (
+from ever import (
     E, State, Defect, Lang,
     e_z, e_val, e_equiv, excel, a_anchor,
     E_ZERO, E_CERTAIN, E_EXECUTE_FLOOR, E_PI_WIDTH_WARN,
@@ -401,7 +401,7 @@ def i_inject(p: E, bindings: Dict[str, E], name: str) -> E:
 class Ledger:
     """The archive of what was owned, superseded and optimised.
 
-    Obliterate does not delete. Conservation is a law in EZR, so the
+    Obliterate does not delete. Conservation is a law in Ever, so the
     strongest thing available is supersession with the record kept.
     """
     owned: List[E] = field(default_factory=list)
@@ -706,7 +706,7 @@ class Evolver:
 
         Where they disagree, withhold. Inventing an expected answer
         would teach the corpus a fact nobody verified, which is the one
-        thing EZR exists to prevent.
+        thing Ever exists to prevent.
         """
         votes: Dict[Any, int] = {}
         for body in self.satisfying:
@@ -816,7 +816,7 @@ class Evolver:
 
 if __name__ == "__main__":
     print("\n" + "=" * 66)
-    print("EZR — the vowel operators, running")
+    print("EVER — the vowel operators, running")
     print("=" * 66)
 
     spec = Spec("fact", ["n"], [([1], 1), ([2], 2), ([3], 6), ([4], 24)])

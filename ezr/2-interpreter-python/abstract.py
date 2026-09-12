@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-lambda.py — EZR / Tapestry, the abstraction layer
+lambda.py — Ever / Tapestry, the abstraction layer
 
-This is what turns EZR from a trust calculus into a language you write
+This is what turns Ever from a trust calculus into a language you write
 in: functions, conditionals, and recursion, with confidence semantics
 defined for each.
 
@@ -41,7 +41,7 @@ Six decisions, made deliberately and implemented here:
      requires a DECREASING MEASURE, because confidence proves trust and
      not termination. Without the measure, the ceiling stays at 3.
 
-  6. EZR IS PURE. LEXICAL SCOPE.
+  6. EVER IS PURE. LEXICAL SCOPE.
      No mutation. The archive's audit trail depends on every thread
      being a value that was derived, never overwritten.
 
@@ -54,7 +54,7 @@ import re
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Tuple
 
-from ezr import (
+from ever import (
     E, State, Defect, Lang,
     e_z, e_val, e_equiv, excel, a_anchor, a_assimilate, a_ascend,
     E_ZERO, E_CERTAIN, E_EXECUTE_FLOOR, E_PI_WIDTH_WARN,
@@ -62,6 +62,12 @@ from ezr import (
 )
 
 E_DEPTH_CEILING = 3          # floor(pi). unverified recursion stops here.
+
+#: The hard stop for anchored recursion. Was a bare 4000 at the one
+#: place it is checked; named because physics_test.py and audit.py
+#: both need to state it, and a magic number stated in three places
+#: is a number that will disagree with itself.
+E_HARD_DEPTH = 4000
 
 
 # ═════════════════════════════════════════════
@@ -179,14 +185,6 @@ def a_anchor_fn(p: E) -> E:
 # Application — the chain rule
 # ═════════════════════════════════════════════
 
-#: The hard stop for anchored recursion. Python's own stack is the
-#: real constraint -- each EZR frame costs several Python frames -- so
-#: the interpreter raises its recursion limit to match and stops here
-#: well short of it, rather than letting a RecursionError escape and
-#: break G1 from underneath.
-E_HARD_DEPTH = 4000
-
-
 class DepthExceeded(Exception):
     def __init__(self, name: str, limit: int):
         self.name, self.limit = name, limit
@@ -223,7 +221,7 @@ def branch(cond: E, then_thunk, else_thunk, ident: str) -> E:
     them. That is the cost of not collapsing to Z: to say 'it is one of
     these two' you have to know what both of them are.
 
-    So EZR is lazy in branches under a known condition and eager under
+    So Ever is lazy in branches under a known condition and eager under
     an unknown one. The unknown case is where the expense lives, which
     is the correct place for it to live.
     """
@@ -285,7 +283,7 @@ TOKEN = re.compile(r'''
 
 
 class Lambda:
-    """Evaluates EZR expressions including application and branching."""
+    """Evaluates Ever expressions including application and branching."""
 
     def __init__(self, trace: bool = False):
         self.globals: Dict[str, E] = {}
@@ -321,10 +319,9 @@ class Lambda:
                                   for i, a in enumerate(args)], {}, 0)
             passed = (not got.is_z) and got.value == expect
         except DepthExceeded:
-            # Unreachable since the ceiling became a refusal, and kept
-            # as a guard rather than removed: running out of depth is a
-            # failed Example either way, never a silent skip, or the
-            # ceiling would be free.
+            # Running out of depth is a failed Example, not a silent
+            # skip. It has to lower the function's standing like any
+            # other failure, or the depth ceiling would be free.
             passed = False
 
         if passed:
@@ -348,7 +345,7 @@ class Lambda:
         if conf <= 0:
             # The definition still exists; only its trustworthiness is
             # zero. Collapsing to a bare Z would discard the closure,
-            # and nothing in EZR is discarded. The thread reports Z and
+            # and nothing in Ever is discarded. The thread reports Z and
             # cannot execute, but the body stays available for the
             # archive and for diagnosis.
             new = E(ident=name, value=c, state=State.Z,
@@ -376,21 +373,11 @@ class Lambda:
 
         # depth is earned. anchored with a measure recurses freely;
         # everything else stops at floor(pi).
-        # A ceiling is a refusal, not an exception. SEMANTICS.md G1
-        # says evaluation is total -- "no exceptions, no undefined
-        # behavior" -- and a raise that escapes `eval` makes totality a
-        # property of whoever remembered to catch it rather than of the
-        # language. The ceiling is still a checked halt (4.3); it now
-        # halts by returning Z, which is absorbing by T1 and therefore
-        # propagates exactly as the depth-exceeded case is specified to.
         earned = fp.anchor_id != 0 and c.measure is not None
         if not earned and depth > E_DEPTH_CEILING:
-            return e_z(c.name,
-                       f"depth ceiling {E_DEPTH_CEILING} exceeded",
-                       Defect.UNBOUNDED)
+            raise DepthExceeded(c.name, E_DEPTH_CEILING)
         if depth > E_HARD_DEPTH:
-            return e_z(c.name, f"hard depth ceiling {E_HARD_DEPTH} exceeded",
-                       Defect.UNBOUNDED)
+            raise DepthExceeded(c.name, E_HARD_DEPTH)
 
         if len(args) != c.arity():
             return e_z(c.name,
@@ -409,18 +396,7 @@ class Lambda:
         for pname, aval in zip(c.params, args):
             local[pname] = aval
 
-        try:
-            result = self.eval(c.body, local, depth + 1, ident=c.name)
-        except RecursionError:
-            # The interpreter's own stack ran out before EZR's ceiling
-            # did. That is still a halt, and it still has to be a
-            # refusal: a RecursionError escaping here breaks G1 from
-            # underneath. It is also the failure an anchored function
-            # is most likely to meet, because anchoring is precisely
-            # what removes the ceiling that would have stopped it
-            # first.
-            return e_z(c.name, "interpreter stack exhausted before the "
-                               "depth ceiling", Defect.UNBOUNDED)
+        result = self.eval(c.body, local, depth + 1, ident=c.name)
 
         # the chain rule: no more trusted than the weakest participant
         conf = chain([fp] + args + [result])
@@ -515,8 +491,8 @@ class Lambda:
 
         # PROGRAM CONSTANTS are Certain about their value.
         #
-        # A literal written in EZR source carries no uncertainty about
-        # WHAT IT IS. The author wrote 1; it is 1. Uncertainty in EZR
+        # A literal written in Ever source carries no uncertainty about
+        # WHAT IT IS. The author wrote 1; it is 1. Uncertainty in Ever
         # belongs to data arriving from outside and to whether functions
         # are correct -- never to what the program says about itself.
         #

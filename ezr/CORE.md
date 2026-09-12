@@ -8,6 +8,19 @@ authority. Nothing here was decided by preference.
 
 ---
 
+> **Which language this specifies.** This document is the forge's ratified
+> core — the language `7-forge/` arbitrated and `5-runtime-java/`
+> implements. It is *not* the language `ever run` executes today. The tree
+> now carries two lineages: this core, and the v4.10 surface specified by
+> `SEMANTICS.md` (statement `let x = v`, records, loops, indexing,
+> externs). They agree on the confidence algebra and split on the grammar.
+> `5-runtime-java/differential.py` measures the split exactly: 124
+> programs, 93 agreed, 31 diverged, every divergence being `let ... in`,
+> list literals, or the `len`/`head`/`tail` builtins. Read this file for
+> what the forge settled; read `SEMANTICS.md` for what runs.
+
+---
+
 ## 0. What this is, and what it is not
 
 EZR V3.0 shipped a working front end and no specification of it.

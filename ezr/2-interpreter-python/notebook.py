@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 """
-notebook.py — EZR / Tapestry, the notebook batch
+notebook.py — Ever / Tapestry, the notebook batch
 
 Twelve cells. Most of them wrong on purpose.
 
-Every cell states what SHOULD happen before EZR sees it, then EZR runs
-for real, and the two are compared. A cell where EZR produces the right
-answer for the wrong reason is scored as a miss, and a cell where EZR
+Every cell states what SHOULD happen before Ever sees it, then Ever runs
+for real, and the two are compared. A cell where Ever produces the right
+answer for the wrong reason is scored as a miss, and a cell where Ever
 refuses when refusing was correct is scored as a hit.
 
-The point is not to make EZR look good. The point is to find out where
+The point is not to make Ever look good. The point is to find out where
 it is wrong, so the refinement layer knows what it is refining.
 
 Codric Enterprise · Ricky (Dreid) · 2026
@@ -24,7 +24,7 @@ import time
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
-from ezr import (
+from ever import (
     E, State, Defect, Lang, e_z, e_val,
     E_CERTAIN, E_EXECUTE_FLOOR, E_INTAKE,
 )
@@ -46,8 +46,8 @@ class Cell:
     title: str
     kind: str                      # "synth" | "inspect"
     payload: Any
-    should: str                    # stated before EZR runs
-    check: Callable[[Any], bool]   # was EZR right?
+    should: str                    # stated before Ever runs
+    check: Callable[[Any], bool]   # was Ever right?
     lang: Optional[ELang] = None
 
     # filled in by the run
@@ -161,8 +161,8 @@ def build_cells() -> List[Cell]:
              check=lambda t: any("mutable default" in e.message for e in t.errors)
                          and any("eval" in e.message for e in t.errors)),
 
-        # ── 7. a spec EZR's grammar cannot express ──
-        # The original expectation here was mine and it was wrong. EZR
+        # ── 7. a spec Ever's grammar cannot express ──
+        # The original expectation here was mine and it was wrong. Ever
         # was asked for a function fitting 2,3,5,7 and it found one:
         # n + f(n-2). That satisfies the spec exactly. It is not prime
         # after n=4, but nothing in the spec said prime. The honest test
@@ -302,7 +302,7 @@ def main() -> int:
     con = open_archive()
 
     print("\n" + "=" * 74)
-    print("EZR — NOTEBOOK BATCH · 12 cells, most of them wrong on purpose")
+    print("EVER — NOTEBOOK BATCH · 12 cells, most of them wrong on purpose")
     print("=" * 74)
 
     for c in cells:
@@ -319,7 +319,7 @@ def main() -> int:
             c.detail = f"{type(exc).__name__}: {str(exc)[:70]}"
 
         mark = "\u2713" if c.hit else "\u2717"
-        print(f"   EZR   : {c.got}")
+        print(f"   Ever   : {c.got}")
         print(f"   detail : {c.detail}")
         print(f"   verdict: {mark} {'as expected' if c.hit else 'MISS'}"
               f"   ({c.ms} ms)")
@@ -353,7 +353,7 @@ def main() -> int:
 
     misses = [c for c in cells if not c.hit]
     if misses:
-        print("\n  MISSES — where EZR was wrong:\n")
+        print("\n  MISSES — where Ever was wrong:\n")
         for c in misses:
             print(f"    cell {c.n}: {c.title}")
             print(f"      expected : {c.should}")

@@ -1,4 +1,4 @@
-# EZR / Tapestry — services
+# Ever / Tapestry — services
 # Codric Enterprise · Ricky (Dreid) · 2026
 
 services:
@@ -7,59 +7,39 @@ services:
   # Java, which the bare build container could not.
   verify:
     build: .
-    image: codric/ezr:2.3
+    image: codric/ever:2.3
     command: ./run.sh
     volumes:
-      - ./archive:/ezr/archive
+      - ./archive:/ever/archive
 
   # The self-generating loop.
   evolve:
     build: .
-    image: codric/ezr:2.3
+    image: codric/ever:2.3
     command: python3 2-interpreter-python/vowels.py
     volumes:
-      - ./archive:/ezr/archive
-
-  # The forge: sixteen front ends, run to convergence. Writes its
-  # rulings to 7-forge/ratified.json and its record to ledger.json, so
-  # mount the directory if you want the result to survive the run.
-  forge:
-    build: .
-    image: codric/ezr:2.3
-    working_dir: /ezr/7-forge
-    command: python3 forge.py --reset --floor 250000
-    volumes:
-      - ./7-forge:/ezr/7-forge
-
-  # Re-emit GRAMMAR.ebnf from the parser's own rule table.
-  grammar:
-    build: .
-    image: codric/ezr:2.3
-    working_dir: /ezr/7-forge
-    command: python3 grammar_doc.py
-    volumes:
-      - ./7-forge:/ezr/7-forge
+      - ./archive:/ever/archive
 
   # The research team: conservation law, ratios, defect profile.
   research:
     build: .
-    image: codric/ezr:2.3
+    image: codric/ever:2.3
     command: python3 research.py
 
-  # Write and run EZR interactively.
+  # Write and run Ever interactively.
   shell:
     build: .
-    image: codric/ezr:2.3
+    image: codric/ever:2.3
     command: /bin/bash
     stdin_open: true
     tty: true
     volumes:
-      - .:/ezr
+      - .:/ever
 
   # The live interpreter, in a browser.
   live:
     build: .
-    image: codric/ezr:2.3
+    image: codric/ever:2.3
     command: python3 -m http.server 8088 --directory 6-interface-html
     ports:
       - "8088:8088"

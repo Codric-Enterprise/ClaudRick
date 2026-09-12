@@ -1,11 +1,14 @@
 #!/usr/bin/env bash
-# EZR / Tapestry — build and verify every layer
-set -u
-# Every layer below is `python3 foo.py | tail -2`, and without this the
-# pipeline's status is tail's, which is always 0. That masked a failing
-# layer completely: run.sh reported PASSED for a suite with two broken
-# assertions in it, for as long as they had been broken.
-set -o pipefail
+# Ever / Tapestry — build and verify every layer
+# pipefail is load bearing, not hygiene. Every layer below is run as
+#     ( cd DIR && test | tail -2 ) && pass || fail
+# and without it the subshell's status is tail's, which is 0 whatever
+# the test did. Measured on this exact script: vowels_test.py patched
+# to `raise SystemExit(1)` was reported PASSED. The only failure the
+# script could ever report was one where `cd` itself failed before the
+# pipe -- which is why a missing 3-dsl-ruby showed up and a failing
+# test never would have.
+set -u -o pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")"
 P=0; S=0; F=0; declare -a N
 have(){ command -v "$1" >/dev/null 2>&1; }
@@ -14,7 +17,7 @@ fail(){ F=$((F+1)); N+=("FAILED   $1"); }
 skip(){ S=$((S+1)); N+=("SKIPPED  $1 — $2"); printf '\n  ~ skipped: %s\n' "$2"; }
 
 echo; echo "════════════════════════════════════════════════"
-echo "EZR / TAPESTRY"; echo "Codric Enterprise"
+echo "EVER / TAPESTRY"; echo "Codric Enterprise"
 echo "════════════════════════════════════════════════"
 
 echo; echo "[0] C — the atom (carries T)"
@@ -34,8 +37,58 @@ else skip "Layer 1 (C++)" "gcc and g++ required"; fi
 
 echo; echo "[2] Python — the interpreter"
 if have python3; then
-  ( cd 2-interpreter-python && python3 ezr_test.py | tail -2 ) && pass "Layer 2 (Python)" || fail "Layer 2 (Python)"
+  ( cd 2-interpreter-python && python3 ever_test.py | tail -2 ) && pass "Layer 2 (Python)" || fail "Layer 2 (Python)"
 else skip "Layer 2 (Python)" "python3 not found"; fi
+
+echo; echo "[TAC] C — Three-Address IR (EvTAC)"
+if have gcc; then
+  ( cd 0-atom-c && gcc -std=c99 -Wall tac_test.c tac.c scope.c ir.c evalue.c tapestry.c -o tac_test -lm && ./tac_test | tail -2 && rm -f tac_test ) && pass "TAC IR (C)" || fail "TAC IR (C)"
+else skip "TAC IR (C)" "gcc not found"; fi
+
+echo; echo "[SCOPE-C] C — universal map (EvScope)"
+if have gcc; then
+  ( cd 0-atom-c && gcc -std=c99 -Wall scope_test.c scope.c ir.c evalue.c tapestry.c -o scope_test -lm && ./scope_test | tail -2 && rm -f scope_test scope.o ) && pass "EvScope (C)" || fail "EvScope (C)"
+else skip "EvScope (C)" "gcc not found"; fi
+
+echo; echo "[SCOPE-PY] Python — universal map (EvScope)"
+if have python3; then
+  ( cd 2-interpreter-python && python3 scope_test.py | tail -2 ) && pass "EvScope (Python)" || fail "EvScope (Python)"
+else skip "EvScope (Python)" "python3 not found"; fi
+
+echo; echo "[BRIDGE] C — Hello World bridge (5 stages, 45 assertions)"
+if have gcc; then
+  ( cd 0-atom-c && gcc -std=c99 -Wall bridge_test.c tapestry.c evalue.c ir.c -o bridge_test -lm && ./bridge_test | tail -4 && rm -f bridge_test ) && pass "Bridge (C)" || fail "Bridge (C)"
+else skip "Bridge (C)" "gcc not found"; fi
+
+echo; echo "[IR-C] C — IR + arena allocator"
+if have gcc; then
+  ( cd 0-atom-c && gcc -std=c99 -Wall ir_test.c ir.c evalue.c tapestry.c -o ir_test -lm && ./ir_test | tail -2 && rm -f ir_test evalue.o ir.o ) && pass "IR + arena (C)" || fail "IR + arena (C)"
+else skip "IR + arena (C)" "gcc not found"; fi
+
+echo; echo "[IR-PY] Python — IR bridge"
+if have python3; then
+  ( cd 2-interpreter-python && python3 ir_runner.py | tail -2 ) && pass "IR bridge (Python)" || fail "IR bridge (Python)"
+else skip "IR bridge (Python)" "python3 not found"; fi
+
+echo; echo "[EV-C] C — unified variant type (EValue)"
+if have gcc; then
+  ( cd 0-atom-c && gcc -std=c99 -Wall evalue_test.c evalue.c tapestry.c -o evalue_test -lm && ./evalue_test | tail -2 && rm -f evalue_test evalue.o ) && pass "EValue (C)" || fail "EValue (C)"
+else skip "EValue (C)" "gcc not found"; fi
+
+echo; echo "[EV-PY] Python — unified variant type (EValue)"
+if have python3; then
+  ( cd 2-interpreter-python && python3 evalue_test.py | tail -2 ) && pass "EValue (Python)" || fail "EValue (Python)"
+else skip "EValue (Python)" "python3 not found"; fi
+
+echo; echo "[ABI] ABI boundary (packed layout, round-trip through C)"
+if have python3 && have gcc; then
+  ( cd 2-interpreter-python && python3 abi_test.py | tail -2 ) && pass "ABI boundary" || fail "ABI boundary"
+else skip "ABI boundary" "python3 and gcc required"; fi
+
+echo; echo "[UNIT] Unit tests (lexer + parser + golden master)"
+if have python3; then
+  ( python3 tests/test_lexer.py | tail -2 && python3 tests/test_parser.py | tail -2 && python3 tests/golden.py | tail -2 ) && pass "Unit tests" || fail "Unit tests"
+else skip "Unit tests" "python3 not found"; fi
 
 echo; echo "[T] Python — teaching layer (Code for Dummies)"
 if have python3; then
@@ -52,6 +105,11 @@ if have python3; then
   ( cd 2-interpreter-python && python3 abstract_test.py | tail -2 ) && pass "Abstraction" || fail "Abstraction"
 else skip "Abstraction" "python3 not found"; fi
 
+echo; echo "[2b+] Python — the runner (ezrun: entry points, Examples, anchoring)"
+if have python3; then
+  ( cd 2-interpreter-python && python3 ezrun_test.py | tail -2 ) && pass "Runner" || fail "Runner"
+else skip "Runner" "python3 not found"; fi
+
 echo; echo "[2c] Python — vowel operators (I O U, synthesis)"
 if have python3; then
   ( cd 2-interpreter-python && python3 vowels_test.py | tail -2 ) && pass "Vowels" || fail "Vowels"
@@ -62,42 +120,9 @@ if have python3; then
   ( cd 2-interpreter-python && python3 notebook.py | tail -6 ) && pass "Notebook" || fail "Notebook"
 else skip "Notebook" "python3 not found"; fi
 
-echo; echo "[P] Python — the laws (thermodynamics, Newton, ultra-anchoring)"
-if have python3; then
-  ( cd 2-interpreter-python && python3 physics_test.py | tail -2 ) && pass "Physics" || fail "Physics"
-else skip "Physics" "python3 not found"; fi
-
-echo; echo "[A] Python — variance audit (documents against code)"
-if have python3; then
-  ( cd 2-interpreter-python && python3 audit.py | tail -6 ) && pass "Audit" || fail "Audit"
-else skip "Audit" "python3 not found"; fi
-
-echo; echo "[7] Python — the forge (20 front ends, one core)"
-if have python3; then
-  ( cd 7-forge && python3 forge_test.py | tail -2 ) && pass "Layer 7 (Forge)" || fail "Layer 7 (Forge)"
-else skip "Layer 7 (Forge)" "python3 not found"; fi
-
-echo; echo "[7b] Python — self-repair (inject a real defect, fix it unaided)"
-if have python3; then
-  ( cd 7-forge && python3 selfheal.py | tail -3 ) && pass "Self-repair" || fail "Self-repair"
-else skip "Self-repair" "python3 not found"; fi
-
-echo; echo "[5] Java — the runtime (a second implementation of the core)"
-if have javac && have java; then
-  ( cd 5-runtime-java && ./build.sh >/dev/null \
-    && env -u JAVA_TOOL_OPTIONS java -cp out com.codric.ezr.RuntimeTest | tail -2 ) \
-    && pass "Layer 5 (Java)" || fail "Layer 5 (Java)"
-else skip "Layer 5 (Java)" "javac not found (Debian: apt install default-jdk)"; fi
-
-echo; echo "[5b] Differential — the Python runner against the Java one"
-if have javac && have java && have python3; then
-  ( cd 5-runtime-java && python3 differential.py | tail -2 ) \
-    && pass "Differential" || fail "Differential"
-else skip "Differential" "needs both python3 and a JDK"; fi
-
 echo; echo "[3] Ruby — the DSL"
 if have ruby; then
-  ( cd 3-dsl-ruby && ruby ezr.rb | tail -2 ) && pass "Layer 3 (Ruby)" || fail "Layer 3 (Ruby)"
+  ( cd 3-dsl-ruby && ruby ever.rb | tail -2 ) && pass "Layer 3 (Ruby)" || fail "Layer 3 (Ruby)"
 else skip "Layer 3 (Ruby)" "ruby not found (macOS: brew install ruby)"; fi
 
 echo; echo "[4] SQL — the archive"

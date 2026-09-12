@@ -1,5 +1,5 @@
 -- ============================================================
--- archive.sql — EZR / Tapestry, Layer 4 (SQL)
+-- archive.sql — Ever / Tapestry, Layer 4 (SQL)
 --
 -- The archive. The corpus. C² — the archive correlating its own
 -- correlations — requires persistence, so persistence lives here.
@@ -21,13 +21,13 @@ PRAGMA foreign_keys = ON;
 -- impossible rather than merely discouraged.
 -- ─────────────────────────────────────────────
 
-CREATE TABLE IF NOT EXISTS ezr_constant (
+CREATE TABLE IF NOT EXISTS ever_constant (
     name       TEXT PRIMARY KEY,
     value      INTEGER NOT NULL,
     derivation TEXT    NOT NULL
 );
 
-INSERT OR REPLACE INTO ezr_constant (name, value, derivation) VALUES
+INSERT OR REPLACE INTO ever_constant (name, value, derivation) VALUES
     ('E_ZERO',               0,    'Z. zero-absolute.'),
     ('E_CERTAIN',            256,  '4^4. the states of a byte.'),
     ('E_EXECUTE_FLOOR',      128,  '256 / 2'),
@@ -42,10 +42,10 @@ INSERT OR REPLACE INTO ezr_constant (name, value, derivation) VALUES
 -- Vocabularies
 -- ─────────────────────────────────────────────
 
-CREATE TABLE IF NOT EXISTS ezr_state (
+CREATE TABLE IF NOT EXISTS ever_state (
     id INTEGER PRIMARY KEY, name TEXT NOT NULL UNIQUE, note TEXT NOT NULL);
 
-INSERT OR REPLACE INTO ezr_state (id, name, note) VALUES
+INSERT OR REPLACE INTO ever_state (id, name, note) VALUES
     (0,'Z','unbound. unknown. contagious.'),
     (1,'Confident','bound, trusted 1..255'),
     (2,'Certain','bound, verified at 256. earned only.'),
@@ -59,10 +59,10 @@ INSERT OR REPLACE INTO ezr_state (id, name, note) VALUES
 
 -- The five ways a binding fails. Every structurally checkable error in
 -- every language reduces to one of these.
-CREATE TABLE IF NOT EXISTS ezr_defect (
+CREATE TABLE IF NOT EXISTS ever_defect (
     id INTEGER PRIMARY KEY, name TEXT NOT NULL UNIQUE, note TEXT NOT NULL);
 
-INSERT OR REPLACE INTO ezr_defect (id, name, note) VALUES
+INSERT OR REPLACE INTO ever_defect (id, name, note) VALUES
     (0,'none','the binding stands'),
     (1,'unbound','name points at nothing'),
     (2,'misbound','name points at the wrong kind of thing'),
@@ -70,14 +70,14 @@ INSERT OR REPLACE INTO ezr_defect (id, name, note) VALUES
     (4,'overbound','many names, one thing, no ordering'),
     (5,'orphaned','thing outlives every name that reaches it');
 
-CREATE TABLE IF NOT EXISTS ezr_lang (
+CREATE TABLE IF NOT EXISTS ever_lang (
     id INTEGER PRIMARY KEY, name TEXT NOT NULL UNIQUE,
     layer INTEGER, role TEXT NOT NULL);
 
-INSERT OR REPLACE INTO ezr_lang (id, name, layer, role) VALUES
+INSERT OR REPLACE INTO ever_lang (id, name, layer, role) VALUES
     (0,'C',0,'the atom. memory. the thread struct.'),
     (1,'C++',1,'the phase engine. corroboration and conflict.'),
-    (2,'Python',2,'the interpreter. EZR executes here.'),
+    (2,'Python',2,'the interpreter. Ever executes here.'),
     (3,'Ruby',3,'the DSL. the writable surface.'),
     (4,'SQL',4,'the archive. the corpus. persistence.'),
     (5,'Java',5,'the runtime. guardrails that travel.'),
@@ -86,12 +86,12 @@ INSERT OR REPLACE INTO ezr_lang (id, name, layer, role) VALUES
     (8,'Go',NULL,'assimilation target'),
     (9,'TypeScript',NULL,'assimilation target'),
     (10,'Swift',NULL,'assimilation target'),
-    (11,'EZR',NULL,'native');
+    (11,'Ever',NULL,'native');
 
-CREATE TABLE IF NOT EXISTS ezr_type (
+CREATE TABLE IF NOT EXISTS ever_type (
     id INTEGER PRIMARY KEY, name TEXT NOT NULL UNIQUE);
 
-INSERT OR REPLACE INTO ezr_type (id, name) VALUES
+INSERT OR REPLACE INTO ever_type (id, name) VALUES
     (0,'void'),(1,'int'),(2,'real'),(3,'text'),
     (4,'bool'),(5,'list'),(6,'foreign');
 
@@ -104,7 +104,7 @@ CREATE TABLE IF NOT EXISTS run (
     started_ms INTEGER NOT NULL,
     ended_ms   INTEGER,
     label      TEXT NOT NULL DEFAULT '',
-    host_lang  INTEGER REFERENCES ezr_lang(id)
+    host_lang  INTEGER REFERENCES ever_lang(id)
 );
 
 -- ─────────────────────────────────────────────
@@ -113,10 +113,10 @@ CREATE TABLE IF NOT EXISTS run (
 
 CREATE TABLE IF NOT EXISTS thread (
     archive_id     INTEGER PRIMARY KEY AUTOINCREMENT,
-    state_id       INTEGER NOT NULL REFERENCES ezr_state(id),
-    type_id        INTEGER NOT NULL REFERENCES ezr_type(id),
-    lang_id        INTEGER NOT NULL REFERENCES ezr_lang(id),
-    defect_id      INTEGER NOT NULL DEFAULT 0 REFERENCES ezr_defect(id),
+    state_id       INTEGER NOT NULL REFERENCES ever_state(id),
+    type_id        INTEGER NOT NULL REFERENCES ever_type(id),
+    lang_id        INTEGER NOT NULL REFERENCES ever_lang(id),
+    defect_id      INTEGER NOT NULL DEFAULT 0 REFERENCES ever_defect(id),
 
     confidence     INTEGER NOT NULL CHECK (confidence BETWEEN 0 AND 256),
     lo             INTEGER NOT NULL CHECK (lo BETWEEN 0 AND 256),
@@ -166,8 +166,8 @@ CREATE TABLE IF NOT EXISTS crossing (
     crossing_id INTEGER PRIMARY KEY AUTOINCREMENT,
     anchor_id   INTEGER REFERENCES anchor(anchor_id),
     thread_id   INTEGER NOT NULL REFERENCES thread(archive_id),
-    from_lang   INTEGER NOT NULL REFERENCES ezr_lang(id),
-    to_lang     INTEGER NOT NULL REFERENCES ezr_lang(id),
+    from_lang   INTEGER NOT NULL REFERENCES ever_lang(id),
+    to_lang     INTEGER NOT NULL REFERENCES ever_lang(id),
     conf_before INTEGER NOT NULL,
     conf_after  INTEGER NOT NULL,
     val_before  TEXT,
@@ -185,7 +185,7 @@ CREATE TABLE IF NOT EXISTS finding (
     finding_id INTEGER PRIMARY KEY AUTOINCREMENT,
     thread_id  INTEGER NOT NULL REFERENCES thread(archive_id),
     kind       TEXT NOT NULL CHECK (kind IN ('error','pattern')),
-    defect_id  INTEGER NOT NULL DEFAULT 0 REFERENCES ezr_defect(id),
+    defect_id  INTEGER NOT NULL DEFAULT 0 REFERENCES ever_defect(id),
     message    TEXT NOT NULL,
     line_no    INTEGER NOT NULL DEFAULT 0,
     weight     INTEGER NOT NULL DEFAULT 0,
@@ -198,8 +198,8 @@ CREATE INDEX IF NOT EXISTS idx_finding_defect  ON finding(defect_id);
 CREATE TABLE IF NOT EXISTS teaching (
     teaching_id     INTEGER PRIMARY KEY AUTOINCREMENT,
     error_message   TEXT    NOT NULL,
-    lang_id         INTEGER NOT NULL REFERENCES ezr_lang(id),
-    defect_id       INTEGER NOT NULL DEFAULT 0 REFERENCES ezr_defect(id),
+    lang_id         INTEGER NOT NULL REFERENCES ever_lang(id),
+    defect_id       INTEGER NOT NULL DEFAULT 0 REFERENCES ever_defect(id),
     fix_template    TEXT    NOT NULL,
     applied_count   INTEGER NOT NULL DEFAULT 0,
     success_count   INTEGER NOT NULL DEFAULT 0,
@@ -246,26 +246,26 @@ SELECT
     t.ident, t.val_text AS value, t.confidence, t.lo, t.hi,
     (t.hi - t.lo) AS width,
     CASE
-        WHEN (t.hi - t.lo) > (SELECT value FROM ezr_constant
+        WHEN (t.hi - t.lo) > (SELECT value FROM ever_constant
                               WHERE name='E_PI_WIDTH_WARN') THEN 'APPROACHING_Z'
-        WHEN (t.hi - t.lo) > (SELECT value FROM ezr_constant
+        WHEN (t.hi - t.lo) > (SELECT value FROM ever_constant
                               WHERE name='E_PI_WIDTH_ENUMERATE') THEN 'ENUMERATE'
         ELSE 'ACCEPTABLE'
     END AS pi_status,
     CASE WHEN s.name IN ('Z','EError','Absent') THEN 0
          WHEN t.confidence > 0 THEN 1 ELSE 0 END AS cleared,
     CASE WHEN s.name IN ('Z','EError','Absent') THEN 0
-         WHEN t.confidence >= (SELECT value FROM ezr_constant
+         WHEN t.confidence >= (SELECT value FROM ever_constant
                                WHERE name='E_EXECUTE_FLOOR') THEN 1
          ELSE 0 END AS can_execute,
     t.anchor_id,
     CASE WHEN t.anchor_id > 0 THEN 1 ELSE 0 END AS anchored,
     t.error_distance, t.generation, t.ascend_points, t.reason, t.run_id
 FROM thread t
-JOIN ezr_state  s ON s.id = t.state_id
-JOIN ezr_type   y ON y.id = t.type_id
-JOIN ezr_lang   l ON l.id = t.lang_id
-JOIN ezr_defect d ON d.id = t.defect_id;
+JOIN ever_state  s ON s.id = t.state_id
+JOIN ever_type   y ON y.id = t.type_id
+JOIN ever_lang   l ON l.id = t.lang_id
+JOIN ever_defect d ON d.id = t.defect_id;
 
 -- Continuity audit: did an anchored thread keep its value and its
 -- confidence across every language it crossed?
@@ -289,8 +289,8 @@ SELECT
     END AS verdict
 FROM anchor a
 LEFT JOIN crossing c  ON c.anchor_id = a.anchor_id
-LEFT JOIN ezr_lang lf ON lf.id = c.from_lang
-LEFT JOIN ezr_lang lt ON lt.id = c.to_lang
+LEFT JOIN ever_lang lf ON lf.id = c.from_lang
+LEFT JOIN ever_lang lt ON lt.id = c.to_lang
 GROUP BY a.anchor_id;
 
 -- Which of the five defects dominate, and in which language
@@ -300,8 +300,8 @@ SELECT
     COUNT(*) AS occurrences,
     ROUND(AVG(t.confidence),1) AS avg_confidence_at_failure
 FROM thread t
-JOIN ezr_defect d ON d.id = t.defect_id
-JOIN ezr_lang   l ON l.id = t.lang_id
+JOIN ever_defect d ON d.id = t.defect_id
+JOIN ever_lang   l ON l.id = t.lang_id
 WHERE t.defect_id <> 0
 GROUP BY d.name, l.name
 ORDER BY occurrences DESC;
@@ -315,8 +315,8 @@ SELECT
         AS teaching_status
 FROM finding f
 JOIN thread t     ON t.archive_id = f.thread_id
-JOIN ezr_lang l  ON l.id = t.lang_id
-JOIN ezr_defect d ON d.id = f.defect_id
+JOIN ever_lang l  ON l.id = t.lang_id
+JOIN ever_defect d ON d.id = f.defect_id
 LEFT JOIN teaching te
        ON te.error_message = f.message AND te.lang_id = t.lang_id
 WHERE f.kind = 'error'
@@ -332,8 +332,8 @@ SELECT
     ROUND(100.0*SUM(CASE WHEN s.name='Z' THEN 1 ELSE 0 END)/COUNT(*),1)
         AS z_percent
 FROM thread t
-JOIN ezr_lang  l ON l.id = t.lang_id
-JOIN ezr_state s ON s.id = t.state_id
+JOIN ever_lang  l ON l.id = t.lang_id
+JOIN ever_state s ON s.id = t.state_id
 GROUP BY l.name
 ORDER BY avg_confidence DESC;
 
@@ -341,9 +341,9 @@ CREATE VIEW IF NOT EXISTS v_boundary AS
 SELECT t.ident, l.name AS lang, d.name AS defect,
        t.lo AS failed_at, t.reason, t.born_ms, t.run_id
 FROM thread t
-JOIN ezr_state  s ON s.id = t.state_id
-JOIN ezr_lang   l ON l.id = t.lang_id
-JOIN ezr_defect d ON d.id = t.defect_id
+JOIN ever_state  s ON s.id = t.state_id
+JOIN ever_lang   l ON l.id = t.lang_id
+JOIN ever_defect d ON d.id = t.defect_id
 WHERE s.name = 'EError'
 ORDER BY t.born_ms DESC;
 
@@ -378,12 +378,12 @@ SELECT r.run_id, r.label, r.started_ms,
        (SELECT COUNT(*) FROM teaching) AS teachings_known
 FROM run r
 LEFT JOIN thread t     ON t.run_id = r.run_id
-LEFT JOIN ezr_state s ON s.id = t.state_id
+LEFT JOIN ever_state s ON s.id = t.state_id
 GROUP BY r.run_id
 ORDER BY r.run_id;
 
 -- ============================================================
--- Triggers. EZR's invariants, enforced by the database so no layer
+-- Triggers. Ever's invariants, enforced by the database so no layer
 -- above can violate them even by accident.
 -- ============================================================
 
@@ -400,7 +400,7 @@ BEGIN SELECT RAISE(ABORT,'Certain must be exactly 256'); END;
 CREATE TRIGGER IF NOT EXISTS trg_emulate_ceiling
 BEFORE INSERT ON thread FOR EACH ROW
 WHEN NEW.state_id = 5 AND NEW.error_distance >
-     (SELECT value FROM ezr_constant WHERE name='E_EMULATE_CEILING')
+     (SELECT value FROM ever_constant WHERE name='E_EMULATE_CEILING')
 BEGIN SELECT RAISE(ABORT,'error distance exceeds emulate ceiling'); END;
 
 -- An anchor on an uncleared binding propagates a lie into every language
@@ -414,7 +414,7 @@ BEGIN SELECT RAISE(ABORT,'cannot anchor an uncleared binding'); END;
 CREATE TRIGGER IF NOT EXISTS trg_ascend_points_bound
 BEFORE INSERT ON thread FOR EACH ROW
 WHEN NEW.ascend_points >
-     (SELECT value FROM ezr_constant WHERE name='E_ASCEND_POINTS')
+     (SELECT value FROM ever_constant WHERE name='E_ASCEND_POINTS')
 BEGIN SELECT RAISE(ABORT,'ascend points exceed the required count'); END;
 
 -- An anchored crossing that loses confidence is a broken anchor.

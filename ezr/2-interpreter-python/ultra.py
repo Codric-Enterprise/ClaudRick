@@ -39,7 +39,7 @@ import threading
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
-from ezr import E, E_CERTAIN, Defect, State, e_z
+from ever import E, E_CERTAIN, Defect, State, e_z
 from physics import Subsystem, Violation, entropy, inertia
 
 #: Reserved stack for a provisioned call. Each EZR frame costs several

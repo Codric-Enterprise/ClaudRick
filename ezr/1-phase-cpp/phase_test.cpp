@@ -1,5 +1,5 @@
 /*
- * phase_test.cpp — EZR / Tapestry Layer 1 verification
+ * phase_test.cpp — Ever / Tapestry Layer 1 verification
  */
 
 #include "phase.hpp"

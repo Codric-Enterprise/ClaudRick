@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""ezr_test.py — EZR / Tapestry interpreter verification."""
+"""ever_test.py — Ever / Tapestry interpreter verification."""
 
-from ezr import (
-    EZR, E, Lang, State, Defect,
+from ever import (
+    Ever, E, Lang, State, Defect,
     a_any, a_anchor, a_assimilate, a_ascend, a_apply2all, a_autodidact,
     e_z, e_val, e_equiv, combine, excel,
     E_CERTAIN, E_ZERO, E_EXECUTE_FLOOR, E_PI_WIDTH_WARN,
@@ -20,7 +20,7 @@ def ok(name, cond):
         failed += 1; print(f"  \u2717 {name}")
 
 
-print("\n=== EZR / Tapestry — the interpreter ===\n")
+print("\n=== Ever / Tapestry — the interpreter ===\n")
 
 print("Constants agree with the C atom")
 ok("Certain is 256",          E_CERTAIN == 256)
@@ -136,11 +136,11 @@ ok("150 approaching Z",       e_equiv("s", 50, 200).pi_status() == "APPROACHING_
 ok("reversed corrected",      e_equiv("s", 200, 50).lo == 50)
 
 print("\nPrograms execute")
-p1 = EZR().run('let x = 10\nlet y = 3\never z = x * y\nshow z')
+p1 = Ever().run('let x = 10\nlet y = 3\never z = x * y\nshow z')
 ok("arithmetic over program constants executes",
    any("z = 30" in o for o in p1.output))
 
-p2 = EZR().run('''
+p2 = Ever().run('''
 let x = 200
 ascend x by 125
 ascend x by 130
@@ -153,11 +153,11 @@ ok("ascended past the floor",
    any(int(o.split("[")[1].split("/")[0]) >= 128
        for o in p2.output if "[" in o))
 
-p3 = EZR().run('z secret "not provided"\never leak = secret + 1\nshow leak')
+p3 = Ever().run('z secret "not provided"\never leak = secret + 1\nshow leak')
 ok("Z contagion in a program", any("Z" in o for o in p3.output))
 ok("reason names the binding", any("secret" in o for o in p3.output))
 
-p4 = EZR().run('''
+p4 = Ever().run('''
 anchor total = 500
 assimilate total to RUST
 assimilate total to SWIFT
@@ -168,7 +168,7 @@ ok("anchored constant crosses losslessly",
    any("256/256" in o for o in p4.output))
 ok("anchor mark shown",        any("\u2693" in o for o in p4.output))
 
-p4b = EZR().run('''
+p4b = Ever().run('''
 let loose = 500
 assimilate loose to RUST
 assimilate loose to SWIFT
@@ -178,20 +178,20 @@ show loose
 ok("unanchored drifts one per hop",
    any("253/256" in o for o in p4b.output))
 
-p5 = EZR().run('z sensor "not read"\nexpect sensor >= 200\nshow sensor')
+p5 = Ever().run('z sensor "not read"\nexpect sensor >= 200\nshow sensor')
 ok("expect blocks on unknown data", p5.blocked > 0)
 ok("blocked reported",         any("BLOCKED" in o for o in p5.output))
-p5b = EZR().run('let a = 100\nexpect a >= 200\nshow a')
+p5b = Ever().run('let a = 100\nexpect a >= 200\nshow a')
 ok("a program constant passes the gate", p5b.blocked == 0)
 
-p6 = EZR().run('let q = 5\nshow nosuch')
+p6 = Ever().run('let q = 5\nshow nosuch')
 ok("unbound name reported",    any("never bound" in o for o in p6.output))
 
-p7 = EZR().run('let x = 1\nthis is not ever')
+p7 = Ever().run('let x = 1\nthis is not ever')
 ok("parse error reported",     any("cannot parse" in o for o in p7.output))
 
 print("\nArchive keeps what failed")
-p8 = EZR().run('z a "one"\nz b "two"\nlet c = 5')
+p8 = Ever().run('z a "one"\nz b "two"\nlet c = 5')
 ok("archive holds the Zs",     len(p8.archive) == 2)
 ok("cleared not archived",     all(not x.is_cleared for x in p8.archive))
 

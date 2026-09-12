@@ -1,5 +1,5 @@
 /*
- * tapestry.h — EZR / Tapestry, the atom
+ * tapestry.h — Ever / Tapestry, the atom
  *
  * The E-particle, restored to E<T>.
  *
@@ -20,6 +20,30 @@
 
 #include <stdint.h>
 #include <stddef.h>
+
+/* ─────────────────────────────────────────────
+ * ABI BOUNDARY
+ *
+ * Every field in e_particle has an explicit size and an explicit offset.
+ * Implicit compiler padding is disabled. Static assertions enforce the
+ * layout at compile time so the Python ctypes layer, the C++ phase
+ * engine, and the C atom stay in agreement whether they are compiled by
+ * gcc, clang, or MSVC.
+ *
+ * The layout is the contract. The assertions are the proof.
+ * ───────────────────────────────────────────── */
+
+#if defined(_MSC_VER)
+  #define E_PACK_BEGIN __pragma(pack(push, 1))
+  #define E_PACK_END   __pragma(pack(pop))
+#elif defined(__GNUC__) || defined(__clang__)
+  #define E_PACK_BEGIN _Pragma("pack(push, 1)")
+  #define E_PACK_END   _Pragma("pack(pop)")
+#else
+  #define E_PACK_BEGIN
+  #define E_PACK_END
+  #warning "Unknown compiler: ABI packing not guaranteed"
+#endif
 
 /* ─────────────────────────────────────────────
  * The scale. Unchanged from v1 — these are load bearing.
@@ -64,7 +88,7 @@ typedef enum {
     E_DEFECT_ORPHANED   = 5   /* thing outlives every name reaching it */
 } e_defect;
 
-/* Source language. EZR accepts all of them; Assimilate moves between. */
+/* Source language. Ever accepts all of them; Assimilate moves between. */
 typedef enum {
     E_LANG_C = 0, E_LANG_CPP = 1, E_LANG_PYTHON = 2, E_LANG_RUBY = 3,
     E_LANG_SQL = 4, E_LANG_JAVA = 5, E_LANG_HTML = 6, E_LANG_RUST = 7,
@@ -85,37 +109,75 @@ typedef enum {
 #define E_REASON_MAX 128
 #define E_TEXT_MAX   192
 
+E_PACK_BEGIN
 typedef struct {
-    /* ── what it holds ── the T that v1 dropped ── */
-    e_type   type;
+    /* ── what it holds ── the T that v1 dropped ──
+     * All enum fields stored as fixed-width integers so the layout is
+     * identical on 32-bit and 64-bit targets. */
+    int32_t  type;                   /* e_type,    4 bytes @ 0   */
+    int32_t  _pad0;                  /* explicit,  4 bytes @ 4   */
     union {
         int64_t as_int;
         double  as_real;
-        int     as_bool;
-        int32_t as_ref;              /* index into a list pool */
-    } value;
-    char     text[E_TEXT_MAX];       /* inline payload for TEXT/FOREIGN */
+        int32_t as_bool;
+        int32_t as_ref;
+    } value;                         /* union,     8 bytes @ 8   */
+    char     text[E_TEXT_MAX];       /* TEXT/FOREIGN, 192 @ 16   */
 
     /* ── how much it is trusted ── */
-    e_state  state;
-    e_defect defect;
-    int16_t  confidence;             /* 0..256 */
-    int16_t  lo, hi;                 /* Equivalence bounds */
+    int32_t  state;                  /* e_state,   4 bytes @ 208 */
+    int32_t  defect;                 /* e_defect,  4 bytes @ 212 */
+    int16_t  confidence;             /* 0..256,    2 bytes @ 216 */
+    int16_t  lo;                     /* Equiv lo,  2 bytes @ 218 */
+    int16_t  hi;                     /* Equiv hi,  2 bytes @ 220 */
+    int16_t  _pad1;                  /* explicit,  2 bytes @ 222 */
 
     /* ── where it came from ── */
-    e_lang   lang;
-    uint8_t  error_distance;
-    uint8_t  generation;
-    uint8_t  ascend_points;          /* aligned evidence toward a rise */
+    int32_t  lang;                   /* e_lang,    4 bytes @ 224 */
+    uint8_t  error_distance;         /*            1 byte  @ 228 */
+    uint8_t  generation;             /*            1 byte  @ 229 */
+    uint8_t  ascend_points;          /*            1 byte  @ 230 */
+    uint8_t  _pad2;                  /* explicit,  1 byte  @ 231 */
 
     /* ── the anchor: identity that survives translation ── */
-    uint32_t anchor_id;              /* 0 = unanchored */
-
-    int32_t  archive_id;
-    int64_t  born_ms;
-    char     ident[E_IDENT_MAX];
-    char     reason[E_REASON_MAX];
+    uint32_t anchor_id;              /* 0=unanchored, 4 @ 232    */
+    int32_t  archive_id;             /*            4 bytes @ 236 */
+    int64_t  born_ms;                /*            8 bytes @ 240 */
+    char     ident[E_IDENT_MAX];     /*           64 bytes @ 248 */
+    char     reason[E_REASON_MAX];   /*          128 bytes @ 312 */
+                                     /* total:         440 @ 440 */
 } e_particle;
+E_PACK_END
+
+/* ─────────────────────────────────────────────
+ * Static layout assertions: the contract, checked at compile time.
+ * If any of these fail, a field moved and the ABI is broken.
+ * Fix the struct above; never adjust the numbers below.
+ * ───────────────────────────────────────────── */
+
+/* E_LAYOUT_ASSERT: a compile-time check compatible with C89, C99, and
+ * C11. Produces a readable error when a field has moved:
+ *   error: size of array 'e_layout_check_N' is negative
+ * If you see that, a field shifted and the ABI is broken.
+ * Fix the struct definition; never adjust the numbers here. */
+#define E_LAYOUT_ASSERT(tag, expr) \
+    typedef char e_layout_check_##tag[(expr) ? 1 : -1]
+
+E_LAYOUT_ASSERT(size,       sizeof(e_particle)             == 440);
+E_LAYOUT_ASSERT(type,       offsetof(e_particle, type)     ==   0);
+E_LAYOUT_ASSERT(value,      offsetof(e_particle, value)    ==   8);
+E_LAYOUT_ASSERT(text,       offsetof(e_particle, text)     ==  16);
+E_LAYOUT_ASSERT(state,      offsetof(e_particle, state)    == 208);
+E_LAYOUT_ASSERT(defect,     offsetof(e_particle, defect)   == 212);
+E_LAYOUT_ASSERT(confidence, offsetof(e_particle, confidence)== 216);
+E_LAYOUT_ASSERT(lo,         offsetof(e_particle, lo)       == 218);
+E_LAYOUT_ASSERT(hi,         offsetof(e_particle, hi)       == 220);
+E_LAYOUT_ASSERT(lang,       offsetof(e_particle, lang)     == 224);
+E_LAYOUT_ASSERT(anchor_id,  offsetof(e_particle, anchor_id)== 232);
+E_LAYOUT_ASSERT(archive_id, offsetof(e_particle, archive_id)==236);
+E_LAYOUT_ASSERT(born_ms,    offsetof(e_particle, born_ms)  == 240);
+E_LAYOUT_ASSERT(ident,      offsetof(e_particle, ident)    == 248);
+E_LAYOUT_ASSERT(reason,     offsetof(e_particle, reason)   == 312);
 
 /* ─────────────────────────────────────────────
  * Constructors

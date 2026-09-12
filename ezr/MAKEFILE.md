@@ -1,4 +1,4 @@
-# Running EZR in the container
+# Running Ever in the container
 
 ```bash
 # build and verify every layer, including Ruby and Java
@@ -10,7 +10,7 @@ docker compose run --rm evolve
 # the research team: conservation law, ratios, defect profile
 docker compose run --rm research
 
-# the live interpreter at http://localhost:8088/ezr-live.html
+# the live interpreter at http://localhost:8088/ever-live.html
 docker compose up live
 
 # a shell inside the image

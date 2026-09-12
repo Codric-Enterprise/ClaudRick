@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-research.py — EZR / Tapestry, the research team
+research.py — Ever / Tapestry, the research team
 
 Four analysts, run over the whole archive of errors and successes:
 
@@ -53,10 +53,10 @@ def excel(a: int, b: int) -> int:
 
 
 class Thermo:
-    """First Law, applied to EZR.
+    """First Law, applied to Ever.
 
     Energy is neither created nor destroyed, only transformed. The
-    equivalent statement for EZR is that CONFIDENCE IS NOT THE CONSERVED
+    equivalent statement for Ever is that CONFIDENCE IS NOT THE CONSERVED
     QUANTITY — UNCERTAINTY IS, and it combines multiplicatively:
 
         u_result = u_a * u_b
@@ -139,10 +139,10 @@ LAYERS = [
     ("1-phase-cpp/phase.hpp",            ELang.CPP,    "phase header"),
     ("1-phase-cpp/phase.cpp",            ELang.CPP,    "phase engine"),
     ("1-phase-cpp/phase_test.cpp",       ELang.CPP,    "phase test"),
-    ("2-interpreter-python/ezr.py",     ELang.PYTHON, "interpreter"),
-    ("2-interpreter-python/ezr_test.py", ELang.PYTHON, "interpreter test"),
+    ("2-interpreter-python/ever.py",     ELang.PYTHON, "interpreter"),
+    ("2-interpreter-python/ever_test.py", ELang.PYTHON, "interpreter test"),
     ("2-interpreter-python/checker.py",  ELang.PYTHON, "checker"),
-    ("3-dsl-ruby/ezr.rb",               ELang.RUBY,   "ruby DSL"),
+    ("3-dsl-ruby/ever.rb",               ELang.RUBY,   "ruby DSL"),
     ("4-archive-sql/archive.sql",        ELang.SQL,    "sql archive"),
     ("4-archive-sql/archive_test.py",    ELang.PYTHON, "archive test"),
 ]
@@ -187,7 +187,7 @@ def gather() -> List[Observation]:
 # ═════════════════════════════════════════════
 
 class Ratio:
-    """phi is EZR's output equalizer. The honest question is whether the
+    """phi is Ever's output equalizer. The honest question is whether the
     corpus actually sits near it, or whether that is decoration.
 
     A ratio is 'at phi' if it lands within 5% of 1.618.
@@ -220,7 +220,7 @@ def rule(ch="\u2500", n=66):
 
 def main() -> int:
     print("\n" + "=" * 70)
-    print("EZR / TAPESTRY — RESEARCH TEAM")
+    print("EVER / TAPESTRY — RESEARCH TEAM")
     print("The archive weighed against the ratio, and the First Law")
     print("=" * 70)
 
@@ -230,7 +230,7 @@ def main() -> int:
     print(f"  Excel vs multiplicative uncertainty : {hits}/{total} exact")
     print(f"  Z absorbs under multiplication      : {Thermo.z_absorbs()}")
     print()
-    print("  First Law for EZR:")
+    print("  First Law for Ever:")
     print("    confidence is NOT conserved. uncertainty is, and it")
     print("    multiplies:   u_result = u_a * u_b")
     print()
@@ -262,7 +262,7 @@ def main() -> int:
 
     # ── CORPUS ──
     obs = gather()
-    print("\n\u25b8 CORPUS — every layer, inspected by EZR itself\n")
+    print("\n\u25b8 CORPUS — every layer, inspected by Ever itself\n")
     print(f"  {'layer':<20}{'lang':<9}{'conf':>6}{'err':>6}{'ok':>6}")
     rule()
     for o in obs:
