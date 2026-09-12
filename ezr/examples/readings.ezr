@@ -1,0 +1,45 @@
+# readings.ezr — a summary over a list of sensor readings.
+#
+#   python3 ../2-interpreter-python/ezrun.py ../examples/readings.ezr
+#   cd ../5-runtime-java && ./ezr ../examples/readings.ezr
+#
+# Two things worth watching.
+#
+# Every line `show` prints carries its own confidence, because in EZR
+# confidence is part of the value rather than something a logger adds.
+# These all read 256/256: the readings are program constants, so there is
+# nothing uncertain about what they say.
+#
+# And `summary` never checks for an empty list. It does not need to. The
+# lets run in order, so the mean is reached first and 0 / 0 refuses there:
+#
+#   --call 'summary([])'   Z(misbound) - division by zero     exit 1
+#   --call 'biggest([])'   Z(unbound) - tail of an empty list exit 1
+#   --call 'total([])'     0  @ 256/256                       exit 0
+#
+# Three different answers to "what about nothing", each correct. The sum
+# of no readings really is 0. The largest of none is not a number, and
+# EZR says so rather than crashing or quietly handing back a zero that
+# would then be averaged into somebody's report.
+
+def total(xs) = if len(xs) == 0 then 0
+                else head(xs) + total(tail(xs))
+
+def biggest(xs) = if len(xs) == 1 then head(xs)
+                  else let rest = biggest(tail(xs)) in
+                       if head(xs) > rest then head(xs) else rest
+
+def smallest(xs) = if len(xs) == 1 then head(xs)
+                   else let rest = smallest(tail(xs)) in
+                        if head(xs) < rest then head(xs) else rest
+
+# `let` earns its keep here: the count and the sum are each computed once
+# and then reused for the mean, rather than walking the list a third time.
+def summary(xs) = let n  = show(len(xs))      in
+                  let s  = show(total(xs))    in
+                  let m  = show(s / n)        in
+                  let hi = show(biggest(xs))  in
+                  let lo = show(smallest(xs)) in
+                  hi - lo
+
+def main() = summary([12, 7, 19, 3, 14, 8])
