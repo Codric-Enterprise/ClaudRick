@@ -6,9 +6,9 @@ from syntax import (
     Num, Str, Bool, Var, BinOp, If, Call, FnDef,
     Semantic, Ty, Analysis, eval_ast,
     skeleton, distinct_skeletons, distinct_shapes, definitions, Prog,
-    unwrap,
+    unwrap, Trust,
 )
-from ezr import Defect, E_CERTAIN
+from ezr import Defect, E_CERTAIN, E_INTAKE
 
 passed = failed = 0
 
@@ -160,7 +160,19 @@ c10 = compile_ezr("def fact(n) = if n <= 1 then 1 else n * fact(n - 1)")
 fns = definitions(c10.ast)
 r = eval_ast(Call("fact", [Num(5)]), {}, fns, 0, limit=99)
 ok("fact(5) computes",       r.value == 120)
-ok("program constants are Certain", r.confidence == E_CERTAIN)
+# This assertion used to read `r.confidence == E_CERTAIN` under the name
+# "program constants are Certain", and it was conflating two claims. A
+# literal really is Certain -- that is checked just below, and still
+# holds. But `fact` is an unverified definition, and [APP] floors a
+# result by the function that produced it, so a call through it comes
+# back at INTAKE. The old assertion passed only because eval_ast was
+# dropping the c_f term from [APP] entirely.
+ok("an unverified function floors its result", r.confidence == E_INTAKE)
+lit = eval_ast(BinOp("+", Num(1), Num(1)), {}, {}, 0)
+ok("program constants are Certain", lit.confidence == E_CERTAIN)
+trusted = eval_ast(Call("fact", [Num(5)]), {}, fns, 0, 99,
+                   Trust(confidence={"fact": 217}))
+ok("a verified function lifts its floor", trusted.confidence == 217)
 r2 = eval_ast(Call("fact", [Num(8)]), {}, fns, 0, limit=3)
 ok("depth ceiling still enforced", r2.is_z)
 

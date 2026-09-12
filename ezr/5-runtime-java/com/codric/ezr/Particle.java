@@ -184,9 +184,17 @@ public final class Particle {
             // whole, so 4 / 2 is "2" and not "2.0"; rendering it Java's way
             // would diverge from Python on almost every arithmetic result.
             double d = (Double) v;
-            if (d == Math.floor(d) && !Double.isInfinite(d)
-                    && Math.abs(d) < 1e15) {
-                return String.valueOf((long) d);
+            if (d == Math.floor(d) && !Double.isInfinite(d)) {
+                // Every magnitude, not just the ones that fit in a long.
+                // The reference interpreter converts a whole float with
+                // Python's int(), which is arbitrary precision and never
+                // falls back to scientific notation — 1e25 prints as
+                // 10000000000000000905969664, the double's exact value.
+                // A `long` cast gives up at 2^63 and String.valueOf gives
+                // up at 1e7, so both diverge on any deep result. This only
+                // became reachable once anchoring bought the depth to
+                // compute numbers that big.
+                return new java.math.BigDecimal(d).toBigInteger().toString();
             }
             return String.valueOf(d);
         }

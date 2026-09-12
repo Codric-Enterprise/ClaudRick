@@ -35,11 +35,18 @@ public final class Eval {
 
     private final Map<String, Fn> fns;
     private final int limit;
+    private final Trust trust;
     private final StringBuilder shown = new StringBuilder();
 
     public Eval(Map<String, Fn> fns, int limit) {
-        this.fns  = fns;
+        this(fns, limit, Trust.none());
+    }
+
+    /** With evidence: what each definition has earned, and what it may cash. */
+    public Eval(Map<String, Fn> fns, int limit, Trust trust) {
+        this.fns   = fns;
         this.limit = limit;
+        this.trust = trust;
     }
 
     /** Anything {@code show} printed, in order. */
@@ -229,9 +236,12 @@ public final class Eval {
             return Particle.z(Defect.UNBOUND, c.name() + " was never defined");
         }
 
-        // G8 — a checked halt, not a hang, and checked before recursing
-        if (depth > limit) {
-            return Particle.z(Defect.UNBOUNDED, "depth ceiling " + limit + " exceeded");
+        // G8 — a checked halt, not a hang, and checked before recursing.
+        // [ANCHOR-REC] lifts the ceiling for an anchored function with a
+        // proven measure, and for nothing else: depth is earned.
+        int ceiling = trust.limitFor(c.name(), limit);
+        if (depth > ceiling) {
+            return Particle.z(Defect.UNBOUNDED, "depth ceiling " + ceiling + " exceeded");
         }
         List<Particle> args = new ArrayList<>();
         for (Ast a : c.args()) {
@@ -249,7 +259,10 @@ public final class Eval {
         Particle r = eval(fn.body(), local, depth + 1);
         if (r.isZ()) return r;
 
-        int conf = r.confidence;                     // [APP], chained
+        // [APP]: min(c_f, c_args, c_result). The c_f term is the one that
+        // was missing — a result is only as trustworthy as the function that
+        // produced it, which is the whole point of the language.
+        int conf = Math.min(r.confidence, trust.of(c.name()));
         for (Particle a : args) conf = Math.min(conf, a.confidence);
         return r.at(conf);
     }
