@@ -6,7 +6,7 @@ Founder: Ricky (Dreid), Codric Enterprise.
 ## Before you touch anything
 
 ```
-python3 tests/run_all.py          # must be 25 passed / 0 failed
+python3 tests/run_all.py          # must be 26 passed / 0 failed
 ```
 
 If it isn't green before your change, stop and say so. Don't build on red.

@@ -175,3 +175,148 @@ Layers 5 (Java) and 6 (HTML) are not yet ported to the v2 atom.
 - φ governing the corpus
 - Self-correction. The system teaches and verifies; it does not yet
   rewrite broken source.
+
+---
+
+## 7. Three evaluators, one rule, three answers
+
+Everything in this section was produced by running the code, not by
+reading it. Each claim names the command that produces it.
+
+### 7.1 [APP] dropped its c_f term in two of the three evaluators
+
+SEMANTICS.md §4.3 gives application as `min(c_f, c_args, c_result)`.
+Three evaluators implement it and only one had all three terms:
+
+| evaluator | file | c_f present |
+|---|---|---|
+| `Lambda` | `abstract.py` | yes |
+| `eval_ast` | `syntax.py` | **no** |
+| `eval_confidence` | `runtime.py` | **no** |
+
+`runtime.py` is the one `ever run` uses. Its own docstring named the
+omission and called it an honest approximation, but the consequence was
+not stated: nothing anywhere read `ScopeEntry.confidence` for an `SK.FN`
+entry, so a function's confidence was a field that could be written and
+never read. Measured before the fix, on that exact path:
+
+```
+def dbl(n) = n * 2        with dbl's scope entry forced to 1/256
+dbl(21)  ->  42 @ 256/256          [APP] wants min(1, 256) = 1
+```
+
+Both are now complete. The 26-suite gate is unchanged by the
+`runtime.py` fix, and that is the point: it is a no-op for every program
+that does not set a function's confidence, and it is what makes earned
+confidence mean anything at all. Guarded by `ezrun_test.py`, which fails
+in exactly one assertion if the term is removed again.
+
+### 7.2 The two evaluators still disagree about [DEF], by 136 points
+
+`eval_ast` enters an undefined name at `E_INTAKE` (120), per [DEF]: a
+definition is a claim, not a verification, and 120 is below the execute
+floor of 128. `runtime.run_source` registers functions at `EV_CERTAIN`
+(256) via `EvScope.set_fn`'s default. Three runners, one program, one
+outlier:
+
+```
+def dbl(n) = n * 2
+def main() = dbl(21)
+
+ezrun.py            (syntax.py eval_ast)   42 @ 120/256
+5-runtime-java/ezr  (Java, CORE.md)        42 @ 120/256
+ever run            (runtime.run_source)   42 @ 256/256
+```
+
+The Java runtime matters here because it shares no code, no type system
+and no habits with either Python evaluator, and it was written against
+`CORE.md` rather than against `runtime.py`. Two independent
+implementations reading the rule the same way, and the third differing
+by 136 points, is the shape of a defect rather than of a disagreement.
+
+**Not fixed.** Aligning the runtime path on 120 would change the
+confidence printed by every program that calls a function, which is a
+decision about the language rather than a repair to it.
+
+### 7.3 run.sh could not report a failing layer
+
+Every layer in `run.sh` ran as
+
+```
+( cd DIR && test | tail -2 ) && pass "L" || fail "L"
+```
+
+The subshell's status is the pipeline's, which is `tail`'s, which is 0
+whatever the test did. Measured: `vowels_test.py` patched to
+`raise SystemExit(1)` was reported `PASSED`. The only failure the script
+could ever surface was one where `cd` itself failed before the pipe —
+which is why a missing `3-dsl-ruby/` showed up and a failing test would
+not have. Fixed with `set -o pipefail`; the same deliberately-broken run
+then reported `FAILED Vowels` and exit 1, with every other layer still
+passing.
+
+### 7.4 The tree carries two lineages, and the split is measurable
+
+`5-runtime-java/differential.py` runs one corpus through both runners as
+processes and compares value, exit code, refusing stage and binding
+defect:
+
+```
+121 programs, 90 agreed, 31 diverged
+```
+
+Every one of the 31 is the same fork, not 31 separate bugs:
+
+| cause | count |
+|---|---|
+| list literals (`cannot evaluate ListLit`) | 7 |
+| `len` / `head` / `tail` (`never defined`) | 9 |
+| `let ... in` is not v4.10 grammar | 9 |
+| other parse splits | 6 |
+
+The Java runtime and `7-forge/` implement `CORE.md`; `eval_ast`
+implements a subset of `SEMANTICS.md`. Both sides pass their own suites
+(98 and 81 assertions, 26 gate suites). A divergence here is a finding
+about two lineages sharing a tree, and which one the project keeps is an
+owner's decision, not something to settle by editing one side to match
+the other.
+
+### 7.5 A witness repeated was counted as a second witness
+
+[EXAMPLE] multiplies uncertainty across independent witnesses:
+`u_f = ((256-120)/256)^p`, then `c_f = floor(256 * (1 - u_f) * p/t)`.
+Independence is the load-bearing word, and `ezrun`'s `--example` did
+not check it. Measured, before the fix:
+
+```
+-x 'growth(100, 0) = 100'                          120/256
+-x 'growth(100, 0) = 100'  (the same case twice)    183/256
+-x 'growth(100, 0) = 100'  (the same case thrice)   217/256
+```
+
+Identical to what three *distinct* cases buy — real confidence for no
+new evidence, which is the one thing T2 (corroboration creates nothing)
+says the algebra must never permit. Examples are now keyed on the
+call's own AST rendering, so `f(1,2)` and `f( 1 , 2 )` are correctly one
+witness and `f(1)` and `f(2)` are correctly two. The same call given two
+different answers is refused outright rather than silently resolved:
+evidence that contradicts itself is not evidence.
+
+### 7.6 `ezrun` cannot run any file in `examples/`
+
+Nine example programs, nine refusals, measured one by one:
+
+| file | ezrun says |
+|---|---|
+| `*.ever` (5 files) | `Z(misbound) — cannot evaluate Show` |
+| `largest.ezr`, `readings.ezr`, `trust.ezr` | `parse: unexpected let` |
+| `sum.ezr` | `Z(misbound) — cannot evaluate ListLit` |
+
+Not a fault in the runner: it is 7.4 seen from the directory listing.
+The `.ever` examples are written in the v4.10 statement surface and the
+`.ezr` examples in the forge's core, and `eval_ast` implements neither
+in full. `examples/earned_trust.ever` was added as one program that sits
+in the subset both lineages share, so it runs under `ezrun` and under
+the Java runtime and they agree — which is also what makes it a usable
+demonstration of [DEF], [EXAMPLE] and [ANCHOR] rather than a description
+of one.

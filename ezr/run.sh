@@ -1,6 +1,14 @@
 #!/usr/bin/env bash
 # Ever / Tapestry — build and verify every layer
-set -u
+# pipefail is load bearing, not hygiene. Every layer below is run as
+#     ( cd DIR && test | tail -2 ) && pass || fail
+# and without it the subshell's status is tail's, which is 0 whatever
+# the test did. Measured on this exact script: vowels_test.py patched
+# to `raise SystemExit(1)` was reported PASSED. The only failure the
+# script could ever report was one where `cd` itself failed before the
+# pipe -- which is why a missing 3-dsl-ruby showed up and a failing
+# test never would have.
+set -u -o pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")"
 P=0; S=0; F=0; declare -a N
 have(){ command -v "$1" >/dev/null 2>&1; }
@@ -96,6 +104,11 @@ echo; echo "[2b] Python — abstraction (functions, recursion)"
 if have python3; then
   ( cd 2-interpreter-python && python3 abstract_test.py | tail -2 ) && pass "Abstraction" || fail "Abstraction"
 else skip "Abstraction" "python3 not found"; fi
+
+echo; echo "[2b+] Python — the runner (ezrun: entry points, Examples, anchoring)"
+if have python3; then
+  ( cd 2-interpreter-python && python3 ezrun_test.py | tail -2 ) && pass "Runner" || fail "Runner"
+else skip "Runner" "python3 not found"; fi
 
 echo; echo "[2c] Python — vowel operators (I O U, synthesis)"
 if have python3; then

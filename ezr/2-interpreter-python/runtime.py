@@ -251,7 +251,20 @@ def eval_confidence(node: Optional[EvNode], scope: EvScope) -> int:
         result = eval_node(node, scope)
         if result.ev_tag == EvType.VOID:
             return 0
-        return min(confs) if confs else E_CERTAIN
+        # [APP] is min(c_f, c_args, c_result), and the c_f term was not
+        # here. A function's own confidence had nowhere to land: nothing
+        # anywhere read ScopeEntry.confidence for an SK.FN entry, so a
+        # function believed at 1/256 still handed back answers at
+        # 256/256. Measured before the fix, on this exact path:
+        #
+        #   def dbl(n) = n * 2   with dbl's entry forced to 1/256
+        #   dbl(21)  ->  42 @ 256      [APP] wants min(1, 256) = 1
+        #
+        # Including it is a no-op for every program that does not set a
+        # function's confidence, since definitions still enter at
+        # CERTAIN -- but it is what makes earned confidence mean
+        # anything, and it is what SEMANTICS.md 4.3 actually says.
+        return min([entry.confidence] + confs)
 
     return 0
 

@@ -1,28 +1,49 @@
 #!/usr/bin/env python3
 """
-ezrun.py — run an EZR program.
+ezrun.py — run an Ever core program, with evidence.
 
-The core language had no runner. `ezr.py <file>` exists and runs a
-*different* language: the directive surface (`tax = 40`, `expect`,
-`learn`) that the browser interface also speaks. Lists, `let`, `show`
-and the builtins live in the AST pipeline in `syntax.py`, and until
-this file the only way to reach any of them was to import the module
-and call `compile_ever` by hand. A language feature you can only use by
-importing the implementation is not shipped.
+Two runners live in this directory and they are not rivals:
 
-    ezrun.py program.ezr                  run it
-    ezrun.py program.ezr --call 'f(3)'    run it, then evaluate a call
-    ezrun.py -e '[1, 2] '                 run one expression
+  ever_cli.py   `ever run f.ever` -- the front door. Drives
+                runtime.run_source: statements, records, loops,
+                indexing, externs, the builtins, the profiler.
+  ezrun.py      this file. Drives syntax.py's eval_ast, and is the
+                only surface anywhere that exposes the confidence
+                algebra -- [EXAMPLE] earning trust, [ANCHOR] buying
+                depth. Without it, eval_ast is reachable only by
+                importing the module, and a language feature you can
+                only use by importing the implementation is not
+                shipped.
+
+    ezrun.py program.ever                 run it
+    ezrun.py program.ever --call 'f(3)'   run it, then evaluate a call
+    ezrun.py -e '1 + 1'                   run one expression
     echo '1 + 1' | ezrun.py -             read from stdin
+    ezrun.py p.ever -x 'f(1) = 1' -a f    earn confidence, then depth
+
+## What this runs, exactly
+
+eval_ast evaluates seven node kinds: numbers, text, booleans, variable
+references, binary operators, if/then/else, and calls to functions the
+program defines. That is the whole of it. A list literal parses and
+then comes back Z("cannot evaluate ListLit"); `len`, `head` and `tail`
+live in builtins_ml and are reachable from the scope/IR path, not from
+here; `let x = v in body` is not v4.10 grammar at all (the statement
+form `let x = v` is, and eval_ast has no case for it either).
+
+None of that is this runner hiding a smaller language behind a bigger
+promise -- it is the boundary of the evaluator it drives, and the
+boundary is where `5-runtime-java/differential.py` reads 31 divergences
+against the Java runtime, which implements the forge's CORE.md instead.
+See ezr/CORE.md for which lineage is which.
 
 ## Entry points
 
-`program := definitions | expression` (CORE.md 1), and there is
-deliberately no trailing expression -- that grammar is ambiguous and
-the chart parser proved it. So a file of definitions defines things and
-produces nothing, and the runner needs to be told what to evaluate:
+v4.10's parser returns a bare node for single-statement source and
+Program(statements) otherwise, and it permits a bare expression as the
+LAST statement of a run of definitions. So:
 
-  * a program that is a single expression is evaluated and printed;
+  * a program that is (or ends in) an expression is evaluated;
   * a program of definitions that defines `main()` has `main()` called;
   * otherwise `--call` names the expression to evaluate.
 
@@ -31,14 +52,10 @@ Nothing in the grammar knows about it.
 
 ## Depth
 
-`--depth` defaults to 100 rather than to floor(pi) = 3. That is a
-divergence from SEMANTICS.md 4.6 and is worth being plain about: the
-earned-depth rule is anchoring, and anchoring lives in `abstract.py`'s
-Lambda, not in the AST evaluator. `eval_ast` has no anchor mechanism at
-all, only a `limit` argument. Defaulting to 3 would impose the ceiling
-without shipping the way to earn past it, which is half a rule and
-worse than either half. The divergence is tracked by `audit.py` rather
-than left to be discovered.
+`--depth` defaults to 100 rather than to floor(pi) = 3. Worth being
+plain about: the earned-depth rule is anchoring, and `--anchor` now
+ships it, so the ceiling and the way past it arrive together. 3 remains
+available as `-d 3`, which is what the anchoring tests use.
 
 Codric Enterprise
 """
@@ -66,10 +83,32 @@ def definitions(node) -> Dict[str, object]:
     which functions a *runner* wants to call is a runner's business.
     """
     if isinstance(node, Program):
-        return {d.name: d for d in node.defs if isinstance(d, FnDef)}
+        return {d.name: d for d in node.statements if isinstance(d, FnDef)}
     if isinstance(node, FnDef):
         return {node.name: node}
     return {}
+
+
+def entry_node(ast):
+    """What this program evaluates on its own, or None if it says nothing.
+
+    Two shapes, because v4.10's parser has two. Single-statement source
+    comes back unwrapped -- `1 + 1` is a BinOp, not a Program of one --
+    and a run of definitions may end in a bare expression, which the
+    parser permits only in last position. Either is an entry point. A
+    program whose last statement is a definition is not one, and needs
+    --call or a main().
+
+    Anything else that is not a FnDef is handed to eval_ast rather than
+    filtered out here, even the node kinds eval_ast cannot evaluate. A
+    `[1, 2]` that comes back "cannot evaluate ListLit" has told the
+    truth about where the boundary is; the same program reported as
+    "defines nothing and does not say what to run" would not have.
+    """
+    if isinstance(ast, Program):
+        last = ast.statements[-1] if ast.statements else None
+        return None if isinstance(last, FnDef) else last
+    return None if isinstance(ast, FnDef) else ast
 
 
 def _read(path: str) -> Optional[str]:
@@ -155,6 +194,8 @@ def _earn(fns, examples: List[str], anchors: List[str], depth: int,
     """
     trust = Trust()
     tally: Dict[str, List[int]] = {}
+    #: canonical call source -> the answer already claimed for it.
+    seen: Dict[str, object] = {}
 
     for spec in examples:
         parts = _split_example(spec)
@@ -184,6 +225,26 @@ def _earn(fns, examples: List[str], anchors: List[str], depth: int,
         got = eval_ast(cc.ast, {}, dict(fns), 0, depth, trust)
         want = eval_ast(wc.ast, {}, {}, 0, depth, Trust())
         ok = (not got.is_z) and (not want.is_z) and got.value == want.value
+
+        # [EXAMPLE] multiplies uncertainty across INDEPENDENT witnesses,
+        # and the same case stated twice is one witness, not two. Before
+        # this check it was two: measured, `-x 'growth(100, 0) = 100'`
+        # repeated three times took the function from 120 to 183 to 217,
+        # exactly as three distinct cases would -- real confidence bought
+        # with no new evidence, which is the one thing T2 says the
+        # algebra must never allow. Keyed on the AST's own rendering, so
+        # `f(1,2)` and `f( 1 , 2 )` are correctly the same witness and
+        # `f(1)` and `f(2)` are correctly not.
+        key = str(cc.ast)
+        if key in seen:
+            if seen[key] != want.value:
+                print(f"ezrun: --example {spec!r}: {key} was already "
+                      f"given {seen[key]!r} as its answer. Evidence that "
+                      f"contradicts itself is not evidence.",
+                      file=sys.stderr)
+                return None, EXIT_BAD_INPUT
+            continue
+        seen[key] = want.value
 
         p, t = tally.get(name, [0, 0])
         tally[name] = [p + (1 if ok else 0), t + 1]
@@ -217,7 +278,7 @@ def _earn(fns, examples: List[str], anchors: List[str], depth: int,
 
 
 def _called_name(ast) -> Optional[str]:
-    node = ast.expr if isinstance(ast, Program) and ast.expr is not None else ast
+    node = entry_node(ast)
     return node.name if isinstance(node, Call) else None
 
 
@@ -245,18 +306,21 @@ def run(src: str, call: Optional[str] = None, depth: int = 100,
     if trust is None:
         return code
 
-    # A program that is one expression is its own entry point.
-    if isinstance(c.ast, Program) and c.ast.expr is not None and call is None:
-        result = eval_ast(c.ast, {}, dict(fns), 0, depth, trust)
+    # A program that ends in an expression is its own entry point.
+    node = entry_node(c.ast) if call is None else None
+    if node is not None:
+        result = eval_ast(node, {}, dict(fns), 0, depth, trust)
         _show(result, quiet)
         # A Z is a refusal on this path too. Returning OK here meant
         # `ezrun -e 'head([])'` printed Z and exited 0, so anything
         # scripting it read a refusal as a success.
         return EXIT_REFUSED if result.is_z else EXIT_OK
 
-    # Definitions: register them, then find something to evaluate.
-    eval_ast(c.ast, {}, fns, 0, depth, trust)
-
+    # Definitions only. `definitions()` already has the table, so there
+    # is nothing to register by walking the tree -- and walking it is
+    # not harmless: eval_ast has no Program case, so the call that used
+    # to sit here returned Z("cannot evaluate Program") and the result
+    # was discarded, which is how it went unnoticed.
     entry = call
     if entry is None:
         if "main" in fns and not fns["main"].params:

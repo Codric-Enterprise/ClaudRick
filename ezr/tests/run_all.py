@@ -20,6 +20,7 @@ SUITES = [
     ("IR bridge",      f"{sys.executable} 2-interpreter-python/ir_runner.py"),
     ("Pipeline",       f"{sys.executable} 2-interpreter-python/syntax_test.py"),
     ("Abstraction",    f"{sys.executable} 2-interpreter-python/abstract_test.py"),
+    ("Runner",         f"{sys.executable} 2-interpreter-python/ezrun_test.py"),
     ("Vowels",         f"{sys.executable} 2-interpreter-python/vowels_test.py"),
     ("Teaching",       f"{sys.executable} 2-interpreter-python/teach_test.py"),
     ("SQL archive",    f"{sys.executable} 4-archive-sql/archive_test.py"),
