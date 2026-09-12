@@ -83,8 +83,10 @@ Key design decisions:
 ├── .github/workflows/ci.yml           # ruff check + ruff format --check + pytest (3.11-3.13) + docker build
 ├── .github/workflows/deploy-pages.yml # publishes mastery-system/ to GitHub Pages on push to main
 ├── .github/workflows/security.yml     # pip-audit (root) + npm audit (power-pack/); push/PR + weekly Mon 06:00 UTC cron
-│   # NOTE: a 4th check, CodeQL "Analyze (ruby)", also runs on every PR. It is GitHub
-│   # default setup (repo settings), NOT a workflow in this tree — you will not find a file for it.
+│   # NOTE: CodeQL also runs on every PR — "Analyze (ruby)" and "Analyze (java-kotlin)",
+│   # so 14 check runs, not 12. It is GitHub default setup (repo settings), NOT a workflow
+│   # in this tree — you will not find a file for it, and the language list grows by itself:
+│   # java-kotlin appeared on its own once ezr/5-runtime-java/ landed.
 ├── .devcontainer/devcontainer.json    # generic universal devcontainer (no repo-specific setup)
 ├── Dockerfile                # stdlib-only image; binds 0.0.0.0:8000; HEALTHCHECK /healthz
 ├── .dockerignore
