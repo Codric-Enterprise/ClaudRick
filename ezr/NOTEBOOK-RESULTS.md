@@ -1,8 +1,8 @@
-# EZR — Notebook Batch Results
+# Ever — Notebook Batch Results
 
 **13 cells, most of them wrong on purpose. Codric Enterprise · 2026**
 
-Every cell stated what *should* happen before EZR saw it. EZR then ran
+Every cell stated what *should* happen before Ever saw it. Ever then ran
 for real. Producing the right answer for the wrong reason scores as a
 miss; refusing when refusing was correct scores as a hit.
 
@@ -17,12 +17,12 @@ The number that matters is not the final one. It is what the misses were.
 | **overall** | **10/12** | **13/13** |
 
 Six cells also crashed on the first attempt — **my harness bug**, an
-`EState` import that does not exist. Not EZR's failure, and worth
+`EState` import that does not exist. Not Ever's failure, and worth
 separating from the two that were.
 
 ---
 
-## What EZR got right unprompted
+## What Ever got right unprompted
 
 | Cell | Task | Result |
 |---|---|---|
@@ -42,9 +42,9 @@ spec.
 
 ---
 
-## Miss 1 — a real EZR bug, now fixed
+## Miss 1 — a real Ever bug, now fixed
 
-**Cell 4, broken SQL.** EZR caught the injection, the `SELECT *`, the
+**Cell 4, broken SQL.** Ever caught the injection, the `SELECT *`, the
 unguarded `DROP`, and the `JOIN` without `ON`. It **missed
 `DELETE FROM sessions`** — the most destructive statement in the sample.
 
@@ -69,9 +69,9 @@ on realistic input.
 
 ## Miss 2 — not a bug. The important finding.
 
-**Cell 7, the first four primes.** EZR returned:
+**Cell 7, the first four primes.** Ever returned:
 
-```ezr
+```ever
 if n < 0 then 1 else n + prime(n - 2)
 ```
 
@@ -83,12 +83,12 @@ wrong everywhere past the evidence.
 
 **My expectation was the thing that was wrong.** Nothing in the spec said
 *prime*. Four points were given and a function fitting four points was
-returned. The failure was not that EZR answered; it was that its
+returned. The failure was not that Ever answered; it was that its
 confidence did not reflect how little four points determine.
 
 ### The fix: measure agreement beyond the evidence
 
-EZR already had the mechanism. After synthesis, poll every candidate
+Ever already had the mechanism. After synthesis, poll every candidate
 that satisfied the same examples on inputs **nobody supplied**. Where
 they agree, the evidence determined the shape. Where they scatter, it did
 not, and confidence must say so.
@@ -134,7 +134,7 @@ is the honest boundary of the current system.
 
 ## Cell 13, added because of cell 7
 
-A single example, `g(2)=6`. EZR fits it and **caps below the execute
+A single example, `g(2)=6`. Ever fits it and **caps below the execute
 floor**. Fitting one point is not knowledge, and the language now says so
 in the only currency it has.
 

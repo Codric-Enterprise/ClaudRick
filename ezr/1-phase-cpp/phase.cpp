@@ -1,5 +1,5 @@
 /*
- * phase.cpp — EZR / Tapestry, Layer 1 (C++)
+ * phase.cpp — Ever / Tapestry, Layer 1 (C++)
  * Codric Enterprise · Ricky (Dreid) · 2026
  */
 
@@ -112,7 +112,7 @@ PhaseResult PhaseEngine::combine(const e_particle& a, const e_particle& b) {
     if (e_is_z(&a) || e_is_z(&b)) {
         r.outcome  = Outcome::Blocked;
         r.survivor = e_z_defect("blocked", "Z present in phase interaction",
-                                e_is_z(&a) ? a.defect : b.defect);
+                                e_is_z(&a) ? (e_defect)a.defect : (e_defect)b.defect);
         r.note     = "Z-contagion: interaction blocked";
         return r;
     }
@@ -125,7 +125,7 @@ PhaseResult PhaseEngine::combine(const e_particle& a, const e_particle& b) {
         char buf[192];
         std::snprintf(buf, sizeof buf,
             "Conflict: %s holds %s, %s holds %s",
-            a.ident, e_type_name(a.type), b.ident, e_type_name(b.type));
+            a.ident, e_type_name((e_type)a.type), b.ident, e_type_name((e_type)b.type));
         r.note = buf;
         return r;
     }
@@ -250,7 +250,7 @@ e_particle PhaseEngine::weave(const std::vector<e_particle>& set,
             case Outcome::Repel: {
                 /* unresolved disagreement becomes an open range */
                 e_particle eq = e_equivalence(ident, (int16_t)r.lowEdge,
-                                              (int16_t)r.highEdge, acc.lang);
+                                              (int16_t)r.highEdge, (e_lang)acc.lang);
                 std::snprintf(eq.reason, E_REASON_MAX,
                     "wove to a range: threads disagreed at step %zu", i);
                 return eq;

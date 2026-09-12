@@ -1,5 +1,5 @@
 /*
- * phase.hpp — EZR / Tapestry, Layer 1 (C++)
+ * phase.hpp — Ever / Tapestry, Layer 1 (C++)
  * The phase engine. What happens when two threads meet in the weave.
  *
  * v1 could only compare confidence, because particles held no value.

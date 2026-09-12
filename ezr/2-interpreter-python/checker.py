@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-translate.py — EZR Language, Layer 2 (Python)
+translate.py — Ever Language, Layer 2 (Python)
 
 The translator. Every language becomes E-particles here.
 
@@ -9,7 +9,7 @@ best pattern-matching glue in the stack. It speaks to Layer 0 through the
 serialized particle line format, so C, C++, Java and SQL all read exactly
 what Python writes.
 
-EZR accepts:  C · C++ · Python · Ruby · SQL · Java · HTML
+Ever accepts:  C · C++ · Python · Ruby · SQL · Java · HTML
 
 Codric Enterprise · Ricky (Dreid) · 2026
 Theory of Relative E:  E = MC²
@@ -54,7 +54,7 @@ class ELang(IntEnum):
     SQL    = 4
     JAVA   = 5
     HTML   = 6
-    EZR   = 7
+    EVER   = 7
 
 
 # ─────────────────────────────────────────────
@@ -65,7 +65,7 @@ class ELang(IntEnum):
 class EParticle:
     state: EState = EState.Z
     phase: int = 0
-    lang: ELang = ELang.EZR
+    lang: ELang = ELang.EVER
     confidence: int = 0
     lo: int = 0
     hi: int = 0
@@ -247,7 +247,7 @@ def detect(code: str) -> ELang:
         return ELang.RUBY
 
     # A bare C function with no include directive. Found by cross-checking
-    # Layer 2 against Layer 6: both agreed on 'EZR', and both were wrong.
+    # Layer 2 against Layer 6: both agreed on 'Ever', and both were wrong.
     if re.search(r'^\s*(?:static\s+|const\s+|unsigned\s+)*'
                  r'(int|char|float|double|long|short|void|size_t)\s*\*?\s*'
                  r'\w+\s*\([^;]*\)\s*\{', s, re.M):
@@ -258,7 +258,7 @@ def detect(code: str) -> ELang:
     if re.search(r'^\s*(import|from)\s+\w+', s, re.M) and ":" in s:
         return ELang.PYTHON
 
-    return ELang.EZR
+    return ELang.EVER
 
 
 # ─────────────────────────────────────────────
@@ -269,7 +269,7 @@ def detect(code: str) -> ELang:
 # ─────────────────────────────────────────────
 
 class Inspector:
-    lang: ELang = ELang.EZR
+    lang: ELang = ELang.EVER
 
     def inspect(self, code: str) -> List[Finding]:
         raise NotImplementedError
@@ -530,7 +530,7 @@ class HtmlInspector(Inspector):
     def _markup_only(code: str) -> str:
         """Script, style and comment bodies are not markup.
 
-        Found by running EZR against its own interface: a <img> inside a
+        Found by running Ever against its own interface: a <img> inside a
         JavaScript string is sample data, not an image, and flagging it
         drove a sound file to Z. A false positive that reaches Z is worse
         than a missed finding, because it teaches the corpus a lie.

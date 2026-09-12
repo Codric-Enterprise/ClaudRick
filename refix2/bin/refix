@@ -1,0 +1,233 @@
+#!/usr/bin/env node
+// refix — v2. Zero-dependency Node CLI.
+//
+//   refix scan <log>              — match a captured build log against signatures
+//   refix accept <log> <src-id>   — archive matches as accepted repairs
+//   refix candidates              — show fixture_forms that cleared E_ASCEND_POINTS
+//   refix propose                 — attempt to admit each candidate; replay-gated
+//   refix rules                   — show admitted/rejected rules
+//   refix archive                 — dump the raw archive (jsonl on stdout)
+//
+// The archive lives at ~/.refix by default, override with REFIX_HOME.
+// The CLI writes nothing to your project. That's deliberate; apply is
+// a separate command intentionally not shipped in v0.
+//
+// Design rule (from Codric): every repair carries its own revert.
+// v2 archives fixture_form (the edit spec) but does not itself edit
+// files. When `apply` ships, revert lives in the same record.
+
+'use strict';
+
+const fs   = require('fs');
+const path = require('path');
+const os   = require('os');
+
+const { Archive, makeRepair }   = require('../src/archive');
+const { loadSignatures, scan }  = require('../src/match');
+const { E }                     = require('../src/constants');
+const applyMod                  = require('../src/apply');
+
+const HOME  = process.env.REFIX_HOME || path.join(os.homedir(), '.refix');
+const SIGS  = path.join(__dirname, '..', 'signatures', 'gradle.json');
+
+function usage(code = 2) {
+  process.stderr.write(
+`refix v2 — Failure/Fixture engine
+
+usage:
+  refix scan <build.log>
+  refix accept <build.log> <source-ident>
+  refix candidates
+  refix propose
+  refix rules
+  refix archive
+  refix apply <build.log> [--project <dir>] [--dry-run]
+  refix revert
+
+archive: ${HOME}
+signatures: ${SIGS}
+
+apply notes:
+  --dry-run    print the plan, write nothing.
+  --project    default: current directory.
+  Only admitted rules OR fixture_forms with a registered applier are
+  eligible. Every write leaves a receipt; revert uses it, and refuses
+  if the file changed since apply.
+`);
+  process.exit(code);
+}
+
+function cmdScan(logPath) {
+  const stderr = fs.readFileSync(logPath, 'utf8');
+  const sigs   = loadSignatures(SIGS);
+  const hits   = scan(stderr, sigs);
+  if (!hits.length) { console.log('no signatures matched.'); return; }
+  for (const h of hits) {
+    console.log(`match: ${h.signature_id}  kind=${h.kind === 0 ? 'plain' : 'inferred'}`);
+    console.log(`  failure : ${h.failure_text.replace(/\n.*$/s, ' …')}`);
+    console.log(`  fixture : ${h.fixture_form}`);
+    console.log(`  reason  : ${h.fixture_text}`);
+    console.log('');
+  }
+}
+
+function cmdAccept(logPath, sourceIdent) {
+  const stderr = fs.readFileSync(logPath, 'utf8');
+  const sigs   = loadSignatures(SIGS);
+  const hits   = scan(stderr, sigs);
+  if (!hits.length) { console.log('no signatures matched; nothing archived.'); return; }
+
+  const arch = new Archive(HOME);
+  const runId = Date.now();
+  let n = 0;
+  for (const h of hits) {
+    const rec = makeRepair({
+      runId, lang: 'gradle',
+      signatureId: h.signature_id,
+      kind: h.kind,
+      sourceIdent,
+      lineNo: 0,
+      failureText: h.failure_text,
+      fixtureText: h.fixture_text,
+      fixtureForm: h.fixture_form,
+      reason: `accepted from ${logPath}`,
+      confBefore: E.E_CERTAIN,
+    });
+    arch.append(rec);
+    n++;
+  }
+  console.log(`archived ${n} repair(s) from ${sourceIdent}.`);
+}
+
+function cmdCandidates() {
+  const arch = new Archive(HOME);
+  const cs   = arch.candidates();
+  if (!cs.length) { console.log(`no candidates — threshold is E_ASCEND_POINTS=${E.E_ASCEND_POINTS} distinct sources.`); return; }
+  for (const c of cs) {
+    console.log(`${c.signature_id}  form=${c.fixture_form}`);
+    console.log(`  seen=${c.seen}  distinct_sources=${c.distinct_sources}  distinct_langs=${c.distinct_langs}`);
+  }
+}
+
+function cmdPropose() {
+  const arch = new Archive(HOME);
+  const cs   = arch.candidates();
+  if (!cs.length) { console.log('no candidates to propose.'); return; }
+  for (const c of cs) {
+    const rule = arch.proposeRule(c);
+    arch.appendRule(rule);
+    console.log(`${rule.signature_id}  ->  ${rule.status}   conf=${rule.confidence}  agreed=${rule.replay_agreed}/${rule.replay_total}${rule.rejected_why ? '  why=' + rule.rejected_why : ''}`);
+  }
+}
+
+function cmdRules() {
+  const arch  = new Archive(HOME);
+  const rules = arch.rules();
+  if (!rules.length) { console.log('no rules yet.'); return; }
+  for (const r of rules) {
+    console.log(`${r.status.padEnd(9)} ${r.signature_id.padEnd(35)} conf=${r.confidence} agreed=${r.replay_agreed}/${r.replay_total}${r.rejected_why ? '  why=' + r.rejected_why : ''}`);
+  }
+}
+
+function cmdArchive() {
+  const arch = new Archive(HOME);
+  for (const r of arch.repairs()) console.log(JSON.stringify(r));
+}
+
+function cmdApply(logPath, opts) {
+  const stderr = fs.readFileSync(logPath, 'utf8');
+  const sigs   = loadSignatures(SIGS);
+  const hits   = scan(stderr, sigs);
+  if (!hits.length) { console.log('no signatures matched; nothing to apply.'); return; }
+
+  const projectRoot = path.resolve(opts.project || process.cwd());
+  const arch        = new Archive(HOME);
+  const admitted    = new Set(arch.rules()
+    .filter(r => r.status === 'admitted')
+    .map(r => r.fixture_form));
+
+  let done = 0, skipped = 0, failed = 0;
+  for (const h of hits) {
+    // Gate: an unfamiliar fixture that has never been admitted, from
+    // a signature ReFix has an applier for, is applied but flagged.
+    // A fixture with no applier is refused with the reason.
+    const isAdmitted = admitted.has(h.fixture_form);
+    console.log(`\n${h.signature_id}  form=${h.fixture_form}`);
+    let planned;
+    try {
+      planned = applyMod.plan(h.fixture_form, projectRoot);
+    } catch (e) {
+      console.log(`  refused: ${e.message}`);
+      skipped++;
+      continue;
+    }
+    if (planned.before === planned.after) {
+      console.log(`  no-op: ${planned.summary}`);
+      skipped++;
+      continue;
+    }
+    console.log(`  plan:  ${planned.summary}`);
+    if (!isAdmitted)
+      console.log(`  note:  fixture is not yet an admitted rule — apply anyway`);
+    if (opts.dryRun) { skipped++; continue; }
+    try {
+      const res = applyMod.execute({
+        plan: planned, projectRoot,
+        fixtureForm: h.fixture_form,
+        signatureId: h.signature_id,
+        receiptsDir: HOME,
+      });
+      if (res.applied) {
+        console.log(`  wrote: ${planned.file}`);
+        done++;
+      } else {
+        console.log(`  skipped: ${res.reason}`);
+        skipped++;
+      }
+    } catch (e) {
+      console.log(`  error: ${e.message}`);
+      failed++;
+    }
+  }
+  console.log(`\napplied ${done}, skipped ${skipped}, failed ${failed}.`);
+}
+
+function cmdRevert() {
+  const res = applyMod.revertLast(HOME);
+  if (res.reverted) console.log(`reverted: ${res.summary}\n  ${res.file}`);
+  else              console.log(`nothing reverted: ${res.reason}`);
+}
+
+const [ , , cmd, ...rest ] = process.argv;
+
+function parseApplyFlags(argv) {
+  const opts = { project: null, dryRun: false };
+  const positional = [];
+  for (let i = 0; i < argv.length; i++) {
+    const a = argv[i];
+    if (a === '--dry-run')      opts.dryRun = true;
+    else if (a === '--project') opts.project = argv[++i];
+    else                        positional.push(a);
+  }
+  return { opts, positional };
+}
+
+try {
+  switch (cmd) {
+    case 'scan':       return rest[0] ? cmdScan(rest[0])            : usage();
+    case 'accept':     return rest[1] ? cmdAccept(rest[0], rest[1]) : usage();
+    case 'candidates': return cmdCandidates();
+    case 'propose':    return cmdPropose();
+    case 'rules':      return cmdRules();
+    case 'archive':    return cmdArchive();
+    case 'apply': {
+      const { opts, positional } = parseApplyFlags(rest);
+      return positional[0] ? cmdApply(positional[0], opts) : usage();
+    }
+    case 'revert':     return cmdRevert();
+    default:           return usage(cmd ? 2 : 0);
+  }
+} catch (e) {
+  process.stderr.write(`refix: ${e.message}\n`);
+  process.exit(1);
+}

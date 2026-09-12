@@ -1,4 +1,4 @@
-# EZR — Operational Semantics
+# Ever — Operational Semantics
 
 **Version 0.3 · Codric Enterprise · Ricky (Dreid) · 2026**
 
@@ -8,7 +8,7 @@ disagree, the spec is wrong and gets fixed — not the other way round.
 
 ---
 
-## 0. What EZR is
+## 0. What Ever is
 
 A language in which every binding carries **what it holds** and **how
 much that binding is trusted**, and in which nothing executes below a
@@ -18,7 +18,7 @@ Formally: a pure, strictly-evaluated, lexically-scoped first-order
 functional language over a trust-annotated value domain, with a
 possibilistic chain rule and a probabilistic corroboration rule.
 
-EZR is **not** Turing-complete by default. Unbounded recursion is a
+Ever is **not** Turing-complete by default. Unbounded recursion is a
 privilege earned by proof, not a default granted on request. That is a
 design commitment, not a limitation to be fixed later.
 
@@ -67,14 +67,14 @@ u = 1  ⟺  Z          u = 0  ⟺  Certain
 
 ### 1.2 Two entry points, not one
 
-EZR distinguishes two questions that an earlier draft conflated:
+Ever distinguishes two questions that an earlier draft conflated:
 
 | Question | Answer | Entry confidence |
 |---|---|---|
 | Do I know what the program **says**? | always yes | `Certain` (256) |
 | Do I know this reflects **reality**? | often no | `INTAKE` (120) |
 
-A **program constant** — a literal written in EZR source — carries no
+A **program constant** — a literal written in Ever source — carries no
 uncertainty about its value. The author wrote `1`; it is `1`. It enters
 at `Certain`.
 
@@ -85,7 +85,7 @@ floor.
 This distinction is load-bearing. Treating source literals as external
 input floored every computation in the language at 120: a verified
 function given a certain argument returned the correct answer and could
-not certify it, forever. Uncertainty in EZR belongs to **data from
+not certify it, forever. Uncertainty in Ever belongs to **data from
 outside** and to **whether functions are correct** — never to what the
 program says about itself.
 
@@ -93,7 +93,7 @@ program says about itself.
 
 ## 2. The two composition laws
 
-EZR has **two** operators, drawn from **two different formalisms**, used
+Ever has **two** operators, drawn from **two different formalisms**, used
 for **two different questions**. This is deliberate and must be stated
 plainly, because silently mixing them would be an error.
 
@@ -114,7 +114,7 @@ never be reported as one.
 Chosen over the probabilistic rule (`c_f × c_x / 256`) because chains
 compose without collapsing: a ten-step computation over trusted inputs
 stays usable. The cost is that `min` does not track accumulated
-independent error. EZR accepts that cost and states it.
+independent error. Ever accepts that cost and states it.
 
 ### 2.2 Corroborate — multiplicative uncertainty
 
@@ -191,7 +191,7 @@ would propagate by mere mention and continuity would be meaningless.
 ```
 
 Division by zero yields `Z(misbound, "division by zero")`. There are no
-exceptions in EZR; **evaluation is total**. Every expression returns a
+exceptions in Ever; **evaluation is total**. Every expression returns a
 well-formed thread.
 
 ---
@@ -388,30 +388,15 @@ Named honestly, because scope depends on it.
 
 | Missing | Consequence |
 |---|---|
-| Integer arithmetic | no modulo and no integer division, so divisibility cannot be written -- `n / d * d == n` looks like a test for it and is always true, because `/` is float division. FizzBuzz is not expressible in the core |
-| Records | only lists so far; `E_TYPE_LIST` is implemented, records are not |
+| Composite data (records, lists) | `E_TYPE_LIST` is an unimplemented enum |
+| Higher-order functions | functions cannot be arguments |
 | Pattern matching | only `if/then/else` |
 | Static type system | dynamic tag checks only |
 | Module system | one flat global namespace |
 | Transpiler back-ends | anchored bodies do not yet emit Rust/Go/TS |
+| Formal grammar (EBNF) | parsing is regex-based |
 | Soundness proof | no progress/preservation |
-
-Three rows left this table, and they were removed because
-`2-interpreter-python/audit.py` proved they were false rather than
-because anybody remembered:
-
-| Was listed missing | Actually |
-|---|---|
-| Composite data (records, lists) | lists parse, evaluate, and take their confidence from the chain rule over their elements. Records remain missing, so the row narrowed rather than went |
-| Higher-order functions | functions have always been able to be arguments: `twice(inc, 5)` is 7 and `twice(dbl, 5)` is 20. This row was never true |
-| Formal grammar (EBNF) | `7-forge/GRAMMAR.ebnf` is emitted from the chart parser's own rule table, so it cannot drift from the code |
-
-That last pair is the reason the auditor exists. A specification that
-overstates is dangerous because somebody relies on it; one that
-understates is cheaper but still false, and it hides finished work from
-whoever is deciding what to build next. Higher-order functions were
-listed as missing for as long as this document has existed and worked
-the whole time.
+| ~~Forgiveness cost~~ | *specified in §9* |
 
 **Transpilation is the largest gap.** The decision is that an anchored
 function's *body* travels into the target language, with its Examples as
@@ -422,7 +407,7 @@ Examples to inherit the anchor. Nothing of this is built.
 
 ## 8. Worked example
 
-```ezr
+```ever
 def fact(n) = if n <= 1 then 1 else n * fact(n - 1)
 ```
 
@@ -449,3 +434,100 @@ a rebuild; four tests failed and all four had been asserting the defect.
 
 *297 assertions across C, C++, Python and SQL, plus 70 on the
 abstraction layer. Codric Enterprise, 2026.*
+
+---
+
+## 9. Forgiveness
+
+E does not refuse a program over a misplaced comma. Until now that
+behaviour lived only in `forgive.py` and was priced nowhere — the
+implementation counted repairs and never charged for them. This section
+defines the rule the implementations are measured against.
+
+### 9.1 Failure and Fixture
+
+A healing is **two things, never one**:
+
+- **Failure** — the problem. What the source actually said.
+- **Fixture** — the solution. What E bound in its place.
+
+Both are archived, every time, unconditionally. A Fixture recorded
+without its Failure is an invention: the record shows code E wrote with
+no evidence of what provoked it. A Failure recorded without a Fixture is
+a refusal, not a repair. Neither half is archived alone, and the archive
+enforces this rather than trusting it — `repair` rejects an empty
+`failure_text` or `fixture_text` outright.
+
+Nothing is deleted. A repair later proved wrong stays as a boundary
+marker, the same as an `EError`.
+
+### 9.2 Two kinds, two prices
+
+| Kind | What happens | Cost |
+|---|---|---|
+| **plain** | noise removed; one reading was possible | `E_REPAIR_PLAIN` = 8 |
+| **inferred** | structure supplied; intent was assumed | `E_REPAIR_INFERRED` = 32 |
+
+Both are derived from `E_CERTAIN` (256): `256/32` and `256/8`.
+
+Charging one rate for both would assert that deleting a stray semicolon
+and inventing a comma carry equal risk. They do not. A trailing comma
+could only have meant one thing. An inserted comma is a claim about what
+the author intended, and it is a claim E is usually — not always — right
+about.
+
+The consequence falls out rather than being tuned: **four inferred
+repairs land a binding at exactly `E_EXECUTE_FLOOR` (128).** The fifth
+puts it beneath the floor, where it must not run unexamined. A program
+needing five guesses about its structure is not a program with typos.
+
+### 9.3 The seven repairs
+
+| # | Repair | Kind | Defect |
+|---|---|---|---|
+| 1 | `trailing_comma` | plain | none |
+| 2 | `stray_semicolon` | plain | none |
+| 3 | `keyword_case` | plain | none |
+| 4 | `colon_for_equals` | inferred | misbound |
+| 5 | `equals_for_colon` | inferred | misbound |
+| 6 | `equals_for_compare` | inferred | misbound |
+| 7 | `missing_comma` | inferred | unbounded |
+
+Enumerated in `ever_repair` so a second implementation is measured
+against the table, not against Python's error wording.
+
+### 9.4 What is never healed
+
+Missing closing bracket, unterminated string, wrong bracket kind,
+closing the wrong opener, missing `def` body. Guessing where these end
+is guessing structure, not fixing a slip. E explains them and refuses.
+
+### 9.5 Fixture form
+
+`fixture_text` is prose, for a human reading the archive.
+`fixture_form` is the same solution as a structured token edit.
+
+Prose cannot be replayed, so a repair whose `fixture_form` is `NULL`
+counts toward nothing. This column is the gate on §9.6, and it is the
+only reason any of it is possible.
+
+### 9.6 Rules derived from the archive
+
+A Failure shape that has resolved to the **same** `fixture_form` across
+`E_ASCEND_POINTS` (3) *distinct sources* is a candidate rule. Distinct
+sources, not total count: ten repairs in one file is one author's habit.
+
+A candidate is not a rule. It is born as `proposed` at `E_INTAKE` (120),
+beneath the execute floor, healing nothing. It is then **replayed
+against every repair already archived**. If admitting it would change
+the outcome of any prior recorded repair, it is `rejected` — and kept,
+with the reason.
+
+Only a rule that agrees with the entire archive may rise to the floor
+and be `admitted`. The archive enforces both conditions: a rule cannot
+be `admitted` below 128, and cannot be `admitted` with
+`replay_agreed < replay_total`.
+
+No threshold here is new. `E_ASCEND_POINTS`, `E_INTAKE` and
+`E_EXECUTE_FLOOR` were already constants; this section spends them
+rather than inventing rates beside them.

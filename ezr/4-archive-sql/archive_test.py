@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""archive_test.py — EZR / Tapestry Layer 4 verification.
+"""archive_test.py — Ever / Tapestry Layer 4 verification.
 
 Drives archive.sql through Python's sqlite3 so the layer verifies without
 requiring the sqlite3 CLI. The SQL under test is unchanged.
@@ -46,12 +46,12 @@ tables, views, triggers = names('table'), names('view'), names('trigger')
 ok("thread table exists",     "thread" in tables)
 ok("anchor table exists",     "anchor" in tables)
 ok("crossing table exists",   "crossing" in tables)
-ok("defect vocabulary",       "ezr_defect" in tables)
+ok("defect vocabulary",       "ever_defect" in tables)
 ok("nine correlation views",  len(views) == 9)
 ok("nine invariant triggers", len(triggers) == 9)
 
 print("\nConstants agree with the C atom")
-K = dict(con.execute("SELECT name, value FROM ezr_constant"))
+K = dict(con.execute("SELECT name, value FROM ever_constant"))
 ok("Certain 256",        K['E_CERTAIN'] == 256)
 ok("execute floor 128",  K['E_EXECUTE_FLOOR'] == 128)
 ok("pi warn 81",         K['E_PI_WIDTH_WARN'] == 81)
@@ -61,7 +61,7 @@ ok("ascend points 3",    K['E_ASCEND_POINTS'] == 3)
 ok("intake 120",         K['E_INTAKE'] == 120)
 
 print("\nThe five defects are named")
-D = dict(con.execute("SELECT name, id FROM ezr_defect"))
+D = dict(con.execute("SELECT name, id FROM ever_defect"))
 for d in ("unbound", "misbound", "unbounded", "overbound", "orphaned"):
     ok(f"{d} present", d in D)
 

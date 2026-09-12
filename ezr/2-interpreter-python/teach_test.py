@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""teach_test.py — EZR / Tapestry, teaching layer verification.
+"""teach_test.py — Ever / Tapestry, teaching layer verification.
 
 The engine is tested elsewhere. What is tested here is whether somebody
 on their first day would be helped or discouraged.
@@ -12,7 +12,7 @@ from teach import (
     band, percent, find_lesson,
 )
 from checker import ELang
-from ezr import E_CERTAIN, E_EXECUTE_FLOOR
+from ever import E_CERTAIN, E_EXECUTE_FLOOR
 
 passed = failed = 0
 
@@ -26,7 +26,7 @@ def ok(name, cond):
 
 
 t = Teacher()
-print("\n=== EZR \u2014 the teaching layer ===\n")
+print("\n=== Ever \u2014 the teaching layer ===\n")
 
 print("Confidence reads as words, not fractions")
 ok("zero has a label",        band(0)[0] != "")

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""vowels_test.py — EZR / Tapestry, vowel operator verification."""
+"""vowels_test.py — Ever / Tapestry, vowel operator verification."""
 
 from vowels import (
     Spec, Candidate, Ledger, Evolver, templates,
@@ -8,7 +8,7 @@ from vowels import (
     u_understand, u_undermine, u_unwrap, u_ultracode,
 )
 from abstract import Lambda, Closure
-from ezr import e_val, e_z, State, Defect, E_CERTAIN, E_INTAKE
+from ever import e_val, e_z, State, Defect, E_CERTAIN, E_INTAKE
 
 passed = failed = 0
 
@@ -21,7 +21,7 @@ def ok(name, cond):
         failed += 1; print(f"  \u2717 {name}")
 
 
-print("\n=== EZR — the vowel operators ===\n")
+print("\n=== Ever — the vowel operators ===\n")
 
 FACT = Spec("fact", ["n"], [([1], 1), ([2], 2), ([3], 6), ([4], 24)])
 SUM = Spec("tri", ["n"], [([1], 1), ([2], 3), ([3], 6), ([4], 10)])
@@ -46,7 +46,7 @@ ok("winner clears the floor",    fn.can_execute)
 
 lam = Lambda()
 lam.define("fact", ["n"], fn.value.body)
-from ezr import a_anchor
+from ever import a_anchor
 lam.globals["fact"] = a_anchor(lam.globals["fact"])
 r = lam.apply(lam.globals["fact"], [e_val("n", 6, E_CERTAIN)], {}, 0)
 ok("synthesised function computes fact(6)=720", r.value == 720)

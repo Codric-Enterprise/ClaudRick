@@ -1,4 +1,4 @@
-# EZR — The Vowel Operators
+# Ever — The Vowel Operators
 
 **Codric Enterprise · Ricky (Dreid) · 2026**
 
@@ -40,7 +40,7 @@ one of them.
 Verified: from `fact(1)=1, fact(2)=2, fact(3)=6, fact(4)=24` it searched
 816 candidates, 10 satisfied, and returned
 
-```ezr
+```ever
 if n < 1 then 1 else n * fact(n - 1)
 ```
 
@@ -63,7 +63,7 @@ not claim to be.
 | **obliterate** | `E × E × Ledger → E` | **Supersedes** — marks and archives | Delete anything, ever |
 | **optimize** | `[Cand] × Spec → E` | Selects by confidence per unit complexity | Prefer a longer program that does the same work |
 
-**`obliterate` never deletes.** Conservation is a law in EZR, not a
+**`obliterate` never deletes.** Conservation is a law in Ever, not a
 preference, so the strongest available operation is supersession with the
 record kept. The superseded thread becomes an `EError` boundary marker
 recording where the previous best stood and what replaced it.
@@ -127,14 +127,14 @@ Verified: from three examples the system independently derived
 independently synthesised programs.
 
 **Where they disagree, it withholds.** Inventing an expected answer would
-teach the corpus a fact nobody verified, which is the one thing EZR
+teach the corpus a fact nobody verified, which is the one thing Ever
 exists to prevent.
 
 ### Honest convergence
 
 The loop **converges and says so**. Given a spec it can already satisfy
 optimally, it reports *"incumbent held; no improvement found"* rather
-than churning to look busy. EZR-evolving means it evolves when there is
+than churning to look busy. Ever-evolving means it evolves when there is
 room — not that it manufactures change when there is none.
 
 ---
@@ -147,7 +147,7 @@ Every layer, every toolchain, one image:
 docker compose run --rm verify     # all layers, including Ruby and Java
 docker compose run --rm evolve     # the self-generating loop
 docker compose run --rm research   # conservation law, ratios, defects
-docker compose up live             # localhost:8088/ezr-live.html
+docker compose up live             # localhost:8088/ever-live.html
 ```
 
 The image **verifies itself at build time**. If any layer fails, the
