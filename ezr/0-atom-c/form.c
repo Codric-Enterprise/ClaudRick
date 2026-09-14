@@ -4,14 +4,12 @@
  * Codric Enterprise · Ricky (Dreid) · 2026
  */
 
+#include "tapestry.h"   /* E_INTAKE and the rest of the scale */
 #include "form.h"
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 
-#ifndef E_INTAKE
-#define E_INTAKE 120
-#endif
 #ifndef E_CERTAIN
 #define E_CERTAIN 256
 #endif

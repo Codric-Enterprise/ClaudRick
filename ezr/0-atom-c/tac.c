@@ -3,10 +3,8 @@
  * Codric Enterprise · Ricky (Dreid) · 2026
  */
 
+#include "tapestry.h"   /* E_INTAKE and the rest of the scale */
 #include "tac.h"
-#ifndef E_INTAKE
-#define E_INTAKE 120  /* external data enters at 120/256 */
-#endif
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>

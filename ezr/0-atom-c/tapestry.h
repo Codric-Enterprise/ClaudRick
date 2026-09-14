@@ -52,6 +52,7 @@
 #define E_ZERO               0     /* Z. zero-absolute.              */
 #define E_CERTAIN            256   /* 4^4. the states of a byte.     */
 #define E_EXECUTE_FLOOR      128   /* 256 / 2                        */
+#define E_INTAKE             120   /* what arrives from outside      */
 #define E_PI_WIDTH_WARN      81    /* floor(256 / pi)                */
 #define E_PI_WIDTH_ENUMERATE 25    /* floor(256 / pi^2)              */
 #define E_EMULATE_CEILING    3     /* floor(pi)                      */
@@ -253,6 +254,8 @@ e_particle a_autodidact(const e_particle *history, int n, const char *about);
 e_particle e_carry(const e_particle *src, const char *new_ident);
 e_particle e_cap(const e_particle *src, int16_t ceiling);
 int16_t    e_excel_formula(int16_t a, int16_t b);
+int16_t    e_confidence_from_examples(int passing, int total);
+int        e_witnesses_needed(int passing, int total, int16_t target, int cap);
 int16_t    e_phi_equalize(int16_t value, int16_t set_mean);
 e_particle e_emulate(const e_particle *broken, const e_particle *working,
                      uint8_t error_distance);

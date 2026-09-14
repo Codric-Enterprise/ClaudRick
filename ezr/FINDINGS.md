@@ -223,35 +223,36 @@ this block stops matching a real run.
 <!-- assertion-counts:begin -->
 | suite | assertions | failed |
 |---|---:|---:|
-| C atom        | 88 | 0 |
-| C bridge      | ran | 0 |
-| EValue (C)    | 98 | 0 |
-| IR+arena (C)  | 70 | 0 |
-| Phase (C++)   | 50 | 0 |
-| Lexer         | 91 | 0 |
-| Parser        | 74 | 0 |
-| ABI           | 46 | 0 |
-| EValue (Py)   | 85 | 0 |
-| Interpreter   | 83 | 0 |
-| IR bridge     | 7 | 0 |
-| Pipeline      | 65 | 0 |
-| Abstraction   | 70 | 0 |
-| Runner        | 46 | 0 |
-| Vowels        | 79 | 0 |
-| Teaching      | 41 | 0 |
-| SQL archive   | 56 | 0 |
-| Kitchen sink  | ran | 0 |
-| Form IR (C99) | ran | 0 |
-| Profiler      | 99 | 0 |
-| Native (C99)  | ran | 0 |
-| Integration   | ran | 0 |
-| Gold standard | ran | 0 |
-| Golden master | 31 | 0 |
-| Notebook      | ran | 0 |
-| Research      | ran | 0 |
+| C atom         | 88 | 0 |
+| C bridge       | ran | 0 |
+| EValue (C)     | 98 | 0 |
+| IR+arena (C)   | 70 | 0 |
+| Phase (C++)    | 50 | 0 |
+| Lexer          | 91 | 0 |
+| Parser         | 74 | 0 |
+| ABI            | 46 | 0 |
+| EValue (Py)    | 85 | 0 |
+| Interpreter    | 83 | 0 |
+| IR bridge      | 7 | 0 |
+| Pipeline       | 65 | 0 |
+| Abstraction    | 70 | 0 |
+| Runner         | 46 | 0 |
+| Vowels         | 79 | 0 |
+| Teaching       | 41 | 0 |
+| SQL archive    | 56 | 0 |
+| Kitchen sink   | ran | 0 |
+| Form IR (C99)  | ran | 0 |
+| Profiler       | 99 | 0 |
+| Native (C99)   | ran | 0 |
+| Integration    | ran | 0 |
+| Gold standard  | ran | 0 |
+| Golden master  | 31 | 0 |
+| Notebook       | ran | 0 |
+| Research       | ran | 0 |
+| Algebra parity | ran | 0 |
 | **total** | **1179** | **0** |
 
-The total covers the 18 suites that report a tally. 8 more run and pass without counting assertions (C bridge, Kitchen sink, Form IR (C99), Native (C99), Integration, Gold standard, Notebook, Research); they are verified, not quantified, and inventing a number for them is what this table exists to prevent.
+The total covers the 18 suites that report a tally. 9 more run and pass without counting assertions (C bridge, Kitchen sink, Form IR (C99), Native (C99), Integration, Gold standard, Notebook, Research, Algebra parity); they are verified, not quantified, and inventing a number for them is what this table exists to prevent.
 <!-- assertion-counts:end -->
 
 ### Why this is generated now
@@ -572,3 +573,59 @@ down(xs, 5)    ->  63 [256/256]
 call. `examples/readings.ever` counts down and says why in a comment,
 and 7.7's guidance names the parameter that went the wrong way when
 asked through `ezrun`.
+
+### 7.9 One rule, four languages, two implementations
+
+The standing rule is that whatever is written in Python is written in
+every language the system implements. Measured against the tree, it had
+already rotted:
+
+| piece | C | Python | Ruby | Java |
+|---|:-:|:-:|:-:|:-:|
+| `excel` / corroboration | yes | yes | yes | yes |
+| `from_examples` — the [EXAMPLE] ladder | **no** | yes | **no** | yes |
+| `witnesses_needed` — its inverse | **no** | yes | **no** | yes |
+| `movements` — the measure inversion | n/a | yes | n/a | yes |
+
+Nothing reported it. Three pieces of the confidence algebra lived in two
+of four implementations and the gate was green the whole time, because
+every suite checks its own language against itself.
+
+C and Ruby now carry both arithmetic pieces, and all four produce the
+identical ladder and the identical inverse:
+
+```
+p of p     0   1    2    3    4    5    6
+           0 120  183  217  235  245  250
+2 of 3   122
+witnesses needed at the floor, from (0,0) (1,1) (2,3) (1,9):  2  1  1  8
+```
+
+`tests/algebra_parity.py` runs those vectors through all four as
+processes and fails the gate on any disagreement — proven by changing
+Ruby's intake constant from 120 to 128 and watching it report the split.
+It is in `run_all.py` and in `run.sh`.
+
+`movements` is marked n/a rather than missing: it needs an AST with call
+nodes. Ruby is a DSL with no parser, and C's `measure` is structural
+metrics (`ev_node_measure` fills size and depth) — C has no termination
+measure and no anchoring at all, which `CLAUDE.md` already said. A gap
+with a reason is not the same as a gap.
+
+### 7.10 `E_INTAKE` was defined five times
+
+Found while giving C the ladder, which needed the constant: `E_INTAKE`
+was not in `tapestry.h` at all. It was `#define`d, `#ifndef`-guarded, in
+`form.c`, `form_lower.c`, `tac.c`, `kitchen_sink.c` and `tac_test.c` —
+five copies of 120, in a language where the other eight scale constants
+all live in the header. Three of those files did not include
+`tapestry.h`, so the guards were not even redundant; they were the only
+definition each file had.
+
+Nothing would have caught a drift. The guards mean a file that disagreed
+would compile silently and quietly enter its values at a different floor.
+
+Now declared once, in `tapestry.h` beside `E_EXECUTE_FLOOR`, and the five
+local copies are gone. Verified: `kitchen_sink` 573 assertions / 31
+suites, `tac_test` 56 assertions, no new compiler warnings (the two that
+remain are pre-existing and in `ev_test.h`).

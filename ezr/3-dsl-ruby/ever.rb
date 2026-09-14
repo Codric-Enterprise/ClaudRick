@@ -256,6 +256,41 @@ module EZR
     [[a + b - (a * b / CERTAIN), CERTAIN - 1].min, ZERO].max
   end
 
+  # [EXAMPLE], SEMANTICS.md 4.2 — evidence earns confidence.
+  #
+  #   u_f = ((CERTAIN - INTAKE)/CERTAIN) ** p
+  #   c_f = floor(CERTAIN * (1 - u_f) * p/t), capped one short of CERTAIN
+  #
+  # Each passing Example is an INDEPENDENT witness at intake strength, so
+  # Examples corroborate rather than chain: 1/1 is 120 and still under the
+  # execute floor, 2/2 clears at 183, 3/3 is 217. A failure scales the
+  # result by the share that held, so 2 of 3 is 122 and back under.
+  def from_examples(passing, total)
+    return ZERO if total <= 0
+
+    passing = 0 if passing.negative?
+    unit = (CERTAIN - INTAKE).to_f / CERTAIN
+    u    = passing.zero? ? 1.0 : unit**passing
+    c    = (CERTAIN * (1.0 - u) * (passing.to_f / total)).floor
+    [[c, CERTAIN - 1].min, ZERO].max
+  end
+
+  # [EXAMPLE] solved for the evidence still owed, rather than the score.
+  #
+  # The least k further PASSING witnesses that reach `target`, or nil when
+  # it is out of reach within `cap`. Walked rather than inverted: the
+  # forward rule is monotone in k and saturates one short of CERTAIN, so
+  # walking up from 0 finds the least sufficient k or proves there is
+  # none. A failure already recorded cannot be withdrawn, so the answer
+  # accounts for it — 1 of 9 needs eight more, not one.
+  #
+  # A refusal that says only "below the execute floor" has deleted the
+  # half a person can act on. This is that half.
+  def witnesses_needed(passing, total, target = EXECUTE_FLOOR, cap = 64)
+    (0..cap).each { |k| return k if from_examples(passing + k, total + k) >= target }
+    nil
+  end
+
   # ASCEND — the only path upward. Three aligned points.
   def ascend(thread, evidence)
     return Thread.z(thread.ident, 'Z cannot ascend; it must be resolved', thread.defect) if thread.z?

@@ -38,6 +38,11 @@ SUITES = [
     # real run -- the drift that let FINDINGS.md claim 81 while the suite
     # said 83, in five places, for as long as nobody compared them.
     ("Assertion counts", f"{sys.executable} tests/assertion_counts.py --check"),
+    # One rule, every language. Runs the same [EXAMPLE] ladder through C,
+    # Python, Ruby and Java as processes and fails if any two disagree.
+    # movements, witnesses_needed and from_examples all lived in Python
+    # and Java and nowhere else, and nothing said so.
+    ("Algebra parity",   f"{sys.executable} tests/algebra_parity.py"),
 ]
 
 def run(label, cmd):

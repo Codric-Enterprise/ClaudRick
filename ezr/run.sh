@@ -120,6 +120,11 @@ if have python3; then
   ( cd 2-interpreter-python && python3 notebook.py | tail -6 ) && pass "Notebook" || fail "Notebook"
 else skip "Notebook" "python3 not found"; fi
 
+echo; echo "[PARITY] one rule, every language (C, Python, Ruby, Java)"
+if have python3; then
+  ( python3 tests/algebra_parity.py | tail -2 ) && pass "Algebra parity" || fail "Algebra parity"
+else skip "Algebra parity" "python3 not found"; fi
+
 echo; echo "[3] Ruby — the DSL"
 if have ruby; then
   ( cd 3-dsl-ruby && ruby ever.rb | tail -2 ) && pass "Layer 3 (Ruby)" || fail "Layer 3 (Ruby)"

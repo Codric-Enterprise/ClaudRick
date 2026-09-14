@@ -7,10 +7,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
+#include "tapestry.h"   /* E_INTAKE and the rest of the scale */
 #include "tac.h"
-#ifndef E_INTAKE
-#define E_INTAKE 120
-#endif
 
 static int ok_n=0, fail_n=0;
 static void _ok(const char *n, int c){
