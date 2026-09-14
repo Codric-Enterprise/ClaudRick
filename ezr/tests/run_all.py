@@ -33,6 +33,11 @@ SUITES = [
     ("Golden master",  f"{sys.executable} tests/golden.py"),
     ("Notebook",       f"{sys.executable} 2-interpreter-python/notebook.py"),
     ("Research",       f"{sys.executable} research.py"),
+    # Last, because it runs everything above a second time to read their
+    # tallies. It fails when a document's assertion count stops matching a
+    # real run -- the drift that let FINDINGS.md claim 81 while the suite
+    # said 83, in five places, for as long as nobody compared them.
+    ("Assertion counts", f"{sys.executable} tests/assertion_counts.py --check"),
 ]
 
 def run(label, cmd):

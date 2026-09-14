@@ -20,7 +20,42 @@ uncertainty combination:
 u_result = u_a × u_b
 ```
 
-Verified exactly across the full grid: **1089 / 1089**.
+Verified across the full grid: **1020 / 1089**, and the 69 gaps are the
+interesting part.
+
+That number used to read 1089 / 1089, and it was measuring nothing.
+`research.py` carried its own copy of `excel` — the **uncapped** formula,
+`min(256, a + b − ab/256)` — and compared it against the closed form of
+the same uncapped rule. A formula agreeing with itself. The cap that this
+very section reports as "fixed in C, Python and Ruby" had never reached
+the copy here, so `research.excel(250, 250)` still returned 256: the
+manufactured-Certain bug, alive in the file that reports it as dead.
+
+`research.py` now imports `excel` from `ever.py`. One formula, one place.
+Against the language's actual function the grid is 1020 / 1089, and every
+one of the 69 disagreements is the cap firing:
+
+| gap | count | what it is |
+|---|---:|---|
+| two imperfect witnesses rounding up to Certain | 5 | what the cap is for |
+| one witness already Certain | 64 | `u = 1 × 0 = 0` says 256; the cap says 255 |
+| both Certain | 0 | agree |
+
+The 64 are worth a decision. T3 says `u = 0` requires **some** `u_i = 0`
+— one witness already at zero ignorance is enough. The shipped cap
+requires **both** inputs at Certain and returns 255 otherwise, so
+`excel(Z, Certain) = 255` where the algebra says 256. Either T3 is loose
+and the language means both, or the cap is one notch too strict. Recorded
+rather than decided; it changes what `EXCEL` means.
+
+Nothing tests it, on any side. `kitchen_sink.c` checks
+`e_excel_formula(CERTAIN, CERTAIN)`, then a sweep of `e_excel_formula(c,
+c)` for matching pairs — never an asymmetric pairing with one Certain
+input. So the 64 points where the cap and the algebra disagree are
+untested in C, untested in Python, and were unmeasurable here because
+this file held an uncapped copy. Three independent reasons nobody saw
+them, which is usually how a question stays open without anyone deciding
+it was open.
 
 That is the standard rule for combining independent evidence: the chance
 both witnesses are wrong is the product of each being wrong. It was
@@ -33,11 +68,47 @@ confidence. It multiplies two ignorances into a smaller one. The
 confidence was already distributed across the witnesses; corroboration
 only revealed it. Conservation holds.
 
-**Z-contagion is not a rule — it is arithmetic.** `u = 1`, and
-`1 × x = 1` for every x. Z is the absorbing element under multiplication.
-Anything mixed with total ignorance yields total ignorance. This was
-written into the language as a design decision; it turns out to be a
-theorem.
+**Z-contagion is arithmetic — but not this arithmetic.** The claim
+printed here for a long time was: `u = 1`, and `1 × x = 1` for every x,
+so Z is the absorbing element under multiplication. Two of those three
+statements are false. `1 × x = x`, not 1; and Z is the **identity** of
+corroboration, not its absorbing element. Measured:
+
+```
+excel(0, b)   == b     for every b in 0..256     Z is the identity
+excel(256, b) == 256   for every b in 0..256     CERTAIN is what absorbs
+```
+
+That is the right behaviour and always was the code's behaviour —
+corroborating with a witness who knows nothing leaves what you had
+exactly as it was. Only the description was wrong.
+
+Z-contagion is real, and it is a theorem — of the **chain rule**, which
+is `min`, where `min(0, b) = 0` for every b. So Z is contagious along a
+chain of dependence and inert under corroboration. A computation that
+consumed an unknown is unknown; a witness who abstains has not testified.
+Conflating the two operations made a true statement about `min` read as a
+false one about `excel`, and the function cited as proof
+(`Thermo.z_absorbs`) was in fact asserting `excel(0, b) == b` — the
+identity law, under a name promising absorption. It returned True and was
+read as confirming a claim it never made.
+
+Now split into three functions that each say what they check, and each
+reports a count rather than a bool, because two of the three laws do not
+hold everywhere in the shipped `excel`:
+
+| law | shipped | pure algebra |
+|---|---:|---:|
+| `excel(Z, b) == b` — Z is the identity | 256/257 | 257/257 |
+| `excel(Certain, b) == Certain` — Certain absorbs | 1/257 | 257/257 |
+| `min(Z, b) == Z` — Z absorbs along the chain | 257/257 | 257/257 |
+
+The cap breaks both `EXCEL` laws at the Certain boundary and nowhere
+else. That is a real cost of the cap, and nothing reported it, because
+the file that would have was measuring the uncapped formula where nothing
+breaks. The chain rule is untouched — Z-contagion holds everywhere, which
+is the one thing the original claim got right about the language even
+while getting the algebra wrong.
 
 **Certain is unreachable by combination.** `u = 0` requires some
 `u_i = 0` exactly. A product of non-zero terms is never zero. No stack of
@@ -144,30 +215,105 @@ formal reason Certain must come from outside the corpus.
 
 ## 5. Executed verification
 
-| layer | assertions |
-|---|---|
-| 0 · C — the atom | 88 |
-| 1 · C++ — the phase engine | 50 |
-| 2 · Python — the interpreter | 81 |
-| 4 · SQL — the archive | 56 |
-| **total** | **275** |
+Everything below is emitted by `python3 tests/assertion_counts.py`, which
+runs every suite and reads the tally each one prints. Nothing here is
+typed by hand, and `--check` (wired into `run_all.py`) fails the gate if
+this block stops matching a real run.
 
-Layer 3 (Ruby) is written and inspected clean at 228/256 by Ever's own
-Ruby checker, but has not been executed — no Ruby toolchain in the build
-container. It runs on macOS.
+<!-- assertion-counts:begin -->
+| suite | assertions | failed |
+|---|---:|---:|
+| C atom        | 88 | 0 |
+| C bridge      | ran | 0 |
+| EValue (C)    | 98 | 0 |
+| IR+arena (C)  | 70 | 0 |
+| Phase (C++)   | 50 | 0 |
+| Lexer         | 91 | 0 |
+| Parser        | 74 | 0 |
+| ABI           | 46 | 0 |
+| EValue (Py)   | 85 | 0 |
+| Interpreter   | 83 | 0 |
+| IR bridge     | 7 | 0 |
+| Pipeline      | 65 | 0 |
+| Abstraction   | 70 | 0 |
+| Runner        | 46 | 0 |
+| Vowels        | 79 | 0 |
+| Teaching      | 41 | 0 |
+| SQL archive   | 56 | 0 |
+| Kitchen sink  | ran | 0 |
+| Form IR (C99) | ran | 0 |
+| Profiler      | 99 | 0 |
+| Native (C99)  | ran | 0 |
+| Integration   | ran | 0 |
+| Gold standard | ran | 0 |
+| Golden master | 31 | 0 |
+| Notebook      | ran | 0 |
+| Research      | ran | 0 |
+| **total** | **1179** | **0** |
 
-Layers 5 (Java) and 6 (HTML) are not yet ported to the v2 atom.
+The total covers the 18 suites that report a tally. 8 more run and pass without counting assertions (C bridge, Kitchen sink, Form IR (C99), Native (C99), Integration, Gold standard, Notebook, Research); they are verified, not quantified, and inventing a number for them is what this table exists to prevent.
+<!-- assertion-counts:end -->
+
+### Why this is generated now
+
+The table this replaces said the Python interpreter had **81** assertions.
+It has 83, and has for a while. Four other documents — `PIPELINE.md`,
+`ABI.md`, `VOWELS.md`, `TEACHING.md` — carried their own copies of the
+same row and all four said 83, so the tree disagreed with itself in five
+places about one number.
+
+The 81 was not a typo. The old table totalled 88 + 50 + **81** + 56 =
+275, and printed 275 — self-consistent, and therefore right when it was
+written. `ever_test.py` then gained two assertions and no document
+noticed, because nothing compared them. That is the whole failure mode: a
+transcribed number cannot go stale loudly.
+
+Three unrelated 81s in this project made it harder to spot rather than
+easier. ⌊256/π⌋ = 81 is `PI_WARN`, the forge reports 81 passing
+assertions, and this table claimed 81 — so the wrong number looked
+familiar every time anyone read past it.
+
+The four duplicate tables are gone; they point here. One number, one
+place, generated.
+
+### What is not counted
+
+Eight suites pass without reporting a tally (`C bridge`, `Kitchen sink`,
+`Form IR`, `Native`, `Integration`, `Gold standard`, `Notebook`,
+`Research`). They are listed as `ran`. An earlier draft of the generator
+scanned their output for anything shaped like a count and reported
+`Integration` as 12, `Gold standard` as 8, `Notebook` as 6 and `Research`
+as 1089 — that last being the excel verification grid, not an assertion
+count at all. Four invented numbers, produced by the script written to
+stop numbers being invented. The heuristic is gone: a canonical tally, or
+nothing.
+
+### Layers not in that table
+
+Layer 3 (Ruby) **does** run here: `cd 3-dsl-ruby && ruby ever.rb` reports
+69 passed, 0 failed. The claim that it had never been executed for want
+of a toolchain was true when written and is not now.
+
+Layer 5 (Java) runs too — `RuntimeTest`, 98 assertions — as does
+`7-forge` at 81. Neither is in `run_all.py`, so neither appears above;
+that is a gap in the gate, recorded in §7.4, not an absence of tests.
 
 ---
 
 ## 6. What is safe to claim
 
 **Supported:**
-- Excel is exactly multiplicative uncertainty combination (1089/1089)
-- Z-contagion is a consequence of that algebra, not an imposed rule
-- Certain is formally unreachable by combination at any strength
+- Excel is multiplicative uncertainty combination at 1020/1089 grid
+  points; the 69 gaps are all the 255 cap, 64 of them where one witness
+  is already Certain (§1). The old "1089/1089 exact" compared a stale
+  local copy of the uncapped formula against itself.
+- Z-contagion is a theorem of the CHAIN rule, `min(0, b) = 0` — not of
+  corroboration, where Z is the identity and `excel(0, b) = b` (§1)
+- Certain is formally unreachable by combination at any strength, and is
+  the absorbing element of corroboration
 - Every finding classifies into five binding defects
-- 275 assertions execute and pass across four layers
+- The assertion totals in §5, which are generated from a run rather than
+  transcribed
 - Anchored threads cross five languages with zero loss; unanchored drift
   is measurable and the database refuses to record an anchored loss
 

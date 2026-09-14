@@ -26,12 +26,14 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, "2-interpreter-python"))
 
 from checker import Translator, ELang, classify   # noqa: E402
+from ever import (E_CERTAIN, E_EXECUTE_FLOOR, E_PI_WIDTH_ENUMERATE,  # noqa: E402
+                  E_PI_WIDTH_WARN, E_ZERO, excel)
 
-E_CERTAIN            = 256
-E_ZERO               = 0
-E_EXECUTE_FLOOR      = 128
-E_PI_WIDTH_WARN      = 81
-E_PI_WIDTH_ENUMERATE = 25
+#: The scale constants and `excel` are imported, not restated. They were
+#: restated here, and the restated `excel` had silently fallen a bug fix
+#: behind the language -- the same failure the assertion counts had, one
+#: layer down. A constant copied is a constant that can drift; there is
+#: no reason for this file to hold its own opinion about what CERTAIN is.
 PHI                  = 1.6180339887
 
 
@@ -48,8 +50,21 @@ def confidence_from(u: float) -> int:
     return int(round(E_CERTAIN * (1.0 - u)))
 
 
-def excel(a: int, b: int) -> int:
-    return min(E_CERTAIN, a + b - (a * b) // E_CERTAIN)
+#: `excel` is imported from ever.py above rather than redefined here.
+#:
+#: It used to be redefined, as `min(256, a + b - (a*b)//256)` -- the
+#: UNCAPPED formula, which is the "manufactured Certain" bug this very
+#: file reports as fixed in section 1 of FINDINGS.md. The fix landed in
+#: C, Python and Ruby and never reached the copy living here, so the
+#: research file certifying the algebra was certifying a formula the
+#: language does not use. Measured across the 1089-point grid: they
+#: disagree at 69 points.
+#:
+#: `verify_excel_is_multiplicative` then compared this local copy against
+#: the closed form of the same uncapped rule and reported 1089/1089 -- a
+#: formula agreeing with itself. Against the shipped excel it is
+#: 1020/1089, and the 69 gaps are the interesting part rather than an
+#: embarrassment; see the function.
 
 
 class Thermo:
@@ -68,9 +83,22 @@ class Thermo:
        confidence was always there, distributed across the witnesses. The
        system only revealed it.
 
-    2. Z is the absorbing element. u = 1, and 1 * x = 1 for every x. That
-       is WHY Z is contagious. It was never a rule imposed on the system;
-       it is what maximum uncertainty does under multiplication.
+    2. Z is the IDENTITY of corroboration, not its absorbing element.
+       u = 1, and 1 * x = x -- so excel(Z, b) = b. A witness who knows
+       nothing leaves what you already had exactly as it was. That is the
+       right behaviour and it is what the code does; an earlier version
+       of this docstring claimed the opposite ("1 * x = 1 for every x"),
+       which is false arithmetic, and named Z as the absorbing element,
+       which it is not. The absorbing element of excel is CERTAIN:
+       excel(256, b) = 256 for every b.
+
+       Z-contagion is real, and it comes from the OTHER operation. The
+       chain rule is min, and 0 absorbs under min: min(0, b) = 0 for
+       every b. So Z is contagious along a chain of dependence and inert
+       under corroboration, which is exactly as it should be -- a
+       computation that consumed an unknown is unknown, while a witness
+       who abstains has not testified. Conflating the two made a true
+       statement about min read as a false one about excel.
 
     3. Certain is unreachable by combination alone. u = 0 requires some
        u_i = 0 exactly. No finite stack of imperfect witnesses reaches it.
@@ -80,7 +108,16 @@ class Thermo:
 
     @staticmethod
     def verify_excel_is_multiplicative() -> Tuple[int, int]:
-        """Excel and multiplicative uncertainty must agree exactly."""
+        """The language's excel against pure multiplicative uncertainty.
+
+        This is now a real cross-check: `excel` is the shipped function,
+        and `predicted` is the closed form of u_r = u_a * u_b. They agree
+        at 1020 of 1089 grid points and differ at 69, all of them where
+        the shipped cap fires. Every disagreement is the cap, not the
+        algebra -- which is the finding, and is worth more than the
+        1089/1089 this reported when it was comparing a local copy of the
+        uncapped formula against the uncapped formula.
+        """
         hits = total = 0
         for a in range(0, 257, 8):
             for b in range(0, 257, 8):
@@ -91,11 +128,90 @@ class Thermo:
         return hits, total
 
     @staticmethod
-    def z_absorbs() -> bool:
-        """Z-contagion as a consequence rather than a rule."""
-        return all(excel(E_ZERO, b) == b - (E_ZERO * b) // E_CERTAIN
-                   and uncertainty(E_ZERO) == 1.0
-                   for b in range(0, 257, 16))
+    def cap_divergences() -> Dict[str, int]:
+        """Where the shipped cap departs from pure multiplication, and why.
+
+        Two different things, and only one of them is the cap doing its
+        job:
+
+        `neither_certain` -- combination that would otherwise round up to
+        256 out of two imperfect witnesses. This is exactly what the cap
+        exists to stop, and T3 agrees with the cap.
+
+        `one_certain` -- one witness already at zero ignorance. The
+        product u = 1 * 0 is 0, so multiplication says Certain, and T3
+        says `u = 0 requires SOME u_i = 0` -- one is enough. The shipped
+        cap requires BOTH inputs at Certain and returns 255 here. So
+        either T3 is loose and the language means both, or the cap is a
+        notch too strict. That is a decision about the language, recorded
+        rather than made.
+        """
+        out = {"both_certain": 0, "one_certain": 0, "neither_certain": 0}
+        for a in range(0, 257, 8):
+            for b in range(0, 257, 8):
+                predicted = E_CERTAIN - ((E_CERTAIN - a) * (E_CERTAIN - b)
+                                         // E_CERTAIN)
+                if predicted == excel(a, b):
+                    continue
+                if a >= E_CERTAIN and b >= E_CERTAIN:
+                    out["both_certain"] += 1
+                elif a >= E_CERTAIN or b >= E_CERTAIN:
+                    out["one_certain"] += 1
+                else:
+                    out["neither_certain"] += 1
+        return out
+
+    @staticmethod
+    def z_is_identity_under_excel() -> Tuple[int, int]:
+        """excel(Z, b) == b: corroborating with a witness who knows
+        nothing changes nothing.
+
+        This is what the function previously named `z_absorbs` actually
+        tested. Its assertion was `excel(0, b) == b - (0*b)//256`, whose
+        right-hand side is just `b` -- the identity law, checked under a
+        name that promised absorption. The test was right and the name
+        was wrong, which is the worst way round: it returned True and was
+        cited as proof of a claim it never made.
+
+        Returns hits/total rather than a bool because the law does not
+        hold everywhere in the SHIPPED excel: it holds for b in 0..255
+        and breaks at b = 256, where the cap returns 255. The old version
+        returned True by testing an uncapped local copy of the formula.
+        Reporting 256/257 is the honest number; reporting True required
+        testing a function the language does not use.
+        """
+        hits = sum(1 for b in range(0, 257) if excel(E_ZERO, b) == b)
+        return hits, 257
+
+    @staticmethod
+    def certain_absorbs_under_excel() -> Tuple[int, int]:
+        """excel(Certain, b) == Certain -- absorption, in pure algebra.
+
+        In the shipped excel this holds at exactly one point, b = 256,
+        because the cap returns 255 whenever only one input is Certain.
+        So 1/257, and the gap is the cap rather than the algebra.
+
+        Pure multiplicative uncertainty has Certain as the absorbing
+        element of corroboration (u = 0 times anything is 0) and Z as the
+        identity. The cap breaks both laws at the Certain boundary, which
+        is a real cost of the cap and was not being reported anywhere --
+        the file that would have reported it was using the uncapped
+        formula, where nothing breaks.
+        """
+        hits = sum(1 for b in range(0, 257) if excel(E_CERTAIN, b) == E_CERTAIN)
+        return hits, 257
+
+    @staticmethod
+    def z_absorbs_under_chain() -> bool:
+        """min(Z, b) == Z for every b.
+
+        Where Z-contagion really lives. Dependence chains by min, and 0
+        absorbs under min -- so a value computed from an unknown is
+        unknown. That IS a theorem rather than a rule, exactly as the
+        project claimed; it is a theorem about the chain rule, and was
+        being attributed to corroboration, where it is false.
+        """
+        return all(min(E_ZERO, b) == E_ZERO for b in range(0, 257))
 
     @staticmethod
     def combine_chain(confidences: List[int]) -> int:
@@ -227,8 +343,22 @@ def main() -> int:
     # ── THERMO ──
     print("\n\u25b8 THERMO — what is actually conserved\n")
     hits, total = Thermo.verify_excel_is_multiplicative()
+    gaps = Thermo.cap_divergences()
     print(f"  Excel vs multiplicative uncertainty : {hits}/{total} exact")
-    print(f"  Z absorbs under multiplication      : {Thermo.z_absorbs()}")
+    print(f"    the {total - hits} gaps are all the shipped cap firing:")
+    print(f"      {gaps['neither_certain']:>3} two imperfect witnesses "
+          f"rounding up to Certain \u2014 what the cap is for")
+    print(f"      {gaps['one_certain']:>3} one witness already Certain "
+          f"\u2014 u = 1 x 0 = 0 says 256, the cap says 255")
+    print(f"      {gaps['both_certain']:>3} both Certain")
+    zid_h, zid_t = Thermo.z_is_identity_under_excel()
+    cab_h, cab_t = Thermo.certain_absorbs_under_excel()
+    print(f"  Z is the IDENTITY of excel          : {zid_h}/{zid_t}"
+          f"   excel(0,b) = b, all but b=256")
+    print(f"  CERTAIN absorbs under excel         : {cab_h}/{cab_t}"
+          f"   pure algebra says 257/257; the cap says otherwise")
+    print(f"  Z absorbs under the CHAIN rule      : "
+          f"{Thermo.z_absorbs_under_chain()}   min(0,b) = 0, everywhere")
     print()
     print("  First Law for Ever:")
     print("    confidence is NOT conserved. uncertainty is, and it")
@@ -236,7 +366,9 @@ def main() -> int:
     print()
     print("  Consequences, none of them designed in:")
     print("    Excel creates nothing  \u2014 it multiplies two ignorances down")
-    print("    Z is contagious        \u2014 because u=1 and 1*x=1, absorbing")
+    print("    Z is INERT here        \u2014 u=1 and 1*x=x, so excel(Z,b)=b;")
+    print("                             a witness who abstains adds nothing")
+    print("    Z is contagious there  \u2014 along the CHAIN, where min(0,b)=0")
     print("    Certain is unreachable \u2014 by combination alone; u=0 needs")
     print("                             a witness already at zero ignorance")
 
