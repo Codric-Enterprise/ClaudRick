@@ -55,7 +55,7 @@ Key design decisions:
 │   └── test_server.py             # runs a live server on port 0, fake client
 ├── .claude/                  # checked-in Claude Code tooling (see "Claude tooling" below)
 │   ├── settings.json         # permissions allowlist + PreToolUse/PostToolUse/SessionStart hooks
-│   ├── hooks/session-start.sh     # SessionStart: loads .env if present, installs dev deps on cold containers
+│   ├── hooks/session-start.sh     # SessionStart: loads .env, installs ReVision dev deps, verifies ezr's toolchain
 │   ├── hooks/git-safety-guard.sh  # PreToolUse (Bash): blocks force-push/reset --hard/clean -f/--no-verify/…
 │   ├── hooks/secret-scan-precommit.sh # PreToolUse (Bash): blocks `git commit` on a likely-secret staged diff
 │   ├── commands/             # custom slash commands (/analyze, /think, /check, /run-app, /prd, …)
@@ -288,7 +288,12 @@ model stack, the core-files framework, and the Claude Code app workflow):
   notes checklist below).
 - **`settings.json` + `hooks/`** — a `permissions.allow` list pre-authorizing
   `ruff`/`pytest`/`python`/`revision`/`curl`; a `SessionStart` hook
-  (`hooks/session-start.sh`) that installs dev deps on a cold remote container;
+  (`hooks/session-start.sh`) that installs dev deps on a cold remote container
+  and verifies the C/C++/Ruby/Java toolchains `ezr/`'s gate needs — because
+  `run.sh` and `algebra_parity.py` *skip* a layer whose toolchain is absent and
+  still exit 0, so a degraded container reads green (measured: hiding `/usr/bin`
+  takes `algebra_parity` from 4 agreed to 2 agreed / 2 skipped, exit 0 both
+  times). It also warns when `JAVA_TOOL_OPTIONS` is set, per the gotcha below;
   and two `PreToolUse` hooks matched on `Bash` calls — `git-safety-guard.sh`
   (hard-blocks force-push without `--force-with-lease`, `reset --hard`,
   `clean -f`, `branch -D`, discard-all `checkout`/`restore .`, and
