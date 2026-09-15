@@ -249,10 +249,11 @@ this block stops matching a real run.
 | Golden master  | 31 | 0 |
 | Notebook       | ran | 0 |
 | Research       | ran | 0 |
+| Examples       | 37 | 0 |
 | Algebra parity | ran | 0 |
-| **total** | **1179** | **0** |
+| **total** | **1216** | **0** |
 
-The total covers the 18 suites that report a tally. 9 more run and pass without counting assertions (C bridge, Kitchen sink, Form IR (C99), Native (C99), Integration, Gold standard, Notebook, Research, Algebra parity); they are verified, not quantified, and inventing a number for them is what this table exists to prevent.
+The total covers the 19 suites that report a tally. 9 more run and pass without counting assertions (C bridge, Kitchen sink, Form IR (C99), Native (C99), Integration, Gold standard, Notebook, Research, Algebra parity); they are verified, not quantified, and inventing a number for them is what this table exists to prevent.
 <!-- assertion-counts:end -->
 
 ### Why this is generated now
@@ -409,17 +410,18 @@ processes and compares value, exit code, refusing stage and binding
 defect:
 
 ```
-128 programs, 97 agreed, 31 diverged
+124 programs, 97 agreed, 27 diverged
 ```
 
-Every one of the 31 is the same fork, not 31 separate bugs:
+Every one of the 27 is the same fork, not 27 separate bugs. The causes
+are `let ... in`, list literals, and the `len`/`head`/`tail` builtins --
+all present in `CORE.md` and the Java runtime, none of them in the
+subset `eval_ast` implements.
 
-| cause | count |
-|---|---|
-| list literals (`cannot evaluate ListLit`) | 7 |
-| `len` / `head` / `tail` (`never defined`) | 9 |
-| `let ... in` is not v4.10 grammar | 9 |
-| other parse splits | 6 |
+A per-cause table used to stand here, hand-totalled to 31. It is gone
+rather than re-transcribed: `differential.py` prints the current split
+itself, and the headline above drifted from 128/31 to 124/27 without
+anything noticing, in the four documents that copied it. Run the tool.
 
 The Java runtime and `7-forge/` implement `CORE.md`; `eval_ast`
 implements a subset of `SEMANTICS.md`. Both sides pass their own suites
@@ -462,18 +464,23 @@ corpus is for:
 | one call, two answers | refused, exit 2 | **60/256, exit 0** |
 
 Three cases were added to the differential corpus so it reaches this
-ground: 128 programs, 97 agreed. The corpus had never reached it because
+ground: 124 programs, 97 agreed. The corpus had never reached it because
 every evidence case in it was already distinct.
 
-### 7.6 `ezrun` cannot run any file in `examples/`
+### 7.6 `ezrun` runs exactly one file in `examples/`
 
-Nine example programs, nine refusals, measured one by one:
+Eleven example programs, one of which runs. Measured one by one:
 
 | file | ezrun says |
 |---|---|
-| `*.ever` (5 files) | `Z(misbound) — cannot evaluate Show` |
-| `largest.ezr`, `readings.ezr`, `trust.ezr` | `parse: unexpected let` |
-| `sum.ezr` | `Z(misbound) — cannot evaluate ListLit` |
+| `earned_trust.ever` | **runs** — `133.1  @ 120/256` |
+| the other six `*.ever` | `Z(misbound) — cannot evaluate Show` |
+| `core-lineage/{largest,readings,trust}.ezr` | `parse: unexpected let` |
+| `core-lineage/sum.ezr` | `Z(misbound) — cannot evaluate ListLit` |
+
+The heading of this section used to read "cannot run any file" and the
+count used to read nine. Both were true when written and neither was
+re-measured.
 
 Not a fault in the runner: it is 7.4 seen from the directory listing.
 The `.ever` examples are written in the v4.10 statement surface and the

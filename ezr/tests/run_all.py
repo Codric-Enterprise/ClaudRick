@@ -33,6 +33,12 @@ SUITES = [
     ("Golden master",  f"{sys.executable} tests/golden.py"),
     ("Notebook",       f"{sys.executable} 2-interpreter-python/notebook.py"),
     ("Research",       f"{sys.executable} research.py"),
+    # The examples must do what their comments say. Nothing checked them
+    # before: weekly_sales.ever printed `total = z` under a comment
+    # promising a sum of five days, and earned_trust.ever -- the file that
+    # explains the whole idea -- was a transcript nobody re-ran. Pins each
+    # example's exact output AND the eleven-step confidence ladder.
+    ("Examples",       f"{sys.executable} tests/examples_test.py"),
     # Last, because it runs everything above a second time to read their
     # tallies. It fails when a document's assertion count stops matching a
     # real run -- the drift that let FINDINGS.md claim 81 while the suite

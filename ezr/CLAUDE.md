@@ -6,8 +6,13 @@ Founder: Ricky (Dreid), Codric Enterprise.
 ## Before you touch anything
 
 ```
-python3 tests/run_all.py          # must be 26 passed / 0 failed
+python3 tests/run_all.py          # must be 29 passed / 0 failed
 ```
+
+The suite count is not decoration: it was 26 here while the gate ran 28,
+and the number nobody re-ran is the number that stops meaning anything.
+`tests/assertion_counts.py --check` runs last in the gate and fails it
+when a document's count drifts from a real run.
 
 If it isn't green before your change, stop and say so. Don't build on red.
 
