@@ -41,7 +41,12 @@ src = ["src", "tests"]
 # its own test suite and its own conventions. ReVision's lint rules
 # are not theirs, and reformatting them here would fork them from
 # upstream for no gain.
-extend-exclude = ["ezr", "everconf"]
+# realm/ is excluded for the same reason ezr/ is, though it is written
+# here rather than vendored: it is a separate language with its own
+# gate (realm/realm_test.py). Its vocabulary table is hand-aligned so
+# that a rhyme class reads as a block, and `ruff format` would explode
+# it -- which is the same trap CLAUDE.md records for ezr/.
+extend-exclude = ["ezr", "everconf", "realm"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM"]

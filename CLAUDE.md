@@ -106,6 +106,14 @@ Key design decisions:
 │   ├── FINDINGS.md           # what was computed, not asserted (research.py corroborates it)
 │   ├── .claude/skills/verify/  # directory-scoped skill: how to drive EZR's surfaces
 │   └── run.sh                # 22 layers. NOT 7-forge or 5-runtime-java — see below
+├── realm/                    # Rime — a language whose grammar rhymes (see below)
+│   ├── contract.py           # tokens, the vocabulary, trees, printing
+│   ├── lexers.py parsers.py  # 3 scanners x 3 parsers = 9 front ends
+│   ├── machine.py            # the stack, the store, the voice
+│   ├── rhyme.py              # the rhyme rule, run backwards as a generator
+│   ├── realm.py              # the matrix, the laws, the corpus, the CLI
+│   ├── realm_test.py         # the gate: 74 assertions
+│   └── LANGUAGE.md           # the spec — start here
 ├── README.md
 └── .gitignore
 ```
@@ -362,6 +370,43 @@ two are verified by separate commands.
 ReVision's own gate (`pytest`, `ruff check .`) does not cover `ezr/`,
 and `ezr/run.sh` does not cover ReVision. Run whichever matches what
 you touched.
+
+## Rime (`realm/`) — a third project in the same repo
+
+`realm/` is **not part of ReVision and not part of EZR**. It is Rime, a
+small postfix language whose *well-formedness condition is rhyme*: a
+program is a sequence of couplets, a line ends in a verb, and a couplet
+is legal only when its two verbs rhyme. It shares no code with
+`src/revision/` or `ezr/` — no imports, no tokens, no trees.
+
+- **Verify it:** `cd realm && python3 realm_test.py` — 74 assertions,
+  a plain script that reports its own tally and calls `raise
+  SystemExit`, like `ezr/`'s suites and unlike a pytest module.
+  `testpaths = ["tests"]`, so `pytest` never looks here.
+- **See it run:** `cd realm && python3 realm.py` — writes a poem from a
+  phrase, runs it, then puts the whole corpus to nine front ends and
+  reports whether they converged. Exits non-zero if a law breaks.
+- **The one idea.** The vocabulary is built so that **a rhyme class is
+  exactly an operation family** (`-ow` moves numbers, `-eep` touches the
+  store, and so on). Rhyme is a typing discipline written as verse, not
+  decoration. Do not add a verb without placing it in the family its
+  sound already claims — `law_family` exists to catch precisely that.
+- **Deterministic generation.** Because a class is a finite *ordered*
+  list, the answering verb of a couplet is simply the next one, so half
+  of every program is derived rather than chosen. The rest collapses
+  from a phrase via a hand-written FNV-1a, addressed by path. There is
+  no random source in `realm/`, and `hash()` is never touched — keep it
+  that way, or `PYTHONHASHSEED` starts changing the corpus.
+- **The order of complaint is part of the language.** A program can be
+  wrong several ways at once; the phases (shape → vocabulary → pairing
+  → rhyme) are published in `parsers.py` so three parsers cannot each
+  pick a favourite fault. Changing that order changes Rime.
+
+`realm/` is in ruff's `extend-exclude` for the same reason `ezr/` is: it
+keeps its own conventions, its vocabulary table is hand-aligned so a
+rhyme class reads as a block, and `ruff format` would explode it. So
+ReVision's gate does not cover `realm/`, and `realm_test.py` does not
+cover ReVision. Run whichever matches what you touched.
 
 ## Two gotchas that cost real time
 
