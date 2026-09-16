@@ -10,20 +10,30 @@ files did not parse under either runner, and `earned_trust.ever` -- the
 file that actually explains the whole idea -- was a transcript nobody
 re-ran.
 
-Two sections, because the examples are reached two ways:
+Three sections, because the examples are reached three ways:
 
-  RUN         `ever_cli.py run f.ever` drives runtime.run_source, which
-              is the front door: statements, lists, loops, indexing.
-              Each file's exact stdout is pinned.
+  RUN           `ever_cli.py run f.ever` drives runtime.run_source, the
+                statement-based front door: let/ever/show, lists, loops,
+                indexing. Each `.ever` file's exact stdout is pinned.
 
-  TRANSCRIPT  `ezrun.py` drives syntax.py's eval_ast and is the only
-              surface that exposes the confidence algebra -- [EXAMPLE]
-              earning trust, [ANCHOR] buying depth. earned_trust.ever
-              documents eleven invocations in its comments; all eleven
-              are run here and pinned to the value AND the exit code.
+  TRANSCRIPT    `ezrun.py` drives syntax.py's eval_ast and is the only
+                surface that exposes the confidence algebra -- [EXAMPLE]
+                earning trust, [ANCHOR] buying depth. earned_trust.ever
+                documents eleven invocations in its comments; all eleven
+                are run here and pinned to the value AND the exit code.
 
-A new example with no entry in either table fails this suite. That is
-deliberate -- an unchecked example is how the last set rotted.
+  CORE LINEAGE  The four `.ezr` files are written in the forge's core
+                (CORE.md): `let x = v in body` as an expression, list
+                literals, and the show/len/head/tail builtins -- none
+                of it v4.10 grammar, none of it something `eval_ast`
+                understood until it was taught all three, closing the
+                exact gap `5-runtime-java/differential.py` measured as
+                27 divergences (now 5; see FINDINGS.md 7.4). Pinned here
+                against `ezrun.py` directly -- no Java build needed to
+                run them, only to cross-check them.
+
+A new example with no entry in RUN or CORE LINEAGE fails this suite.
+That is deliberate -- an unchecked example is how the last set rotted.
 """
 from __future__ import annotations
 
@@ -37,6 +47,7 @@ CLI = ROOT / "2-interpreter-python" / "ever_cli.py"
 EZRUN = ROOT / "2-interpreter-python" / "ezrun.py"
 EXAMPLES = ROOT / "examples"
 TRUST = EXAMPLES / "earned_trust.ever"
+EVER_WRAPPER = ROOT / "ever"
 
 passed = 0
 failed = 0
@@ -233,24 +244,122 @@ def section_counterfactual() -> None:
 
 
 # ── section 3: nothing goes unchecked ────────────────────────────────
+# ── section 4: the core lineage, via ezrun.py directly ───────────────
+#: Exact stdout, one line per `show`/print. `trust.ezr` and `readings.ezr`
+#: use the core's `show(expr)` builtin, which prints as a side effect and
+#: also returns its argument -- so `main() = show(describe(30))` prints
+#: the value once from inside show() and once more as ezrun's own
+#: top-level result line. Two identical lines is correct, not a dupe.
+CORE_LINEAGE_OUTPUT = {
+    "trust.ezr": [
+        "big  @ 120/256",
+        "big  @ 120/256",
+    ],
+    "largest.ezr": [
+        "42  @ 120/256",
+    ],
+    "readings.ezr": [
+        "6  @ 256/256",
+        "63  @ 120/256",
+        "10.5  @ 120/256",
+        "19  @ 120/256",
+        "3  @ 120/256",
+        "16  @ 120/256",
+    ],
+    "sum.ezr": [
+        "15  @ 120/256",
+    ],
+}
+
+
+def section_core_lineage() -> None:
+    print("\ncore lineage — ezrun.py, no Java build required")
+    for name, want in sorted(CORE_LINEAGE_OUTPUT.items()):
+        out, code = run([sys.executable, str(EZRUN), str(EXAMPLES / name)])
+        ok = check(f"{name} exit 0", code, 0)
+        ok &= check(f"{name} output", out.splitlines(), want)
+        if ok:
+            print(f"  ok   {name}  ({len(want)} line(s))")
+
+
 def section_completeness() -> None:
     print("\ncoverage")
     on_disk = {p.name for p in EXAMPLES.glob("*.ever")}
     accounted = set(RUN_OUTPUT) | RUN_SILENT
     check("every examples/*.ever is pinned above", on_disk, accounted)
     if on_disk == accounted:
-        print(f"  ok   all {len(on_disk)} examples are pinned")
+        print(f"  ok   all {len(on_disk)} .ever examples are pinned")
     else:
         for name in sorted(on_disk - accounted):
             print(f"       unpinned: {name}  (add it to RUN_OUTPUT)")
         for name in sorted(accounted - on_disk):
             print(f"       pinned but missing from disk: {name}")
 
+    ezr_on_disk = {p.name for p in EXAMPLES.glob("*.ezr")}
+    ezr_accounted = set(CORE_LINEAGE_OUTPUT)
+    check("every examples/*.ezr is pinned above", ezr_on_disk, ezr_accounted)
+    if ezr_on_disk == ezr_accounted:
+        print(f"  ok   all {len(ezr_on_disk)} .ezr examples are pinned")
+    else:
+        for name in sorted(ezr_on_disk - ezr_accounted):
+            print(f"       unpinned: {name}  (add it to CORE_LINEAGE_OUTPUT)")
+        for name in sorted(ezr_accounted - ezr_on_disk):
+            print(f"       pinned but missing from disk: {name}")
+
+
+# ── section 5: the unified `ever` wrapper's dispatch itself ──────────
+def section_unified_wrapper() -> None:
+    """Not a re-run of every pinned case -- this proves the DISPATCH
+    logic in `ever` (extension routing, and the empty-output fallback),
+    which nothing else here exercises. The examples above already pin
+    every runner's actual output; duplicating that through a second
+    entry point would test the same evaluators twice and the new code
+    not at all.
+    """
+    print("\nthe unified `ever` wrapper — one command, either lineage")
+
+    out, code = run([sys.executable, str(EVER_WRAPPER),
+                     str(EXAMPLES / "weekly_sales.ever")])
+    ok = check("ever picks ever_cli.py run for .ever", code, 0)
+    ok &= check("ever .ever output matches RUN_OUTPUT",
+               out.splitlines(), RUN_OUTPUT["weekly_sales.ever"])
+    if ok:
+        print("  ok   .ever -> ever_cli.py run")
+
+    out, code = run([sys.executable, str(EVER_WRAPPER),
+                     str(EXAMPLES / "trust.ezr")])
+    ok = check("ever picks ezrun.py for .ezr", code, 0)
+    ok &= check("ever .ezr output matches CORE_LINEAGE_OUTPUT",
+               out.splitlines(), CORE_LINEAGE_OUTPUT["trust.ezr"])
+    if ok:
+        print("  ok   .ezr -> ezrun.py")
+
+    # earned_trust.ever: v4.10's own runner exits 0 with NO output (no
+    # top-level `show`, and `main()` is ezrun's convention, not the
+    # grammar's) -- the one case that needs the fallback, which is why
+    # it was picked as the flagship demo in the first place.
+    out, code = run([sys.executable, str(EVER_WRAPPER), str(TRUST)])
+    ok = check("ever falls back to ezrun.py on empty ever_cli.py output",
+              code, 0)
+    ok &= check("ever earned_trust.ever output", out.strip(),
+               "133.1  @ 120/256")
+    if ok:
+        print("  ok   .ever with no top-level show -> falls back to ezrun.py")
+
+    out, code = run([sys.executable, str(EVER_WRAPPER), "no_such.ever"])
+    ok = check("ever: missing file exit", code, 1)
+    ok &= check("ever: missing file message names the file",
+               out.strip(), "ever: no such file: no_such.ever")
+    if ok:
+        print("  ok   missing file -> exit 1, names the file")
+
 
 def main() -> int:
     section_run()
     section_transcript()
     section_counterfactual()
+    section_core_lineage()
+    section_unified_wrapper()
     section_completeness()
     print(f"\n=== Examples: {passed} passed, {failed} failed ===")
     return 1 if failed else 0

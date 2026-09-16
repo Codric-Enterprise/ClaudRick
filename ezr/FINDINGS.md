@@ -249,9 +249,9 @@ this block stops matching a real run.
 | Golden master  | 31 | 0 |
 | Notebook       | ran | 0 |
 | Research       | ran | 0 |
-| Examples       | 37 | 0 |
+| Examples       | 54 | 0 |
 | Algebra parity | ran | 0 |
-| **total** | **1216** | **0** |
+| **total** | **1233** | **0** |
 
 The total covers the 19 suites that report a tally. 9 more run and pass without counting assertions (C bridge, Kitchen sink, Form IR (C99), Native (C99), Integration, Gold standard, Notebook, Research, Algebra parity); they are verified, not quantified, and inventing a number for them is what this table exists to prevent.
 <!-- assertion-counts:end -->
@@ -403,32 +403,57 @@ not have. Fixed with `set -o pipefail`; the same deliberately-broken run
 then reported `FAILED Vowels` and exit 1, with every other layer still
 passing.
 
-### 7.4 The tree carries two lineages, and the split is measurable
+### 7.4 The tree carries two lineages. The grammar gap between them is closed; five findings remain
 
 `5-runtime-java/differential.py` runs one corpus through both runners as
 processes and compares value, exit code, refusing stage and binding
-defect:
+defect. It read **124 programs, 97 agreed, 27 diverged** for as long as
+`eval_ast` (what `ezrun.py` drives) had no case for `let ... in`, list
+literals, or the `len`/`head`/`tail`/`show` builtins -- all present in
+`CORE.md` and the Java runtime, none of them implemented on the Python
+side. That gap is closed: `eval_ast` now evaluates all four, matching
+`Eval.java`'s `call()` / `builtin()` / `let()` / `list()` line for line
+(same dispatch order -- args evaluate before an undefined name is
+judged, so a Z argument to an unbound name reports THAT Z, not "was
+never defined"; same refusal defect classes; `len`/`head`/`tail` report
+the list's OWN confidence rather than manufacturing one).
 
 ```
-124 programs, 97 agreed, 27 diverged
+128 programs, 123 agreed, 5 diverged
 ```
 
-Every one of the 27 is the same fork, not 27 separate bugs. The causes
-are `let ... in`, list literals, and the `len`/`head`/`tail` builtins --
-all present in `CORE.md` and the Java runtime, none of them in the
-subset `eval_ast` implements.
+(124, immediately after the fix -- the total climbed to 128 the moment
+the four `.ezr` files moved from `examples/core-lineage/` back into
+`examples/`, §7.11's other change: this file's own corpus-builder globs
+`examples/*.ezr` directly and runs each one it finds through both
+runners, so relocating them added four more comparisons for free, and
+all four agree.)
 
-A per-cause table used to stand here, hand-totalled to 31. It is gone
-rather than re-transcribed: `differential.py` prints the current split
-itself, and the headline above drifted from 128/31 to 124/27 without
-anything noticing, in the four documents that copied it. Run the tool.
+The remaining five are not the grammar gap -- they are five separate,
+smaller findings, each a genuine disagreement rather than a missing
+feature:
 
-The Java runtime and `7-forge/` implement `CORE.md`; `eval_ast`
-implements a subset of `SEMANTICS.md`. Both sides pass their own suites
-(98 and 81 assertions, 26 gate suites). A divergence here is a finding
-about two lineages sharing a tree, and which one the project keeps is an
-owner's decision, not something to settle by editing one side to match
-the other.
+| program | python | java | what it is |
+|---|---|---|---|
+| `1000000000000000000 + 1` | `1000000000000000001` | `1000000000000000000` | Python's arbitrary-precision `int` against Java's `double`-backed `Particle`; past 2^53 the double rounds and the int doesn't |
+| `arity wrong` (`f(1,2)` where `f` takes 1) | refuses at RUNTIME (exit 1) | refuses at SEMANTIC time (exit 2) | Java's `Semantic.java` checks a user function's call arity before running anything; `ezrun`'s semantic pass does not, so the same mistake surfaces one stage later |
+| `unbound` (`missing` never bound, inside a def) | refuses at RUNTIME (exit 1) | refuses at SEMANTIC time (exit 2) | the same staging split, for an unbound name instead of an arity mismatch |
+| `'f(1,)'` (trailing comma in a call) | parses (the comma is forgiven), then refuses UNBOUND on `f` | refuses to PARSE at all | `GRAMMAR.ebnf`'s settled question `trailing_comma = False`; the Python parser tolerates it anyway (`_sep_list`'s own recovery, unconditional, not the separate `forgive.py` layer) |
+| `'def f(n) = n\n1 + 1'` (definitions, then a bare expression) | accepts it, evaluates the expression | refuses to PARSE (`trailing_expression = False`, settled: ambiguous with a body of `1` followed by unary `- 1`) | v4.10's own documented rule -- "a bare expression is legal as the LAST statement" -- says yes; the forge's settled doctrine says the construction is ambiguous and must say no |
+
+A per-cause table for the old 27 used to stand here, hand-totalled to
+31. It is gone rather than re-transcribed: the headline drifted from
+128/31 to 124/27 without anything noticing, in the four documents that
+copied it, and `differential.py` prints the current split itself. Run
+the tool rather than trusting a number written down about it. See 7.11
+for how the gap was closed and what stayed open on purpose.
+
+The Java runtime and `7-forge/` implement `CORE.md`; `eval_ast` now
+implements the core grammar in full and a subset of `SEMANTICS.md`
+besides. Both sides pass their own suites (98 and 81 assertions, 29
+gate suites). Each of the five remaining divergences is a finding about
+the language, and which way to settle it -- if at all -- is an owner's
+decision, not something to fix by editing one side to match the other.
 
 ### 7.5 A witness repeated was counted as a second witness
 
@@ -464,32 +489,41 @@ corpus is for:
 | one call, two answers | refused, exit 2 | **60/256, exit 0** |
 
 Three cases were added to the differential corpus so it reaches this
-ground: 124 programs, 97 agreed. The corpus had never reached it because
-every evidence case in it was already distinct.
+ground: 124 programs, 97 agreed -- the corpus total as it stood then,
+before the `examples/*.ezr` glob had anything to find (§7.11) pushed it
+to 128. The corpus had never reached this ground because every evidence
+case in it was already distinct.
 
-### 7.6 `ezrun` runs exactly one file in `examples/`
+### 7.6 `ezrun` ran exactly one file in `examples/`. It runs five, now
 
-Eleven example programs, one of which runs. Measured one by one:
+Eleven example programs. Measured one by one, before 7.11's fix:
 
-| file | ezrun says |
+| file | ezrun said |
 |---|---|
-| `earned_trust.ever` | **runs** — `133.1  @ 120/256` |
+| `earned_trust.ever` | ran — `133.1  @ 120/256` |
 | the other six `*.ever` | `Z(misbound) — cannot evaluate Show` |
-| `core-lineage/{largest,readings,trust}.ezr` | `parse: unexpected let` |
-| `core-lineage/sum.ezr` | `Z(misbound) — cannot evaluate ListLit` |
+| `largest.ezr`, `readings.ezr`, `trust.ezr` | `parse: unexpected let` |
+| `sum.ezr` | `Z(misbound) — cannot evaluate ListLit` |
 
 The heading of this section used to read "cannot run any file" and the
-count used to read nine. Both were true when written and neither was
-re-measured.
+count used to read nine, before that. Both were true when written and
+neither was re-measured before the next claim was made on top of it --
+the same failure mode 7.4's dropped per-cause table had.
 
-Not a fault in the runner: it is 7.4 seen from the directory listing.
-The `.ever` examples are written in the v4.10 statement surface and the
-`.ezr` examples in the forge's core, and `eval_ast` implements neither
-in full. `examples/earned_trust.ever` was added as one program that sits
-in the subset both lineages share, so it runs under `ezrun` and under
-the Java runtime and they agree — which is also what makes it a usable
-demonstration of [DEF], [EXAMPLE] and [ANCHOR] rather than a description
-of one.
+This was 7.4 seen from the directory listing, not a fault in the runner
+by itself: the `.ever` examples are written in the v4.10 statement
+surface and the `.ezr` examples in the forge's core, and `eval_ast`
+implemented neither in full. Now that it implements the core's binding,
+lists and builtins (7.11), all four `.ezr` files run under `ezrun`
+directly -- measured, exact output pinned in `tests/examples_test.py`'s
+`CORE_LINEAGE_OUTPUT`, agreeing with the Java runtime on every line. The
+six other `*.ever` files still don't: `eval_ast` was never asked to
+learn v4.10's OWN surface (statements, records, loops, externs,
+indexing) and 7.11 didn't change that on purpose -- see its closing
+note. `examples/earned_trust.ever` remains the one program written to
+sit in the subset both lineages already shared, which is what makes it
+a usable demonstration of [DEF], [EXAMPLE] and [ANCHOR] on its own
+rather than requiring the rest of the bridge to exist first.
 
 ### 7.7 Every refusal was a solved equation with the answer thrown away
 
@@ -636,3 +670,71 @@ Now declared once, in `tapestry.h` beside `E_EXECUTE_FLOOR`, and the five
 local copies are gone. Verified: `kitchen_sink` 573 assertions / 31
 suites, `tac_test` 56 assertions, no new compiler warnings (the two that
 remain are pre-existing and in `ev_test.h`).
+
+### 7.11 The core lineage's grammar gap was a missing feature, not a settled disagreement
+
+7.4 and 7.6 both trace to the same root: `eval_ast` (`syntax.py`, the
+evaluator `ezrun.py` drives) had no case for `let ... in`, list
+literals, or the `show`/`len`/`head`/`tail` builtins -- constructs the
+forge's core (`CORE.md`, `GRAMMAR.ebnf`) settled and the Java runtime
+already implements. Unlike the questions `CORE.md`'s "settled
+questions" table records -- trailing commas, chained comparison, a
+trailing expression after definitions -- nothing had ever ruled on
+these three. They were absent because nobody had written them, not
+because two doctrines conflicted over them. A missing feature is a
+different kind of gap than a live disagreement, and this is the first
+time this project has closed one rather than recording it.
+
+Ported from `Eval.java` line for line, not reinvented against the
+prose: `builtin()`'s dispatch order (an undefined name's arguments
+evaluate before the name is judged unbound, so a Z argument reports
+that Z first), its arity checks (checked at runtime, not semantically
+-- Java's `Semantic.java` doesn't arity-check builtins either, and the
+first attempt here did, which promptly showed up as two NEW
+divergences differential.py hadn't seen before), `list()`'s empty-list-
+is-Certain and short-circuit-on-first-Z, and `let()`'s ordinary
+shadowing bind. The one construct with no separate grammar rule to
+port was `show` itself: GRAMMAR.ebnf has no keyword for it (`atom = ...
+name "(" arguments ")" ...` covers it the same as any call), but
+v4.10's lexer already reserves `show` for its OWN statement (`show
+NAME`). Resolved with one token of lookahead in the parser -- `show`
+followed immediately by `(` is the core's callable; `show` followed by
+a name is v4.10's statement -- rather than picking one meaning and
+losing the other language's construct.
+
+Effect, measured before and after, same corpus, same two runners:
+
+```
+before:  124 programs,  97 agreed, 27 diverged
+after:   128 programs, 123 agreed,  5 diverged
+```
+
+The total moved from 124 to 128 between "before" and "after" for a
+second reason besides the fix itself: `differential.py`'s corpus-builder
+globs `examples/*.ezr` and runs whatever it finds through both runners
+(a check this file's own author had forgotten was there). While the
+four files sat in the `examples/core-lineage/` holding pen 7.6 put them
+in, that glob found nothing. Moving them back to `examples/` -- where
+they now belong, since they run under `ezrun.py` -- handed the harness
+four more comparisons it had been silently skipping, and all four agree.
+
+All four `.ezr` example files -- `trust.ezr`, `largest.ezr`,
+`readings.ezr`, `sum.ezr` -- now run under `ezrun.py` directly, no Java
+build required, agreeing with the Java runtime on every line (moved
+back into `examples/` from the `examples/core-lineage/` holding pen
+7.6's own finding put them in). `tests/examples_test.py` pins all four
+verbatim, in a section proven to fail against the regression that
+motivated it: an injected off-by-one in `head()` broke three of the
+four pinned outputs, caught immediately, with the exact wrong value
+named.
+
+What this does **not** do: teach `eval_ast` v4.10's OWN grammar (`let
+x = v` the statement, records, loops, indexing, `extern`), or teach
+`runtime.py`/`ever_cli.py`'s statement pipeline the core's `let ... in`,
+lists-via-builtins, or callable `show`. Those remain two genuinely
+different surfaces by design -- `readings.ever` walks its list by
+indexing on purpose, and its own comment says why. The five divergences
+7.4 now lists in place of the old 27 are the ones actually left: real
+disagreements (arity/unbound staging, a numeric-precision limit, two
+settled grammar questions where v4.10 permits what the forge's doctrine
+forbids), not absence.

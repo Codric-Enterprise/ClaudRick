@@ -72,7 +72,15 @@ print("\nA refusal is a refusal at the exit code too")
 # ezrun -e 'head([])' once printed Z and exited 0, so anything
 # scripting it read a refusal as a success. Exit codes are part of the
 # contract, not decoration.
-_, _, rc = run("-e", "[1, 2]")
+#
+# This used to run '[1, 2]' as the refusing example, from when
+# eval_ast had no case for ListLit and any list literal came back
+# Z("cannot evaluate ListLit") -- a refusal by accident of what wasn't
+# implemented yet, not by what the expression means. Now that list
+# literals evaluate for real ('[1, 2]' -> '[1, 2]  @ 256/256', exit 0),
+# that expression no longer refuses, so the test moved to the actual
+# case the comment above has named all along.
+_, _, rc = run("-e", "head([])")
 ok("Z exits 1 (refused)", rc == 1)
 _, _, rc = run("-e", "x")
 ok("will-not-compile exits 2", rc == 2)

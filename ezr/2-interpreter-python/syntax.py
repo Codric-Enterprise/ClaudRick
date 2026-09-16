@@ -371,6 +371,31 @@ class Let(Node):
 
 
 @dataclass
+class LetIn(Node):
+    """`let NAME = value in body` — the EXPRESSION form, from the
+    forge's core grammar (CORE.md, GRAMMAR.ebnf: `binding = "let" name
+    "=" expression "in" expression`). Distinct from `Let` above, which
+    is v4.10's STATEMENT form and has no `in` at all: the two look
+    identical up through `let NAME = value`, and diverge only on
+    whether an `in` follows, which is exactly how the parser tells
+    them apart (see `Parser.letbinding`).
+
+    Unlike `Let`, this has a value of its own — the value of `body`,
+    evaluated with `name` bound — so it composes anywhere an
+    expression can go, including nested inside another expression's
+    subtree, which a bare Program statement cannot do.
+    """
+    name: str
+    value: Node
+    body: Node
+    def children(self) -> List[Node]: return [self.value, self.body]
+    def shape(self) -> str:
+        return f"LetIn[{self.value.shape()},{self.body.shape()}]"
+    def __str__(self) -> str:
+        return f"let {self.name} = {self.value} in {self.body}"
+
+
+@dataclass
 class Show(Node):
     """`show NAME` — a statement, not an expression: it has no value
     of its own to fold into an outer expression, only an effect (write
@@ -483,6 +508,16 @@ class Parser:
 
     # ── helpers ──
     def peek(self) -> Token: return self.toks[self.i]
+    def peek2(self) -> Token:
+        """One token past the current one, or the EOF sentinel past
+        the end. Exists for exactly one ambiguity: `show` is v4.10's
+        statement keyword (`show NAME`) and the core's ordinary
+        callable (`show(expr)`, GRAMMAR.ebnf's `atom = name "(" ... ")"`
+        with no reserved word of its own) at once. One token of
+        lookahead -- is `(` next? -- is what tells them apart; nothing
+        else in this grammar needs to see past the current token."""
+        j = self.i + 1
+        return self.toks[j] if j < len(self.toks) else self.toks[-1]
     def at(self, kind: T, text: Optional[str] = None) -> bool:
         t = self.peek()
         return t.kind is kind and (text is None or t.text == text)
@@ -533,7 +568,7 @@ class Parser:
                 statements[0],
                 (Num, Str, Bool, Var, ZLit, BinOp, If, Call, FnDef,
                  ListLit, RecordLit, UnaryOp, Index, Field,
-                 ForRange, ForIn, While)):
+                 ForRange, ForIn, While, LetIn)):
             return statements[0]
         return Program(statements)
 
@@ -541,8 +576,8 @@ class Parser:
         if self.at(T.KW, "def"):
             return self.fndef()
         if self.at(T.KW, "let") or self.at(T.KW, "ever"):
-            return self.letstmt()
-        if self.at(T.KW, "show"):
+            return self.letbinding()
+        if self.at(T.KW, "show") and self.peek2().kind is not T.LPAR:
             return self.showstmt()
         if self.at(T.KW, "extern"):
             return self.externstmt()
@@ -588,12 +623,30 @@ class Parser:
         self.expect(T.KW, "do")
         return While(cond, self.expr())
 
-    def letstmt(self) -> Let:
+    def letbinding(self) -> Node:
+        """`let/ever NAME = value`, then look at what follows.
+
+        Both v4.10's statement form and the core's expression form
+        start identically; they diverge only on whether `in` comes
+        next. Parsing them with one method rather than two is what
+        keeps that single point of divergence in one place instead of
+        two copies of `NAME = value` drifting apart.
+
+        `in` after `ever NAME = value` still resolves to `LetIn` here
+        rather than being rejected — GRAMMAR.ebnf's `binding` production
+        only spells `let`, but nothing about the shape ties the
+        expression form to one keyword, and refusing `ever x = 1 in x`
+        while accepting the `let` spelling of the exact same tree would
+        be a distinction the grammar itself does not make.
+        """
         tracked = self.at(T.KW, "ever")
         self.take()                       # consume 'let' or 'ever'
         name = self.expect(T.NAME).text
         self.expect(T.EQ)
         value = self.expr()
+        if self.at(T.KW, "in"):
+            self.take()
+            return LetIn(name, value, self.expr())
         return Let(name, value, tracked=tracked)
 
     def showstmt(self) -> Show:
@@ -648,6 +701,16 @@ class Parser:
             then = self.expr()
             self.expect(T.KW, "else")
             return If(cond, then, self.expr())
+        if self.at(T.KW, "let"):
+            node = self.letbinding()
+            if isinstance(node, Let):
+                t = self.peek()
+                raise ParseError(
+                    f"expected 'in' after the bound value of 'let "
+                    f"{node.name}', at line {t.line} — "
+                    f"'let NAME = value' with no 'in' is only legal as "
+                    f"its own top-level statement")
+            return node
         if self.at(T.KW, "for"):
             return self.forstmt()
         if self.at(T.KW, "while"):
@@ -736,6 +799,15 @@ class Parser:
         if t.kind is T.OP and t.text == "-":
             self.take()
             return BinOp("-", Num(0), self.atom())
+        if t.kind is T.KW and t.text == "show" and self.peek2().kind is T.LPAR:
+            # `show` as a call, not the `show NAME` statement -- the
+            # core's `show(expr)` builtin, which prints AND returns its
+            # argument, so it composes inside `let` (readings.ezr).
+            self.take()                       # 'show'
+            self.take()                       # '('
+            args = self._sep_list(T.RPAR, self.expr, "a call")
+            self.expect(T.RPAR)
+            return Call("show", args)
         if t.kind is T.NAME:
             self.take()
             if self.at(T.LPAR):
@@ -1176,11 +1248,27 @@ class Semantic:
                 a.ty = tt if tt == et else Ty.ANY
             return a.ty
 
+        if isinstance(node, LetIn):
+            self._walk(node.value, bound, a)
+            inner_bound = set(bound) | {node.name}
+            bt = self._walk(node.body, inner_bound, a)
+            a.ty = bt
+            return bt
+
         if isinstance(node, Call):
             a.calls.add(node.name)
             for arg in node.args:
                 self._walk(arg, bound, a)
             expected = self.fns.get(node.name)
+            # show/len/head/tail are deliberately NOT arity-checked here.
+            # Semantic.java doesn't either -- BUILTINS only keeps a
+            # builtin name from being flagged as undefined, and Eval.java's
+            # builtin() is where a wrong argument count actually refuses
+            # (Z(misbound), at runtime). Checking it earlier, here, would
+            # make a builtin arity mistake a semantic-stage refusal in
+            # Python and a runtime one in Java -- a new divergence, not
+            # a fix, and differential.py caught exactly that the first
+            # time this was tried.
             if expected is None:
                 try:
                     from builtins_ml import BUILTINS
@@ -1467,6 +1555,58 @@ class Trust:
         return E_HARD_DEPTH if name in self.anchored else default
 
 
+# ═════════════════════════════════════════════
+# The core's four builtins — show, len, head, tail
+#
+# GRAMMAR.ebnf has no separate production for these: `atom = ... | name
+# "(" arguments ")" | ...` covers them the same as a user call, and
+# CORE.md / Semantic.java's BUILTINS set is what makes the four names
+# special. So the split here matches the split there: a name absent
+# from `fns` falls through to this table before becoming a refusal,
+# exactly mirroring Eval.java's `call()` -> `builtin()` order (args are
+# evaluated first either way, so a Z argument to an undefined name
+# still reports that Z, not "was never defined").
+# ═════════════════════════════════════════════
+
+CORE_BUILTINS = ("show", "len", "head", "tail")
+
+
+def _core_builtin_call(name: str, args: List[E]) -> Optional[E]:
+    """`None` means "not a builtin" (caller keeps looking); anything
+    else, including a Z, is the answer.
+
+    Ported from Eval.java's `builtin()` line for line: same arity
+    check, same "needs a list" refusal, same empty-list refusal on
+    head/tail, `len`/`head`/`tail` all reporting the LIST's own
+    confidence rather than manufacturing one. `show` is the identity
+    on its argument -- printing is a side effect, not a transform --
+    so `let x = show(f(n)) in ...` (readings.ezr) sees exactly what
+    was printed.
+    """
+    if name not in CORE_BUILTINS:
+        return None
+    if name == "show":
+        if len(args) != 1:
+            return e_z(name, "show takes 1 argument", Defect.MISBOUND)
+        a = args[0]
+        print(f"{a.value}  @ {a.confidence}/{E_CERTAIN}")
+        return a
+    if len(args) != 1:
+        return e_z(name, f"{name} takes 1 argument", Defect.MISBOUND)
+    a = args[0]
+    if not isinstance(a.value, list):
+        return e_z(name, f"{name} needs a list, got {a.type_name()}",
+                   Defect.MISBOUND)
+    xs = a.value
+    if name == "len":
+        return e_val(name, len(xs), a.confidence)
+    if not xs:
+        return e_z(name, f"{name} of an empty list", Defect.UNBOUND)
+    if name == "head":
+        return e_val(name, xs[0], a.confidence)
+    return e_val(name, xs[1:], a.confidence)
+
+
 def eval_ast(node: Node, env: Dict[str, E],
              fns: Dict[str, FnDef], depth: int = 0,
              limit: int = 3, trust: Optional[Trust] = None) -> E:
@@ -1559,9 +1699,44 @@ def eval_ast(node: Node, env: Dict[str, E],
         r.confidence = min(a.confidence, b.confidence)
         return r
 
+    if isinstance(node, ListLit):
+        # T1: Z absorbs, so a Z element stops the list before it's
+        # built rather than being folded into it as a value. An empty
+        # list is Certain -- there is nothing left unverified about a
+        # collection with nothing in it.
+        items: List[Any] = []
+        conf = E_CERTAIN
+        for it in node.items:
+            r = eval_ast(it, env, fns, depth, limit, trust)
+            if r.is_z:
+                return r
+            items.append(r.value)
+            conf = min(conf, r.confidence)
+        return e_val("list", items, conf)
+
+    if isinstance(node, LetIn):
+        bound = eval_ast(node.value, env, fns, depth, limit, trust)
+        if bound.is_z:
+            return bound
+        inner = dict(env)
+        inner[node.name] = bound
+        return eval_ast(node.body, inner, fns, depth, limit, trust)
+
     if isinstance(node, Call):
         fn = fns.get(node.name)
         if fn is None:
+            # Args evaluate before the name is judged, matching
+            # Eval.java's call(): a Z argument to an undefined name
+            # reports THAT Z, not "was never defined" -- the name
+            # being unbound never got the chance to matter.
+            args = [eval_ast(a, env, fns, depth, limit, trust)
+                   for a in node.args]
+            for a in args:
+                if a.is_z:
+                    return a
+            built = _core_builtin_call(node.name, args)
+            if built is not None:
+                return built
             return e_z(node.name, f"{node.name} was never defined",
                        Defect.UNBOUND)
         # depth is earned: [ANCHOR-REC] lifts the ceiling for an anchored

@@ -34,7 +34,16 @@ htmlcov/
 
 # Editors / OS
 .idea/
-.vscode/
+# Personal editor state is ignored, but the run/debug/task configs below
+# are project tooling (not per-person preference) and are meant to ship --
+# they are what makes "clone and run" work inside VS Code. Applies at any
+# depth: both .vscode/ at the repo root and ezr/.vscode/ for opening the
+# ezr/ subtree on its own.
+.vscode/*
+!.vscode/launch.json
+!.vscode/tasks.json
+!.vscode/extensions.json
+!.vscode/settings.json
 .DS_Store
 
 # Tapestry forge run logs (ledger.json and ratified.json are kept)

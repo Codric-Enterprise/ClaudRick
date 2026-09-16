@@ -10,14 +10,20 @@ authority. Nothing here was decided by preference.
 
 > **Which language this specifies.** This document is the forge's ratified
 > core — the language `7-forge/` arbitrated and `5-runtime-java/`
-> implements. It is *not* the language `ever run` executes today. The tree
-> now carries two lineages: this core, and the v4.10 surface specified by
-> `SEMANTICS.md` (statement `let x = v`, records, loops, indexing,
-> externs). They agree on the confidence algebra and split on the grammar.
-> `5-runtime-java/differential.py` measures the split exactly: 124
-> programs, 97 agreed, 27 diverged, every divergence being `let ... in`,
-> list literals, or the `len`/`head`/`tail` builtins. Read this file for
-> what the forge settled; read `SEMANTICS.md` for what runs.
+> implements. It is *not* the language `ever run` (the STATEMENT surface —
+> `runtime.py`, records, loops, indexing, `extern`) executes. It IS,
+> since `eval_ast` (`2-interpreter-python/syntax.py`, driven by
+> `ezrun.py`) learned this core's binding, list literals and its four
+> builtins, the language `ezrun.py` executes — no Java build required;
+> see FINDINGS.md §7.11. `5-runtime-java/differential.py` measures what
+> is left: 128 programs, 123 agreed, 5 diverged — a numeric-precision
+> limit, two staging differences (arity/unbound checked at compile time
+> in Java, at runtime in Python), and two settled grammar questions
+> (trailing comma, a trailing expression after definitions) where v4.10
+> permits what this core's doctrine forbids. Read this file for what the
+> forge settled; read `SEMANTICS.md` for the OTHER surface `ever run`
+> executes — the two are siblings now, not a full language against a
+> five-file demo.
 
 ---
 

@@ -9,13 +9,20 @@ plausible wrong number: it stays below the line until something
 corroborates it.
 
 ```bash
-python3 2-interpreter-python/ever_cli.py run examples/weekly_sales.ever
+./ever examples/weekly_sales.ever
 ```
 ```
 total = z [0/256]          # Thursday was never recorded
 best = 610 [256/256]
 third_day = 380 [256/256]
 ```
+
+One command for any example in this repo — `./ever` picks the runner
+by the file's own extension (`.ever` → `ever_cli.py run`, `.ezr` →
+`ezrun.py`), so running a program never means knowing which of the two
+lineages it's written in first. Equivalent here to
+`python3 2-interpreter-python/ever_cli.py run examples/weekly_sales.ever`
+directly; `./ever` is the dispatch, not a third implementation.
 
 Not a weekly total quietly missing a day. Put a real number in
 Thursday's place and the same program gives `2615` at full confidence.
@@ -81,12 +88,16 @@ It has **two runners**, and they are not rivals:
 
 | | drives | use it for |
 |---|---|---|
-| `ever_cli.py run` | `runtime.run_source` | the front door: statements, lists, loops, indexing, externs |
-| `ezrun.py` | `syntax.py`'s `eval_ast` | the confidence algebra: `[EXAMPLE]`, `[ANCHOR]` |
+| `ever_cli.py run` | `runtime.run_source` | v4.10's OWN surface: statements, lists-by-indexing, loops, records, externs |
+| `ezrun.py` | `syntax.py`'s `eval_ast` | the confidence algebra (`[EXAMPLE]`, `[ANCHOR]`) AND the forge's core in full: `let ... in`, list literals, `show`/`len`/`head`/`tail` |
 
-They implement overlapping but different subsets, which is a real wart
-and is documented rather than hidden — see `FINDINGS.md` §7.4 and §7.6.
-`examples/earned_trust.ever` sits in the subset both accept.
+They implement overlapping but different surfaces by design, not by
+accident — see `FINDINGS.md` §7.4, §7.6 and §7.11. `ezrun.py` used to
+run exactly one example in this repo; it runs five now, because the
+core grammar it was missing (not a design choice, just unwritten) is
+implemented. `ever_cli.py run` was never asked to learn that grammar in
+return — its own list-by-indexing style is what `readings.ever`
+demonstrates, on purpose, beside `readings.ezr`'s builtin-based twin.
 
 **Everything else in this tree exists to cross-check that language**,
 not to be used directly:
@@ -101,13 +112,18 @@ not to be used directly:
 
 ## The honest parts
 
-- **Two lineages share this tree.** `differential.py` measures the split:
-  **124 programs, 97 agreed, 27 diverged.** Every divergence is
-  `let ... in`, list literals, or `len`/`head`/`tail` — in `CORE.md` and
-  the Java runtime, not in what `eval_ast` implements. It is red on
-  purpose. Which lineage the project keeps is an open decision.
-- **`examples/core-lineage/`** holds four programs written for that other
-  lineage. They run under the Java runtime and not under `ever run`.
+- **Two lineages share this tree.** `differential.py` measures the
+  split: **128 programs, 123 agreed, 5 diverged** — down from 31 once
+  `eval_ast` learned the core's binding, lists and builtins (`FINDINGS.md`
+  §7.11). The 5 left are real findings, not a missing feature: a
+  numeric-precision limit past 2^53, two checks Java makes at compile
+  time and Python defers to runtime, and two grammar questions where
+  v4.10 permits what the forge's doctrine forbids. It is red on purpose.
+  Which lineage the project keeps is still an open decision — this
+  closed the accidental gap between them, not the deliberate one.
+- **`sum.ezr`, `trust.ezr`, `largest.ezr`, `readings.ezr`** are written in
+  that other lineage and run under `ezrun.py` directly now (no Java
+  build needed) — see the two-runners table above.
 - **Not production-ready for anything that isn't a demonstration.**
 - **Not the first system to propagate uncertainty.** `NULL` and `NaN` do
   the mechanically same thing; `Uncertain<T>` (Bornholt et al.) and
@@ -121,7 +137,8 @@ not to be used directly:
 
 ```bash
 python3 tests/run_all.py          # 29 suites, the gate
-python3 tests/examples_test.py    # 37 — every example does what it says
+python3 tests/examples_test.py    # 54 — every example does what it says
+ever examples/trust.ezr           # or: one command, either lineage
 ./run.sh                          # the layers, skipping absent toolchains
 ```
 
@@ -130,10 +147,10 @@ Measured on the last run, not transcribed:
 | | |
 |---|---|
 | `tests/run_all.py` | 29 suites |
-| `tests/examples_test.py` | 37 passed |
+| `tests/examples_test.py` | 54 passed |
 | `tests/test_edapt.py` | 32 passed |
 | `tests/test_backends.py` | 36 passed — **3 of 5 targets** (go, js, rust); R and Kotlin skip when `Rscript`/`kotlinc` are absent |
-| `5-runtime-java/differential.py` | 124 programs, 97 agreed, 27 diverged — red on purpose |
+| `5-runtime-java/differential.py` | 128 programs, 123 agreed, 5 diverged — red on purpose |
 
 `tests/assertion_counts.py --check` runs in the gate and fails it when a
 document's assertion count stops matching a real run. That check exists
