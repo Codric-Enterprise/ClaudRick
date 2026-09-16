@@ -105,10 +105,15 @@ jobs:
       # this is exactly the order #46's job uses, where Examples fails 3/3.
       # Then immediately run examples_test.py for its full output, which
       # run_all truncates to the last 6 lines.
-      - name: DIAG A — run_all.py first (matches #46's order)
+      # v3: byte-identical invocation to #46's step ("python3 tests/run_all.py",
+      # no || echo), so nothing about the shell differs. On failure, dump
+      # examples_test.py's full output -- the assertions run_all truncates --
+      # and only then fail the step.
+      - name: EZR — the 29-suite gate
         working-directory: ezr
-        run: python3 tests/run_all.py || echo "RUN_ALL_EXIT=$?"
-
-      - name: DIAG B — examples_test.py immediately after, full output
-        working-directory: ezr
-        run: python3 tests/examples_test.py || echo "EXAMPLES_EXIT=$?"
+        run: |
+          python3 tests/run_all.py || {
+            echo "=============== run_all FAILED — examples_test detail ==============="
+            python3 tests/examples_test.py
+            exit 1
+          }
