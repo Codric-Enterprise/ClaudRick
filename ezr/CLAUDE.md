@@ -6,8 +6,13 @@ Founder: Ricky (Dreid), Codric Enterprise.
 ## Before you touch anything
 
 ```
-python3 tests/run_all.py          # must be 26 passed / 0 failed
+python3 tests/run_all.py          # must be 29 passed / 0 failed
 ```
+
+The suite count is not decoration: it was 26 here while the gate ran 28,
+and the number nobody re-ran is the number that stops meaning anything.
+`tests/assertion_counts.py --check` runs last in the gate and fails it
+when a document's count drifts from a real run.
 
 If it isn't green before your change, stop and say so. Don't build on red.
 
@@ -30,6 +35,43 @@ z-contagion in a language whose whole point is trust tracking.
 skips the depth-ceiling gate that every real program hits. A fix
 validated only there was wrong in production. Real programs call
 functions as ordinary expressions through `OP_CALL`.
+
+## One rule, every language
+
+**Whatever is written in Python is written in every language the system
+implements.** Not "eventually" — in the same change. A rule that holds in
+one implementation and not the others is not a rule, it is that
+implementation's local habit, and the whole point of having C, Python,
+Ruby and Java agree is that a disagreement between them is a finding
+about the language rather than a bug report against one side.
+
+This had already rotted before anyone wrote it down. `movements`,
+`witnesses_needed` and `from_examples` existed in Python and Java and in
+neither C nor Ruby, and nothing anywhere reported it.
+
+`tests/algebra_parity.py` is the enforcement: it runs the same
+[EXAMPLE] ladder and the same inverse through every implementation as
+processes and fails the gate when any two disagree. It is in
+`run_all.py` and in `run.sh`. A language whose toolchain is absent is
+skipped; a language that is present and lacks the function fails, since
+that is precisely the drift being prevented.
+
+Two honest exemptions, and only two:
+
+- **Harness is not language.** `tests/assertion_counts.py` and
+  `research.py` are tools that measure the project; they have no
+  counterpart to have. The rule covers the algebra and the semantics,
+  not the build.
+- **A layer that structurally cannot.** `movements` needs an AST with
+  call nodes, so it exists in Python, Java and the forge; Ruby is a DSL
+  with no parser and C's `measure` is structural metrics (size/depth),
+  not the termination measure — C has no anchoring at all. Say which
+  layer cannot and why, in the commit, rather than leaving a gap that
+  looks like an oversight.
+
+When you add to the algebra, add the parity probe in the same change.
+A checker that does not cover the new thing will happily report four
+agreements about everything except it.
 
 ## Landmines (each of these has already caused a bug)
 

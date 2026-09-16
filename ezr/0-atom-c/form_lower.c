@@ -30,14 +30,12 @@
  * Codric Enterprise · Ricky (Dreid) · 2026
  */
 
+#include "tapestry.h"   /* E_INTAKE and the rest of the scale */
 #include "tac.h"
 #include "form.h"
 #include <stdio.h>
 #include <string.h>
 
-#ifndef E_INTAKE
-#define E_INTAKE 120
-#endif
 
 /* ─────────────────────────────────────────────
  * ROLE → OPCODE

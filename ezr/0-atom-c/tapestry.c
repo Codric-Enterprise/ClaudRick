@@ -457,6 +457,54 @@ int16_t e_excel_formula(int16_t a, int16_t b) {
     return (int16_t)v;
 }
 
+/* [EXAMPLE], SEMANTICS.md 4.2 — evidence earns confidence.
+ *
+ * u_f = ((CERTAIN - INTAKE)/CERTAIN)^p, then
+ * c_f = floor(CERTAIN * (1 - u_f) * p/t), capped one short of CERTAIN.
+ *
+ * Each passing Example is an INDEPENDENT witness at intake strength, so
+ * Examples corroborate rather than chain: 1/1 is 120 and still under the
+ * execute floor, 2/2 clears at 183, 3/3 is 217. A failure scales the
+ * result by the share that held.
+ *
+ * Uses double and pow() rather than scaled integers deliberately: the
+ * Python, Ruby and Java implementations all evaluate this in IEEE 754
+ * double, and a fixed-point version here would round differently and
+ * put four implementations of one rule out of agreement. There is a
+ * checker (tests/algebra_parity.py) that would catch exactly that. */
+int16_t e_confidence_from_examples(int passing, int total) {
+    if (total <= 0)   return E_ZERO;
+    if (passing < 0)  passing = 0;
+    double unit = (double)(E_CERTAIN - E_INTAKE) / (double)E_CERTAIN;
+    double u    = passing ? pow(unit, (double)passing) : 1.0;
+    double c    = (double)E_CERTAIN * (1.0 - u) * ((double)passing / (double)total);
+    int    v    = (int)c;                       /* non-negative: trunc == floor */
+    if (v > E_CERTAIN - 1) v = E_CERTAIN - 1;
+    if (v < E_ZERO)        v = E_ZERO;
+    return (int16_t)v;
+}
+
+/* [EXAMPLE] solved for the evidence still owed, rather than the score.
+ *
+ * Given p of t witnesses and a target, the least k further PASSING
+ * witnesses that reach it, or -1 when the target is out of reach within
+ * `cap`. Walked rather than inverted analytically: the forward rule is
+ * monotone in k and saturates one short of CERTAIN, so walking up from 0
+ * finds the least sufficient k or proves there is none. A failure already
+ * recorded cannot be withdrawn, so the answer accounts for it -- 1 of 9
+ * needs eight more, not one.
+ *
+ * A refusal that says only "below the execute floor" has deleted the half
+ * a person can act on. This is that half. */
+int e_witnesses_needed(int passing, int total, int16_t target, int cap) {
+    int k;
+    if (cap < 0) cap = 64;
+    for (k = 0; k <= cap; k++) {
+        if (e_confidence_from_examples(passing + k, total + k) >= target) return k;
+    }
+    return -1;
+}
+
 int16_t e_phi_equalize(int16_t value, int16_t set_mean) {
     if (set_mean <= 0) return value;
     int32_t hi_bound = ((int32_t)set_mean * E_PHI_SCALED) / E_PHI_DENOM;

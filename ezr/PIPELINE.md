@@ -148,15 +148,16 @@ the AST paying for itself on the first problem it was pointed at.
 
 | Component | Assertions |
 |---|---|
-| Layer 0 · C — the atom | 88 |
-| Layer 1 · C++ — the phase engine | 50 |
-| Layer 2 · Python — the interpreter | 83 |
-| **Pipeline · lexer, parser, AST, semantic** | **63** |
-| Abstraction · functions, recursion | 70 |
-| Vowels · I O U, synthesis | 79 |
-| Notebook · 13 adversarial cells | 13/13 |
-| Layer 4 · SQL — the archive | 56 |
-| **Total** | **502** |
+
+This table used to be transcribed here by hand, and it had drifted: it
+carried the same Python-interpreter row as three other documents and
+`FINDINGS.md`, and `FINDINGS.md` said 81 while these said 83. Counts now
+live in exactly one place, generated from a real run:
+
+    python3 tests/assertion_counts.py
+
+`FINDINGS.md` §5 carries the output and `--check` fails the gate when it
+goes stale. See §5 there for why the 81 survived as long as it did.
 
 ## What stage 4 still does not have
 

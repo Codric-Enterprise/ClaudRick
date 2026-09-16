@@ -139,9 +139,26 @@ collide, and Expel applies.
 
 ### 2.3 Three theorems
 
-**T1 — Z is absorbing.** `u(Z) = 1`, and `1 × x = 1`. Z-contagion is not
-a rule imposed on the language; it is what maximum uncertainty does under
-multiplication.
+**T1 — Z is absorbing along the chain, and inert under corroboration.**
+The two composition rules of §2 are not the same operation and Z does not
+behave the same way in both.
+
+Chaining is `min` (§3.4), and `min(Z, c) = Z` for every c. A value
+computed from an unknown is unknown: that is Z-contagion, and it is a
+theorem rather than a rule imposed on the language.
+
+Corroboration is `EXCEL`, which is multiplicative in uncertainty, and
+there Z is the **identity**: `u(Z) = 1`, `1 × x = x`, so
+`EXCEL(Z, c) = c`. A witness who knows nothing leaves what you already
+had exactly as it was — correct, and what the code has always done.
+
+This theorem previously read "Z is absorbing. `u(Z) = 1`, and
+`1 × x = 1`", which is false twice over: `1 × x = x`, and the absorbing
+element of `EXCEL` is `Certain`, not Z (`EXCEL(Certain, c) = Certain` for
+every c, which is T3 seen from the other side). The error survived
+because `research.py` shipped a function called `z_absorbs` that returned
+True while actually asserting `EXCEL(0, b) == b` — the identity law under
+a name promising absorption. See `FINDINGS.md` §1.
 
 **T2 — Corroboration creates nothing.** Two witnesses agreeing does not
 manufacture confidence. It multiplies two ignorances into a smaller one.
@@ -358,7 +375,7 @@ case, which is the correct place for it.
 | # | Property | Status |
 |---|---|---|
 | **G1** | Evaluation is total — no exceptions, no undefined behavior | proven by construction |
-| **G2** | Z is absorbing (T1) | algebraic |
+| **G2** | Z is absorbing along the chain; the identity under `EXCEL` (T1) | algebraic |
 | **G3** | Confidence never rises except via `Ascend` or `Excel` | enforced |
 | **G4** | `Ascend` requires 3 aligned points | enforced |
 | **G5** | `Certain` unreachable by combination (T3) | algebraic |

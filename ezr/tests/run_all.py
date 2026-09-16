@@ -33,6 +33,22 @@ SUITES = [
     ("Golden master",  f"{sys.executable} tests/golden.py"),
     ("Notebook",       f"{sys.executable} 2-interpreter-python/notebook.py"),
     ("Research",       f"{sys.executable} research.py"),
+    # The examples must do what their comments say. Nothing checked them
+    # before: weekly_sales.ever printed `total = z` under a comment
+    # promising a sum of five days, and earned_trust.ever -- the file that
+    # explains the whole idea -- was a transcript nobody re-ran. Pins each
+    # example's exact output AND the eleven-step confidence ladder.
+    ("Examples",       f"{sys.executable} tests/examples_test.py"),
+    # Last, because it runs everything above a second time to read their
+    # tallies. It fails when a document's assertion count stops matching a
+    # real run -- the drift that let FINDINGS.md claim 81 while the suite
+    # said 83, in five places, for as long as nobody compared them.
+    ("Assertion counts", f"{sys.executable} tests/assertion_counts.py --check"),
+    # One rule, every language. Runs the same [EXAMPLE] ladder through C,
+    # Python, Ruby and Java as processes and fails if any two disagree.
+    # movements, witnesses_needed and from_examples all lived in Python
+    # and Java and nowhere else, and nothing said so.
+    ("Algebra parity",   f"{sys.executable} tests/algebra_parity.py"),
 ]
 
 def run(label, cmd):

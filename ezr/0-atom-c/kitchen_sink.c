@@ -62,9 +62,6 @@
 #include <string.h>
 #include <stdint.h>
 
-#ifndef E_INTAKE
-#define E_INTAKE 120
-#endif
 /* Ever's depth ceiling is floor(pi) = 3. It lives in ever.py and ir.py
    on the Python side and in tac.c on the C side; tapestry.h does not
    export it, so the guard mirrors the same value here. */
