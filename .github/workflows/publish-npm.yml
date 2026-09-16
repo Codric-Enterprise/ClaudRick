@@ -1,0 +1,113 @@
+# Publishes power-pack/ to npm as `slash-pack`.
+#
+# Manual dispatch only, and dry_run defaults to true. This package is not
+# like the image: `npm publish` claims a global name permanently and an
+# unpublish window is narrow and restricted, so there is no trigger here
+# that can fire without somebody choosing it.
+#
+# LICENSING, READ BEFORE SETTING dry_run=false
+# --------------------------------------------
+# package.json's `files` list includes `pro-commands/`, which is covered by
+# a PROPRIETARY, SINGLE-USER licence -- not the MIT that covers the rest of
+# power-pack/. Publishing ships those 30 commands to a public registry where
+# anyone can `npm install` them. The job prints this and requires the
+# `confirm_proprietary` input to match, so the decision is recorded in the
+# run rather than assumed.
+#
+# Requires an NPM_TOKEN repository secret (Settings -> Secrets and variables
+# -> Actions). An automation token is the right kind; a read-only one will
+# fail at publish.
+name: Publish slash-pack to npm
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Pack and validate only. Uncheck to actually publish."
+        required: false
+        default: true
+        type: boolean
+      confirm_proprietary:
+        description: "To publish, type: publish pro-commands (see licence note in this file)"
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-npm
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: power-pack
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Report what would be published
+        run: |
+          set -euo pipefail
+          name="$(node -p "require('./package.json').name")"
+          version="$(node -p "require('./package.json').version")"
+          echo "package: $name@$version"
+          echo
+          echo "Files npm would include:"
+          npm pack --dry-run 2>&1 | sed 's/^/  /'
+          echo
+          echo "NOTE: pro-commands/ is proprietary and single-user licensed."
+          echo "      Publishing makes it publicly installable."
+
+      - name: Refuse to republish an existing version
+        run: |
+          set -euo pipefail
+          name="$(node -p "require('./package.json').name")"
+          version="$(node -p "require('./package.json').version")"
+          if npm view "$name@$version" version >/dev/null 2>&1; then
+            echo "::error::$name@$version is already published. Bump the version in power-pack/package.json."
+            exit 1
+          fi
+          echo "$name@$version is not on the registry yet."
+
+      - name: Check the CLI at least loads
+        run: node -e "require('./cli.js')" || node --check cli.js
+
+      - name: Dry run — nothing published
+        if: ${{ inputs.dry_run != false }}
+        run: |
+          echo "Dry run. Nothing was published."
+          echo "To publish: re-run with dry_run unchecked AND"
+          echo "confirm_proprietary set to: publish pro-commands"
+
+      - name: Guard the proprietary confirmation
+        if: ${{ inputs.dry_run == false }}
+        run: |
+          if [ "${{ inputs.confirm_proprietary }}" != "publish pro-commands" ]; then
+            echo "::error::confirm_proprietary must read exactly: publish pro-commands"
+            echo "::error::This publishes proprietary, single-user licensed content publicly."
+            exit 1
+          fi
+
+      - name: Require a token
+        if: ${{ inputs.dry_run == false }}
+        run: |
+          if [ -z "${NODE_AUTH_TOKEN}" ]; then
+            echo "::error::NPM_TOKEN secret is not set. Add it under Settings -> Secrets and variables -> Actions."
+            exit 1
+          fi
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish
+        if: ${{ inputs.dry_run == false }}
+        run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

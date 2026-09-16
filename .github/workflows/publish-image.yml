@@ -1,0 +1,106 @@
+# Publishes the ReVision container image to GHCR.
+#
+# Deliberately NOT triggered by pushes to main. CI already builds the image
+# on every PR, which is what catches a broken Dockerfile; publishing is a
+# release act and wants a human deciding when. Triggers are a version tag
+# and a manual dispatch, nothing else.
+#
+# No secret to configure: GHCR authenticates with the built-in GITHUB_TOKEN
+# via the `packages: write` permission below.
+name: Publish image
+
+on:
+  push:
+    tags: ["v*.*.*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Image tag to publish (e.g. 0.1.0). Defaults to the short SHA."
+        required: false
+        type: string
+      dry_run:
+        description: "Build and report the tags, but do not push."
+        required: false
+        default: true
+        type: boolean
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: publish-image-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Work out the tags
+        id: meta
+        run: |
+          set -euo pipefail
+          image="ghcr.io/${GITHUB_REPOSITORY,,}/revision"
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+            version="${GITHUB_REF_NAME#v}"
+          elif [ -n "${{ inputs.tag }}" ]; then
+            version="${{ inputs.tag }}"
+          else
+            version="$(git rev-parse --short HEAD)"
+          fi
+          echo "image=$image"     >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "Publishing $image:$version"
+
+      - name: Build
+        run: |
+          docker build \
+            -t "${{ steps.meta.outputs.image }}:${{ steps.meta.outputs.version }}" \
+            -t "${{ steps.meta.outputs.image }}:latest" \
+            .
+
+      # Prove the image actually serves before it is published. A registry
+      # full of images that never started is worse than no registry: CI's
+      # build step only proves the Dockerfile parses.
+      - name: Smoke test /healthz
+        run: |
+          set -euo pipefail
+          docker run -d --name revision-smoke -p 8000:8000 \
+            -e ANTHROPIC_API_KEY=smoke-test-not-a-real-key \
+            "${{ steps.meta.outputs.image }}:${{ steps.meta.outputs.version }}"
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:8000/healthz | grep -q '"ok"'; then
+              echo "healthz ok after ${i}s"
+              docker rm -f revision-smoke
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "healthz never came up; container logs follow" >&2
+          docker logs revision-smoke >&2
+          docker rm -f revision-smoke
+          exit 1
+
+      - name: Log in to GHCR
+        if: ${{ github.ref_type == 'tag' || inputs.dry_run == false }}
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Push
+        if: ${{ github.ref_type == 'tag' || inputs.dry_run == false }}
+        run: |
+          docker push "${{ steps.meta.outputs.image }}:${{ steps.meta.outputs.version }}"
+          docker push "${{ steps.meta.outputs.image }}:latest"
+
+      - name: Dry run — nothing pushed
+        if: ${{ github.ref_type != 'tag' && inputs.dry_run != false }}
+        run: |
+          echo "Dry run. Would have pushed:"
+          echo "  ${{ steps.meta.outputs.image }}:${{ steps.meta.outputs.version }}"
+          echo "  ${{ steps.meta.outputs.image }}:latest"
+          echo "Re-run with dry_run=false to publish."

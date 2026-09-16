@@ -82,6 +82,8 @@ Key design decisions:
 │   └── LICENSE               # MIT — everything except pro-commands/ (see notice at top of file)
 ├── .github/workflows/ci.yml           # ruff check + ruff format --check + pytest (3.11-3.13) + docker build
 ├── .github/workflows/deploy-pages.yml # publishes mastery-system/ to GitHub Pages on push to main
+├── .github/workflows/publish-image.yml # GHCR image publish — v*.*.* tag or manual; dry_run defaults true
+├── .github/workflows/publish-npm.yml  # power-pack/ -> npm as `slash-pack`; manual only, needs NPM_TOKEN
 ├── .github/workflows/security.yml     # pip-audit (root) + npm audit (power-pack/); push/PR + weekly Mon 06:00 UTC cron
 │   # NOTE: CodeQL also runs on every PR — "Analyze (ruby)" and "Analyze (java-kotlin)",
 │   # so 14 check runs, not 12. It is GitHub default setup (repo settings), NOT a workflow
@@ -254,13 +256,46 @@ Done:
   (root Python deps) and `npm audit --audit-level=high` (`power-pack/`) on
   push/PR plus a weekly cron.
 
+- ✅ Release pipelines — `publish-image.yml` builds the image, proves it
+  answers `/healthz`, and pushes it to GHCR on a `v*.*.*` tag or a manual
+  dispatch; `publish-npm.yml` publishes `power-pack/` to npm. Neither fires
+  on a push to `main`: publishing is a release act, so both want a human
+  choosing the moment. Both default to a dry run.
+
 Likely next steps toward production:
 
 - Persisting the model/config and per-tool token limits.
-- Publishing the Docker image (registry) and a deploy target.
+- A deploy target for the image (nothing hosts it yet — the pipeline
+  publishes, it does not run it anywhere).
 - A proper ASGI stack (e.g. FastAPI + uvicorn) *if* concurrency needs outgrow
   the stdlib `ThreadingHTTPServer` — this would add the first runtime deps.
 - Shared/persistent rate-limit store (e.g. Redis) if run multi-process.
+
+## Publishing (release pipelines)
+
+Neither pipeline runs on a push to `main`, and both default to a dry run.
+CI already builds the image on every PR, which is what catches a broken
+Dockerfile; publishing is a separate act with different consequences.
+
+- **Image → GHCR** (`publish-image.yml`). Fires on a `v*.*.*` tag, or a
+  manual dispatch with `dry_run=false`. No secret needed — it authenticates
+  with the built-in `GITHUB_TOKEN` under `packages: write`. Before pushing
+  it starts the container and waits for `/healthz` to answer, because CI's
+  `docker build` only proves the Dockerfile parses, not that the image
+  serves.
+- **`power-pack/` → npm** (`publish-npm.yml`). Manual dispatch only.
+  Requires an `NPM_TOKEN` repository secret (automation token; a read-only
+  one fails at publish). It refuses to republish a version that already
+  exists — bump `power-pack/package.json` instead.
+
+> **The npm one ships proprietary content.** `package.json`'s `files` list
+> includes `pro-commands/`, which is under a proprietary single-user
+> licence, *not* the MIT covering the rest of `power-pack/`. Publishing
+> makes those 30 commands publicly installable by anyone. The workflow
+> prints this and will not publish unless `confirm_proprietary` is typed
+> exactly, so the decision is recorded in the run rather than assumed.
+> `slash-pack` is currently **unclaimed on npm**, so the first publish
+> takes that global name permanently.
 
 ## Git & branching
 
