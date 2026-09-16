@@ -448,6 +448,15 @@ hand-aligned tables that layer uses. A two-line fix to `syntax.py` came back as
 a 331-line diff this way. Either add `--force-exclude` to the hook, or make
 edits under `ezr/` through Bash (`python3`/`sed`), which the hook does not match.
 
+**`ezr/5-runtime-java` needs JDK 21 or newer.** It uses pattern matching in
+`switch`, which was a *preview* feature through JDK 20 and only became final
+in 21 (JEP 441). `build.sh` passes no `--release`, so it compiles against
+whichever JDK is on `PATH`: on 21 it builds 35 classes, on 17 it dies with
+four `patterns in switch statements are a preview feature` errors. Nothing
+in the tree pins this, so CI's `languages` job asserts the major version and
+says so plainly rather than letting javac's preview-feature error stand as
+the explanation.
+
 **`JAVA_TOOL_OPTIONS` corrupts the Java runtime's output.** When the environment
 sets it, the JVM prints `Picked up JAVA_TOOL_OPTIONS: ...` to stderr on every
 start, which breaks the byte comparison `ezr/5-runtime-java/differential.py`

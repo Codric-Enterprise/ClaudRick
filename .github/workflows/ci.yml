@@ -55,10 +55,15 @@ jobs:
         with:
           python-version: "3.12"
 
+      # 21, not 17: ezr/5-runtime-java uses pattern matching in switch,
+      # which was a *preview* feature through 20 and only became final in
+      # 21 (JEP 441). build.sh passes no --release, so it compiles against
+      # whatever JDK is on PATH -- on 17 it fails with four "patterns in
+      # switch statements are a preview feature" errors.
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: "17"
+          java-version: "21"
 
       # A missing toolchain does not fail these suites -- it makes them
       # quietly cover less and still exit 0. That is the whole reason this
@@ -78,6 +83,12 @@ jobs:
           done
           [ "$missing" -eq 0 ] || {
             echo "::error::A toolchain is absent. These suites would skip a layer and still pass."
+            exit 1
+          }
+          jv="$(env -u JAVA_TOOL_OPTIONS javac -version 2>&1 | awk '{print $2}' | cut -d. -f1)"
+          printf '  javac major version: %s\n' "${jv:-unknown}"
+          [ "${jv:-0}" -ge 21 ] 2>/dev/null || {
+            echo "::error::ezr/5-runtime-java needs JDK 21+ (patterns in switch); found ${jv:-unknown}."
             exit 1
           }
 
