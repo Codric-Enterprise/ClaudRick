@@ -22,6 +22,8 @@ python3 forge_test.py                 # verify the settled core (81 assertions)
 python3 forge.py                      # continue from the current rulings
 python3 forge.py --reset              # start again from unratified
 python3 grammar_doc.py                # re-emit GRAMMAR.ebnf
+python3 quantum.py --stanzas 8        # a rhyming corpus, put to the matrix
+python3 quantum_test.py               # the rhyming corpus (35 assertions)
 ```
 
 `--floor` sets how many programs must be fuzzed before convergence may
@@ -44,6 +46,7 @@ quiet run keeps getting more expensive to stay quiet.
 | `selfgen.py` | emits P5 from that grammar, so the code cannot drift from the document either |
 | `repair.py` | localises a defect, synthesises a fix, adopts it only if it breaks nothing known |
 | `selfheal.py` | puts a real defect back in the matrix and shows the loop closing on it |
+| `quantum.py` | generation addressed by rhyme instead of seeded by a draw |
 | `ratified.json` | the rulings, with the reason for each |
 | `ledger.json` | what the last run did, generation by generation |
 | `counterexamples.json` | what the forge found; every later generation must still satisfy them |
@@ -71,6 +74,33 @@ which is why the matrix is four by five rather than four by four. A
 generator that cannot emit is itself a finding, and the other four
 still have something to say, so it does not take the matrix down with
 it.
+
+## Rhyming couplets, and what they are for
+
+`corpus.py`'s fuzzer is reproducible in the sense that the same seed
+replays the same draws. That is not the same as addressable: case
+`fz-well-137` cannot be regenerated without regenerating the hundred
+and thirty-six before it, and its text is a fact about CPython's
+Mersenne Twister as much as about EZR.
+
+`quantum.py` generates the same kind of material with no random source.
+Every construction site is collapsed by its *address* -- the path from
+the root, hashed with a hand-written FNV-1a -- so the choice at
+`2/cond/left` is a function of the phrase and that path and nothing
+else. Any subtree can be regenerated alone, and `PYTHONHASHSEED` cannot
+change the corpus.
+
+Programs come out in **couplets**: two programs whose last `k` token
+kinds match, and whose skeletons do not. Same ending, different sense.
+That constraint is worth having because a foot is a claim about
+*tokenization*, and it is the one part of a program all four scanners
+must compute identically for anything downstream to mean what it says
+-- this README records the four splitting over a bare `<` before a test
+existed. `law_rhyme` asks that question directly.
+
+When no answering program is found inside the budget, the couplet
+**withholds**, the same thing the forge does below its fourth tier and
+for the same reason.
 
 ## The four tiers
 
