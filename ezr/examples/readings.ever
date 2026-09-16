@@ -3,9 +3,12 @@
 #   python3 2-interpreter-python/ever_cli.py run examples/readings.ever
 #
 # The same program as readings.ezr, in the grammar `ever run` actually
-# speaks. The two lineages split on binding — `let x = v in body` is an
-# expression in the forge's core, `let x = v` is a statement here — so
-# neither file runs on the other's runner. See CORE.md.
+# speaks. The two lineages still split on binding — `let x = v in body`
+# is an expression in the forge's core, `let x = v` is a statement here,
+# and `ever run` has no `in` at all — so this file still will not run
+# on `ezrun.py`, whose evaluator now speaks the CORE side of that split
+# but was never taught v4.10's statement grammar. readings.ezr, in the
+# other direction, now runs on both. See CORE.md.
 #
 # Two things worth watching.
 #

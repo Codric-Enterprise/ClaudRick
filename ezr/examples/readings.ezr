@@ -1,16 +1,19 @@
 # readings.ezr — a summary over a list of sensor readings.
 #
-#   cd 5-runtime-java && ./ezr ../examples/readings.ezr
+#   ezrun.py ../examples/readings.ezr
+#   5-runtime-java/ezr ../examples/readings.ezr        (agrees exactly)
 #
-# NOT ezrun.py, and not `ever run`: this file is written in the forge's
-# core (CORE.md), where `let x = v in body` is an expression. v4.10's
-# grammar has `let x = v` as a statement instead, so it refuses this file
-# at the first `let` in `biggest`. (No line number here on purpose: it is
-# a number about this file, written in this file, and every edit to the
-# comment moves it. It was wrong twice before this sentence replaced it.)
-# readings.ever is the same program in that grammar. Which of
-# the two lineages the project keeps is an open question -- see CORE.md
-# and FINDINGS.md section 7.4.
+# This file is written in the forge's core (CORE.md), where
+# `let x = v in body` is an expression -- not v4.10's grammar, which has
+# `let x = v` as a statement instead and has no `in`. `ezrun.py` used to
+# refuse this file at the first `let` in `biggest`, the same as `ever
+# run` still does: v4.10 was never taught the core's binding, list
+# literals, or its four builtins (show/len/head/tail). `ezrun.py`'s
+# underlying evaluator, `syntax.py`'s `eval_ast`, now implements all
+# three, so this runs there directly -- no Java build required.
+# `ever run` (the statement-based front door) still cannot: it has no
+# `let ... in`, and its own `readings.ever` reaches the same list with
+# indexing instead, by design (see that file's own comment).
 #
 # Two things worth watching.
 #

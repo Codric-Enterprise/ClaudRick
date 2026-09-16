@@ -97,8 +97,8 @@ Key design decisions:
 │   ├── 4-archive-sql/ 6-interface-html/
 │   ├── 5-runtime-java/       # the core again, in Java, + a differential harness
 │   ├── 7-forge/              # the language forge: 20 front ends, one core
-│   ├── tests/                # run_all.py — the 26-suite gate ezr/CLAUDE.md names
-│   ├── examples/             # runnable .ezr programs — start here
+│   ├── tests/                # run_all.py — the 29-suite gate ezr/CLAUDE.md names
+│   ├── examples/             # runnable programs, both lineages — start here
 │   ├── edapt/ archive/       # adaptive layer; repair archive
 │   ├── CLAUDE.md             # ezr's own rules — read it before touching ezr/
 │   ├── CORE.md               # the core the forge settled on (the 5-runtime-java language)
@@ -166,7 +166,7 @@ Uses a **src layout**: importable code is under `src/`; `pyproject.toml` sets
 ### EZR's loop (separate from ReVision's — see the EZR section)
 
 ```bash
-cd ezr && python3 tests/run_all.py     # the gate ezr/CLAUDE.md names: 26 suites
+cd ezr && python3 tests/run_all.py     # the gate ezr/CLAUDE.md names: 29 suites
 cd ezr && ./run.sh                     # 22 layers, a superset in breadth; ~minutes
 cd ezr/2-interpreter-python && python3 syntax_test.py    # one layer, seconds
 cd ezr/2-interpreter-python && python3 ezrun_test.py     # the runner + [EXAMPLE]/[ANCHOR]
@@ -180,13 +180,22 @@ cd ezr/5-runtime-java && python3 differential.py         # RED, and deliberately
 **neither drives `7-forge/` or `5-runtime-java/`** — both still pass their
 own suites (81 and 98 assertions), but nothing runs them for you.
 
-`differential.py` is red on purpose: 124 programs, 97 agreed, **27
-diverged**. Every divergence is the same fork — `let ... in`, list
-literals, and the `len`/`head`/`tail` builtins are in the Java runtime
-and the forge's `CORE.md`, and are not in the language `syntax.py`'s
-`eval_ast` evaluates. That is a finding about two lineages sharing a
-tree, not a bug in either runner, and it is an owner's decision to
-settle. Do not "fix" it by editing one side to match the other.
+`differential.py` is red on purpose: 128 programs, 123 agreed, **5
+diverged**. It read 27 diverged for as long as `syntax.py`'s `eval_ast`
+had no case for `let ... in`, list literals, or the `len`/`head`/`tail`/
+`show` builtins — present in the Java runtime and the forge's `CORE.md`,
+absent from the Python side purely because nobody had written them.
+That gap is closed (`ezr/FINDINGS.md` §7.11): `eval_ast` now implements
+all four, ported from `Eval.java` line for line, and all four
+`.ezr` example files run under `ezrun.py` directly with no Java build.
+The 5 that remain are genuine findings, not missing features — a
+numeric-precision limit past 2^53 (Python's arbitrary-precision `int`
+against Java's `double`-backed value), two arity/unbound checks Java
+makes at compile time and Python defers to runtime, and two grammar
+questions (`GRAMMAR.ebnf`'s settled `trailing_comma = False` and
+`trailing_expression = False`) where v4.10 permits what the forge's
+doctrine forbids. Each is a finding about the language, not a bug in
+either runner — do not "fix" one by editing it to match the other.
 
 `run.sh` has no flag to select a layer — run that layer's own test file
 directly. Each `*_test.py` is a plain script that reports its own tally and
@@ -324,7 +333,7 @@ two are verified by separate commands.
 
 - **Verify it:** `cd ezr && ./run.sh` — 22 layers (needs gcc, g++,
   python3 and ruby; skips any layer whose toolchain is absent rather
-  than failing). `ezr/CLAUDE.md` names `python3 tests/run_all.py` (26
+  than failing). `ezr/CLAUDE.md` names `python3 tests/run_all.py` (29
   suites) as the gate to be green before and after a change; run both.
 - **In a container:** `cd ezr && docker compose run --rm verify`.
   The image verifies itself at build time.
