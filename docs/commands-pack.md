@@ -1,5 +1,4 @@
-# Claude Commands Pack — 62 commands
-# Claude Commands Pack — 74 commands
+# Claude Commands Pack — 78 commands
 
 For each command: the **slash form** works in Claude Code (type `/name your input`);
 the **prompt** below it is what to paste into a normal claude.ai chat (replace
