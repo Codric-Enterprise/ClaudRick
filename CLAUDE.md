@@ -171,6 +171,7 @@ cd ezr && ./run.sh                     # 22 layers, a superset in breadth; ~minu
 cd ezr/2-interpreter-python && python3 syntax_test.py    # one layer, seconds
 cd ezr/2-interpreter-python && python3 ezrun_test.py     # the runner + [EXAMPLE]/[ANCHOR]
 cd ezr/7-forge && python3 forge_test.py                  # 81 assertions; not in run.sh
+cd ezr/7-forge && python3 quantum_test.py                # 35 assertions; not in run.sh
 cd ezr/5-runtime-java && ./build.sh \
   && env -u JAVA_TOOL_OPTIONS java -cp out com.codric.ezr.RuntimeTest   # 98; not in run.sh
 cd ezr/5-runtime-java && python3 differential.py         # RED, and deliberately so
@@ -178,7 +179,7 @@ cd ezr/5-runtime-java && python3 differential.py         # RED, and deliberately
 
 `run.sh` and `run_all.py` overlap but neither contains the other, and
 **neither drives `7-forge/` or `5-runtime-java/`** — both still pass their
-own suites (81 and 98 assertions), but nothing runs them for you.
+own suites (81 + 35 and 98 assertions), but nothing runs them for you.
 
 `differential.py` is red on purpose: 128 programs, 123 agreed, **5
 diverged**. It read 27 diverged for as long as `syntax.py`'s `eval_ast`
@@ -346,6 +347,16 @@ two are verified by separate commands.
   withholds below all four. `ezr/CORE.md` records what it settled;
   `ezr/7-forge/GRAMMAR.ebnf` is emitted from the chart parser's rule
   table so it cannot drift from the code.
+  `ezr/7-forge/quantum.py` is a second generator alongside `corpus.py`'s
+  seeded fuzzer: it collapses each construction site from a phrase by
+  *address* (FNV-1a over the path) rather than by a draw, so any subtree
+  regenerates alone and `PYTHONHASHSEED` cannot change the corpus. It
+  emits rhyming couplets — two programs whose last k token kinds match
+  and whose skeletons differ — which makes the scanners' agreement about
+  where a program *ends* directly checkable (`law_rhyme`). Do not
+  reintroduce `random` or `hash()` there, and note `--emit` writes a
+  `.ezr` into `7-forge/generated/`, which is build output and not an
+  entry for `ezr/examples/`.
 - **`ezr/5-runtime-java/`** is a second implementation of the core, in a
   language that shares no interpreter, type system or habits with the
   Python one. It is checked twice, as two separate layers: `RuntimeTest`
