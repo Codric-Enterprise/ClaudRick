@@ -101,14 +101,14 @@ jobs:
         working-directory: ezr/5-runtime-java
         run: ./build.sh
 
-      - name: DIAG 1 — examples_test.py standalone, full output
+      # v2: run_all.py FIRST, with no prior examples_test.py invocation --
+      # this is exactly the order #46's job uses, where Examples fails 3/3.
+      # Then immediately run examples_test.py for its full output, which
+      # run_all truncates to the last 6 lines.
+      - name: DIAG A — run_all.py first (matches #46's order)
         working-directory: ezr
-        run: python3 tests/examples_test.py || echo "EXIT=$?"
+        run: python3 tests/run_all.py || echo "RUN_ALL_EXIT=$?"
 
-      - name: DIAG 2 — full run_all.py (ignore result)
+      - name: DIAG B — examples_test.py immediately after, full output
         working-directory: ezr
-        run: python3 tests/run_all.py || echo "EXIT=$?"
-
-      - name: DIAG 3 — examples_test.py again, after run_all
-        working-directory: ezr
-        run: python3 tests/examples_test.py || echo "EXIT=$?"
+        run: python3 tests/examples_test.py || echo "EXAMPLES_EXIT=$?"
