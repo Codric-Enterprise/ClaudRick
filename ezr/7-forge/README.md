@@ -1,6 +1,6 @@
 # Layer 7 — the forge
 
-Four lexers, four parsers, sixteen front ends, one language.
+Four lexers, five parsers, twenty front ends, one language.
 
 EZR V3.0 arrived with a working front end and no specification of it.
 `syntax.py` was the lexer, the parser and — by default — the only
@@ -10,9 +10,10 @@ which point there is nothing to check it against.
 
 So this layer writes the second implementation. And the third, and the
 fourth, and then pairs every scanner with every parser and runs the
-matrix against the same cases. Where sixteen independently derived
-front ends agree, the answer belongs to the language. Where they split,
-the language never said, and the split is the finding.
+matrix against the same cases. Where twenty front ends, assembled from
+nine independently derived parts, agree, the answer belongs to the
+language. Where they split, the language never said, and the split is
+the finding.
 
 ## Running it
 
@@ -42,11 +43,16 @@ quiet run keeps getting more expensive to stay quiet.
 | `spec.py` | the ratified decision table |
 | `forge.py` | the loop, and the four tiers of arbitration |
 | `grammar_doc.py` | emits `GRAMMAR.ebnf` from the parser's own rules |
+| `selfgen.py` | emits P5 from that grammar, so the code cannot drift from the document either |
+| `repair.py` | localises a defect, synthesises a fix, adopts it only if it breaks nothing known |
+| `selfheal.py` | puts a real defect back in the matrix and shows the loop closing on it |
 | `quantum.py` | generation addressed by rhyme instead of seeded by a draw |
 | `ratified.json` | the rulings, with the reason for each |
 | `ledger.json` | what the last run did, generation by generation |
+| `counterexamples.json` | what the forge found; every later generation must still satisfy them |
+| `repairs.json` | repairs in force, so a fix found once stays found |
 
-## Why four of each
+## Why four of each, and then a fifth
 
 Precedence lives somewhere different in each parser: in P1 it is the
 call graph, in P2 a number in a table, in P3 a stack discipline, in P4
@@ -57,6 +63,17 @@ parser is evidence about copying.
 The same goes for the scanners, and it paid immediately: the four
 disagreed about which token kind carries a bare `<` before a single
 test had been written, because nobody had ever written that down.
+
+P5 is not a fifth opinion. `selfgen.py` emits it from the ratified
+grammar and nothing else, so it is the witness that decides whether
+`GRAMMAR.ebnf` *describes* the four or merely resembles them. When it
+disagrees, exactly one of two things is wrong — the grammar is not what
+the parsers implement, or a parser is not what the grammar says — and
+the forge has to say which. Consensus cannot produce that finding,
+which is why the matrix is four by five rather than four by four. A
+generator that cannot emit is itself a finding, and the other four
+still have something to say, so it does not take the matrix down with
+it.
 
 ## Rhyming couplets, and what they are for
 
@@ -93,7 +110,7 @@ available.
 1. **Doctrine** — SEMANTICS.md or PIPELINE.md already says. A vote
    cannot overturn a published document, so this tier runs first.
 2. **Coverage** — stage 4 demonstrably holds something stages 1–3
-   cannot express. Consensus cannot see this: all four front ends can
+   cannot express. Consensus cannot see this: every front end can
    agree, sincerely, on a limitation the rest of the language does not
    have.
 3. **Finding** — one of the laws settles it. A law violation is
