@@ -51,6 +51,12 @@ EVER_WRAPPER = ROOT / "ever"
 
 passed = 0
 failed = 0
+#: Names of the assertions that did not hold, in order. The tally alone
+#: ("51 passed, 3 failed") says a suite broke without saying where, and
+#: run_all.py quotes only the tail of a failing suite -- so a failure
+#: that happened early scrolled out of the report entirely. Printing the
+#: names last puts them inside that tail no matter when they happened.
+failures: list[str] = []
 
 
 def check(label: str, got, want) -> bool:
@@ -65,6 +71,7 @@ def check(label: str, got, want) -> bool:
         passed += 1
         return True
     failed += 1
+    failures.append(label)
     print(f"  FAIL {label}")
     print(f"       want: {want!r}")
     print(f"       got:  {got!r}")
@@ -361,6 +368,10 @@ def main() -> int:
     section_core_lineage()
     section_unified_wrapper()
     section_completeness()
+    if failures:
+        print("\nfailed assertions, in order:")
+        for label in failures:
+            print(f"  x  {label}")
     print(f"\n=== Examples: {passed} passed, {failed} failed ===")
     return 1 if failed else 0
 

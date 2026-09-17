@@ -82,7 +82,9 @@ Key design decisions:
 │   └── LICENSE               # MIT — everything except pro-commands/ (see notice at top of file)
 ├── .github/workflows/ci.yml           # ruff + pytest (3.11-3.13) + docker build + `languages`
 │   #   `languages` job: ezr's 29-suite gate, the forge (81), the rhyming corpus (35),
-│   #   the Java runtime (98) and Rime (74) — the suites the other jobs never touch
+│   #   the Java runtime (98) and Rime (74) — the suites the other jobs never touch.
+│   #   Each suite step carries `if: !cancelled()`, so one red suite fails the job
+│   #   without skipping the other five (it used to hide 288 assertions when it tripped).
 ├── .github/workflows/deploy-pages.yml # publishes mastery-system/ to GitHub Pages on push to main
 ├── .github/workflows/publish-image.yml # GHCR image publish — v*.*.* tag or manual; dry_run defaults true
 ├── .github/workflows/publish-npm.yml  # power-pack/ -> npm as `slash-pack`; manual only, needs NPM_TOKEN

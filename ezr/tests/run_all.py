@@ -87,10 +87,18 @@ def main():
     failures = [(l,o) for l,s,o in results if s is False]
     if failures:
         print("  FAILURES:")
+        # 60, not 6. Six lines was enough for a suite that prints its
+        # verdict last and nothing else; it was not enough for one that
+        # names each broken assertion where it happens. A CI run showed
+        # "Examples: 51 passed, 3 failed" and not one of the three names,
+        # because they had already scrolled past the window.
         for label, out in failures:
             print(f"\n  [{label}]")
-            for line in out.split('\n')[-6:]:
-                if line.strip(): print(f"    {line}")
+            lines = [l for l in out.split('\n') if l.strip()]
+            if len(lines) > 60:
+                print(f"    ... {len(lines) - 60} earlier lines omitted ...")
+            for line in lines[-60:]:
+                print(f"    {line}")
     print("="*66 + "\n")
     return 0 if not failures else 1
 
