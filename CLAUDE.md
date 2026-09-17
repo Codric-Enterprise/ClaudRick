@@ -80,7 +80,9 @@ Key design decisions:
 │   ├── index.html            # product landing page
 │   ├── README.md             # standalone product README
 │   └── LICENSE               # MIT — everything except pro-commands/ (see notice at top of file)
-├── .github/workflows/ci.yml           # ruff check + ruff format --check + pytest (3.11-3.13) + docker build
+├── .github/workflows/ci.yml           # ruff + pytest (3.11-3.13) + docker build + `languages`
+│   #   `languages` job: ezr's 29-suite gate, the forge (81), the rhyming corpus (35),
+│   #   the Java runtime (98) and Rime (74) — the suites the other jobs never touch
 ├── .github/workflows/deploy-pages.yml # publishes mastery-system/ to GitHub Pages on push to main
 ├── .github/workflows/security.yml     # pip-audit (root) + npm audit (power-pack/); push/PR + weekly Mon 06:00 UTC cron
 │   # NOTE: CodeQL also runs on every PR — "Analyze (ruby)" and "Analyze (java-kotlin)",
@@ -187,7 +189,18 @@ cd ezr/5-runtime-java && python3 differential.py         # RED, and deliberately
 
 `run.sh` and `run_all.py` overlap but neither contains the other, and
 **neither drives `7-forge/` or `5-runtime-java/`** — both still pass their
-own suites (81 + 35 and 98 assertions), but nothing runs them for you.
+own suites (81 + 35 and 98 assertions). Locally, nothing runs them for
+you; in CI the `languages` job in `ci.yml` does, along with Rime's gate.
+
+> **`tests/algebra_parity.py` skips Java unless the Java runtime is
+> built.** `java_vectors()` requires both `which javac` *and*
+> `5-runtime-java/out/` to exist, and `out/` is build output. So on a
+> fresh checkout the Java arm skips, `run_all.py` still prints
+> `29 passed 0 skipped 0 failed`, and a quarter of the parity check has
+> silently vanished. Measured here: `3 agreed, 1 skipped` before
+> `5-runtime-java/build.sh`, `4 agreed, 0 skipped` after. The `languages`
+> job builds the runtime first for exactly this reason and then asserts
+> `0 skipped` separately, because the 29/29 line cannot show it.
 
 `differential.py` is red on purpose: 128 programs, 123 agreed, **5
 diverged**. It read 27 diverged for as long as `syntax.py`'s `eval_ast`
@@ -311,7 +324,10 @@ model stack, the core-files framework, and the Claude Code app workflow):
   `run.sh` and `algebra_parity.py` *skip* a layer whose toolchain is absent and
   still exit 0, so a degraded container reads green (measured: hiding `/usr/bin`
   takes `algebra_parity` from 4 agreed to 2 agreed / 2 skipped, exit 0 both
-  times). It also warns when `JAVA_TOOL_OPTIONS` is set, per the gotcha below;
+  times; that measurement was not reproducible in the 2026-09 container,
+  where hiding `/usr/bin` changed nothing and the arm that skipped was
+  Java, gated on `5-runtime-java/out/` rather than on `PATH` — the class
+  of problem is the same, the trigger was not). It also warns when `JAVA_TOOL_OPTIONS` is set, per the gotcha below;
   and two `PreToolUse` hooks matched on `Bash` calls — `git-safety-guard.sh`
   (hard-blocks force-push without `--force-with-lease`, `reset --hard`,
   `clean -f`, `branch -D`, discard-all `checkout`/`restore .`, and
@@ -431,6 +447,15 @@ with Write/Edit silently reformats it — re-sorting imports and exploding the
 hand-aligned tables that layer uses. A two-line fix to `syntax.py` came back as
 a 331-line diff this way. Either add `--force-exclude` to the hook, or make
 edits under `ezr/` through Bash (`python3`/`sed`), which the hook does not match.
+
+**`ezr/5-runtime-java` needs JDK 21 or newer.** It uses pattern matching in
+`switch`, which was a *preview* feature through JDK 20 and only became final
+in 21 (JEP 441). `build.sh` passes no `--release`, so it compiles against
+whichever JDK is on `PATH`: on 21 it builds 35 classes, on 17 it dies with
+four `patterns in switch statements are a preview feature` errors. Nothing
+in the tree pins this, so CI's `languages` job asserts the major version and
+says so plainly rather than letting javac's preview-feature error stand as
+the explanation.
 
 **`JAVA_TOOL_OPTIONS` corrupts the Java runtime's output.** When the environment
 sets it, the JVM prints `Picked up JAVA_TOOL_OPTIONS: ...` to stderr on every
