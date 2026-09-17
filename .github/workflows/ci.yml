@@ -40,3 +40,107 @@ jobs:
       - uses: actions/checkout@v4
       - name: Build image
         run: docker build -t revision:ci .
+
+  # The other two projects in this repo. Neither is covered by the `test`
+  # job above: pyproject sets testpaths = ["tests"], and ruff's
+  # extend-exclude skips ezr/ and realm/. Every suite below is a plain
+  # script that prints its own tally and exits non-zero on failure, so
+  # nothing here needs pytest.
+  languages:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # 21, not 17: ezr/5-runtime-java uses pattern matching in switch,
+      # which was a *preview* feature through 20 and only became final in
+      # 21 (JEP 441). build.sh passes no --release, so it compiles against
+      # whatever JDK is on PATH -- on 17 it fails with four "patterns in
+      # switch statements are a preview feature" errors.
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      # A missing toolchain does not fail these suites -- it makes them
+      # quietly cover less and still exit 0. That is the whole reason this
+      # step exists: without it a runner that lost a compiler would report
+      # a green build for a smaller language.
+      - name: Assert the toolchains are actually here
+        run: |
+          set -euo pipefail
+          missing=0
+          for t in gcc g++ python3 ruby javac java; do
+            if command -v "$t" >/dev/null 2>&1; then
+              printf '  ok      %s\n' "$t"
+            else
+              printf '  MISSING %s\n' "$t"
+              missing=1
+            fi
+          done
+          [ "$missing" -eq 0 ] || {
+            echo "::error::A toolchain is absent. These suites would skip a layer and still pass."
+            exit 1
+          }
+          jv="$(env -u JAVA_TOOL_OPTIONS javac -version 2>&1 | awk '{print $2}' | cut -d. -f1)"
+          printf '  javac major version: %s\n' "${jv:-unknown}"
+          [ "${jv:-0}" -ge 21 ] 2>/dev/null || {
+            echo "::error::ezr/5-runtime-java needs JDK 21+ (patterns in switch); found ${jv:-unknown}."
+            exit 1
+          }
+
+      # tests/algebra_parity.py checks for 5-runtime-java/out, not just for
+      # javac, so on a fresh checkout the Java arm skips and the suite still
+      # reports green. Building here is what makes that arm real: measured
+      # locally, it moves algebra parity from "3 agreed, 1 skipped" to
+      # "4 agreed, 0 skipped".
+      - name: Build the Java runtime
+        working-directory: ezr/5-runtime-java
+        run: ./build.sh
+
+      - name: EZR — the 29-suite gate
+        working-directory: ezr
+        run: python3 tests/run_all.py
+
+      # Belt and braces for the step above: run_all reports 29/29 whether or
+      # not a parity arm skipped, so assert the arm count directly.
+      - name: EZR — no parity arm skipped
+        working-directory: ezr
+        run: |
+          set -euo pipefail
+          out="$(python3 tests/algebra_parity.py)"
+          echo "$out"
+          echo "$out" | grep -qE '[0-9]+ agreed, 0 skipped, 0 disagreed' || {
+            echo "::error::An algebra-parity arm skipped or disagreed."
+            exit 1
+          }
+
+      # run.sh and run_all.py drive neither of these; without this job
+      # nothing runs them at all.
+      - name: EZR — the forge (81 assertions)
+        working-directory: ezr/7-forge
+        run: python3 forge_test.py
+
+      - name: EZR — the rhyming corpus (35 assertions)
+        working-directory: ezr/7-forge
+        run: python3 quantum_test.py
+
+      # JAVA_TOOL_OPTIONS makes the JVM print a banner to stderr on every
+      # start; `env -u` removes it rather than emptying it, which does not
+      # help. The 5-runtime-java/ezr wrapper does the same.
+      - name: EZR — the Java runtime (98 assertions)
+        working-directory: ezr/5-runtime-java
+        run: env -u JAVA_TOOL_OPTIONS java -cp out com.codric.ezr.RuntimeTest
+
+      - name: Rime — the realm gate (74 assertions)
+        working-directory: realm
+        run: python3 realm_test.py
+
+      # Deliberately NOT run: ezr/5-runtime-java/differential.py. It is red
+      # on purpose -- 5 of 128 programs diverge, and each divergence is a
+      # recorded finding about the language (ezr/FINDINGS.md 7), not a bug
+      # to be fixed by editing one runner to match the other. Wiring it into
+      # a gate would invite exactly that.
