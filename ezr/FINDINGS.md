@@ -249,9 +249,9 @@ this block stops matching a real run.
 | Golden master  | 31 | 0 |
 | Notebook       | ran | 0 |
 | Research       | ran | 0 |
-| Examples       | 54 | 0 |
+| Examples       | 57 | 0 |
 | Algebra parity | ran | 0 |
-| **total** | **1233** | **0** |
+| **total** | **1236** | **0** |
 
 The total covers the 19 suites that report a tally. 9 more run and pass without counting assertions (C bridge, Kitchen sink, Form IR (C99), Native (C99), Integration, Gold standard, Notebook, Research, Algebra parity); they are verified, not quantified, and inventing a number for them is what this table exists to prevent.
 <!-- assertion-counts:end -->

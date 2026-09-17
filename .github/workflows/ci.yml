@@ -101,13 +101,20 @@ jobs:
         working-directory: ezr/5-runtime-java
         run: ./build.sh
 
+      # Every suite step below carries `if: !cancelled()`. Without it a
+      # failure in the first one skipped the other five, so a single red
+      # suite hid 288 assertions -- a job written to close a coverage gap
+      # opened a larger one whenever it tripped. The job still fails if any
+      # step fails; it just stops taking the rest of the language with it.
       - name: EZR — the 29-suite gate
+        if: ${{ !cancelled() }}
         working-directory: ezr
         run: python3 tests/run_all.py
 
       # Belt and braces for the step above: run_all reports 29/29 whether or
       # not a parity arm skipped, so assert the arm count directly.
       - name: EZR — no parity arm skipped
+        if: ${{ !cancelled() }}
         working-directory: ezr
         run: |
           set -euo pipefail
@@ -121,10 +128,12 @@ jobs:
       # run.sh and run_all.py drive neither of these; without this job
       # nothing runs them at all.
       - name: EZR — the forge (81 assertions)
+        if: ${{ !cancelled() }}
         working-directory: ezr/7-forge
         run: python3 forge_test.py
 
       - name: EZR — the rhyming corpus (35 assertions)
+        if: ${{ !cancelled() }}
         working-directory: ezr/7-forge
         run: python3 quantum_test.py
 
@@ -132,10 +141,12 @@ jobs:
       # start; `env -u` removes it rather than emptying it, which does not
       # help. The 5-runtime-java/ezr wrapper does the same.
       - name: EZR — the Java runtime (98 assertions)
+        if: ${{ !cancelled() }}
         working-directory: ezr/5-runtime-java
         run: env -u JAVA_TOOL_OPTIONS java -cp out com.codric.ezr.RuntimeTest
 
       - name: Rime — the realm gate (74 assertions)
+        if: ${{ !cancelled() }}
         working-directory: realm
         run: python3 realm_test.py
 

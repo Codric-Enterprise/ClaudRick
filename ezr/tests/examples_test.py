@@ -37,8 +37,13 @@ That is deliberate -- an unchecked example is how the last set rotted.
 """
 from __future__ import annotations
 
+import atexit
+import json
+import os
+import shutil
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -49,8 +54,45 @@ EXAMPLES = ROOT / "examples"
 TRUST = EXAMPLES / "earned_trust.ever"
 EVER_WRAPPER = ROOT / "ever"
 
+# ── the suite's own HOME ─────────────────────────────────────────────
+# `ever run` personalises its output. ever_cli.py keeps a learner
+# profile at ~/.ever/profile.json, and runtime.run_source hands the
+# result a `scaffold` band derived from it; for the two lowest bands
+# (score <= 112) the run is prefixed with a legend line and a blank
+# line. So `ever run f.ever` does not have one output -- it has one per
+# band, and which one you get depends on a file outside the repository
+# that every previous run has been editing.
+#
+# That is what broke CI, and only CI. A fresh runner starts at
+# P_START = 64, so the first three examples print the legend and fail
+# their pins; by the fourth the score has climbed past 112 and the rest
+# pass -- `51 passed, 3 failed`, always the same three, and green again
+# on a second run in the same job. A developer's machine is green from
+# the start because its profile graduated long ago. Measured here:
+# HOME=$(mktemp -d) reproduces CI exactly, and the real ~/.ever showed
+# 490 sessions -- every test run this suite had ever done, folded into
+# the developer's own profile.
+#
+# So the suite gets its own HOME, seeded to a band that emits no
+# legend, which is the state every pin below was written against. It
+# also stops the suite writing to the real one.
+_SEEDED_SCORE = 146.0   # "Practitioner" (113-168); the fixed point these
+                        # programs converge to, so the run cannot drift out
+HOME = Path(tempfile.mkdtemp(prefix="ezr-examples-home-"))
+(HOME / ".ever").mkdir()
+(HOME / ".ever" / "profile.json").write_text(json.dumps({"score": _SEEDED_SCORE}))
+atexit.register(shutil.rmtree, HOME, True)
+
+ENV = {**os.environ, "HOME": str(HOME)}
+
 passed = 0
 failed = 0
+#: Names of the assertions that did not hold, in order. The tally alone
+#: ("51 passed, 3 failed") says a suite broke without saying where, and
+#: run_all.py quotes only the tail of a failing suite -- so a failure
+#: that happened early scrolled out of the report entirely. Printing the
+#: names last puts them inside that tail no matter when they happened.
+failures: list[str] = []
 
 
 def check(label: str, got, want) -> bool:
@@ -65,14 +107,16 @@ def check(label: str, got, want) -> bool:
         passed += 1
         return True
     failed += 1
+    failures.append(label)
     print(f"  FAIL {label}")
     print(f"       want: {want!r}")
     print(f"       got:  {got!r}")
     return False
 
 
-def run(cmd: list[str]) -> tuple[str, int]:
-    p = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+def run(cmd: list[str], env: dict[str, str] | None = None) -> tuple[str, int]:
+    p = subprocess.run(cmd, capture_output=True, text=True, timeout=300,
+                       env=env or ENV)
     return (p.stdout + p.stderr).strip(), p.returncode
 
 
@@ -149,6 +193,35 @@ def section_run() -> None:
         ok &= check(f"{name} is definitions-only", out, "")
         if ok:
             print(f"  ok   {name}  (definitions only — see transcript)")
+
+
+# ── section 1b: what a first-time user actually sees ─────────────────
+#: The legend a brand-new profile prints ahead of the values. Nothing
+#: pinned this, which is how the band dependency above stayed invisible
+#: until a fresh CI runner hit it: the suite asserted one of `ever run`'s
+#: outputs and never knew there were others. Pinned from a virgin HOME,
+#: so a change to the scaffolding text fails here, where it is explained,
+#: rather than three times over in RUN_OUTPUT.
+FIRST_RUN_LEGEND = "Confidence is shown as [n/256] next to each value."
+
+
+def section_first_run() -> None:
+    print("\nthe first run — a profile that has earned nothing yet")
+    virgin = Path(tempfile.mkdtemp(prefix="ezr-virgin-home-"))
+    try:
+        out, code = run([sys.executable, str(CLI), "run",
+                         str(EXAMPLES / "compound_interest.ever")],
+                        env={**os.environ, "HOME": str(virgin)})
+        lines = out.splitlines()
+        ok = check("first run exit 0", code, 0)
+        ok &= check("first run is scaffolded with the legend",
+                    lines[:2], [FIRST_RUN_LEGEND, ""])
+        ok &= check("and the values below it are unchanged",
+                    lines[2:], RUN_OUTPUT["compound_interest.ever"])
+        if ok:
+            print("  ok   a virgin profile is scaffolded, the values are not")
+    finally:
+        shutil.rmtree(virgin, ignore_errors=True)
 
 
 # ── section 2: the earned_trust transcript ───────────────────────────
@@ -356,11 +429,16 @@ def section_unified_wrapper() -> None:
 
 def main() -> int:
     section_run()
+    section_first_run()
     section_transcript()
     section_counterfactual()
     section_core_lineage()
     section_unified_wrapper()
     section_completeness()
+    if failures:
+        print("\nfailed assertions, in order:")
+        for label in failures:
+            print(f"  x  {label}")
     print(f"\n=== Examples: {passed} passed, {failed} failed ===")
     return 1 if failed else 0
 

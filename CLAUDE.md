@@ -82,7 +82,9 @@ Key design decisions:
 │   └── LICENSE               # MIT — everything except pro-commands/ (see notice at top of file)
 ├── .github/workflows/ci.yml           # ruff + pytest (3.11-3.13) + docker build + `languages`
 │   #   `languages` job: ezr's 29-suite gate, the forge (81), the rhyming corpus (35),
-│   #   the Java runtime (98) and Rime (74) — the suites the other jobs never touch
+│   #   the Java runtime (98) and Rime (74) — the suites the other jobs never touch.
+│   #   Each suite step carries `if: !cancelled()`, so one red suite fails the job
+│   #   without skipping the other five (it used to hide 288 assertions when it tripped).
 ├── .github/workflows/deploy-pages.yml # publishes mastery-system/ to GitHub Pages on push to main
 ├── .github/workflows/publish-image.yml # GHCR image publish — v*.*.* tag or manual; dry_run defaults true
 ├── .github/workflows/publish-npm.yml  # power-pack/ -> npm as `slash-pack`; manual only, needs NPM_TOKEN
@@ -482,6 +484,21 @@ with Write/Edit silently reformats it — re-sorting imports and exploding the
 hand-aligned tables that layer uses. A two-line fix to `syntax.py` came back as
 a 331-line diff this way. Either add `--force-exclude` to the hook, or make
 edits under `ezr/` through Bash (`python3`/`sed`), which the hook does not match.
+
+**`ever run` personalises its output, from a file outside the repo.**
+`ever_cli.py` keeps a learner profile at `~/.ever/profile.json` and
+`runtime.run_source` derives a `scaffold` band from it; below a score of 112
+the run is prefixed with a legend line and a blank line. So `ever run f.ever`
+has one output per band, not one output. This cost a day of CI: a fresh
+runner starts at `P_START = 64`, so the first three examples printed the
+legend and failed their pins in `tests/examples_test.py` while the rest
+passed — `51 passed, 3 failed`, always the same three, and green again on a
+second run in the same job, because by then the score had climbed past 112.
+Developer machines were green from the start (the profile here had **490
+sessions** banked, every test run the suite had ever done). `examples_test.py`
+now runs every subprocess under its own seeded `HOME`, and pins the
+first-run legend separately. Anything else that pins `ever run` output must
+do the same, or it is really pinning whoever ran it last.
 
 **`ezr/5-runtime-java` needs JDK 21 or newer.** It uses pattern matching in
 `switch`, which was a *preview* feature through JDK 20 and only became final
