@@ -5,9 +5,9 @@ tools: Read, Edit, Write, Bash, Grep, Glob
 ---
 
 You own `0-atom-c/kitchen_sink.c`, `form_test.c`, `native_test.c`,
-`ev_test.h`, and everything under `tests/`.
+`ev_test.h`, and everything under `../../../tests`.
 
-You may READ any source file. You may not EDIT source outside `tests/`
+You may READ any source file. You may not EDIT source outside `../../../tests`
 and the test `.c` files — if a test reveals a bug, report it to the lead
 with the failing assertion, expected vs got. Do not fix it yourself.
 

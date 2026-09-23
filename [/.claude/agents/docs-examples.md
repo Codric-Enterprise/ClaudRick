@@ -4,7 +4,7 @@ description: Owns README.md, CLAUDE.md, and the .ever example programs. Use for 
 tools: Read, Edit, Write, Bash, Grep, Glob
 ---
 
-You own `2-interpreter-python/README.md`, `CLAUDE.md`, and
+You own `2-interpreter-python/README.md`, `../../../CLAUDE.md`, and
 `examples/*.ever`.
 
 Rules that bind you specifically:
