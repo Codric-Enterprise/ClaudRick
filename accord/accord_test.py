@@ -322,6 +322,95 @@ drop = program(
 ok(parse.parse(drop).examples[0].value == (3,), "a one-item list ends at ', trusted'")
 ok(parse_error(drop.replace("drop", "rest")) != "", "'rest' is reserved: no function named rest")
 
+# ── programs: several functions, each witnessed by its own Checks ──────────
+from accord import explain_program  # noqa: E402
+from core import apply_program, verify_program  # noqa: E402
+
+
+def prog(source: str):
+    return verify_program(parse.program(source))
+
+
+STATS = src("stats")
+report = prog(STATS)
+ok(report.accepted and list(report.reports) == ["total", "mean"], "a two-function program")
+ok(apply_program(report, "mean", ((1, 2, 3),)).value == 2.0, "mean calls total and answers 2.0")
+ok(apply_program(report, "mean", ((),)).void, "mean of the empty list is refused, not crashed")
+mean_first = STATS[STATS.index("To mean") :] + "\n" + STATS[: STATS.index("To mean")]
+ok(list(prog(mean_first).reports) == ["total", "mean"], "helpers are verified first")
+ok(report.reports["mean"].accepted, "a caller's Checks need not cover its helper's decisions")
+PICK = program(
+    "To pick given x, answering an Int:",
+    "x is an Int, trusted 256 of 256.",
+    "It never repeats.",
+    "Make sure x is not void.",
+    "Answer x.",
+    checks=("pick of 1 gives 1, trusted 120.", "pick of 2 gives 2, trusted 120."),
+)
+WRAP = program(
+    "To wrap given x, answering an Int:",
+    "x is an Int, trusted 256 of 256.",
+    "It never repeats.",
+    "Make sure x is not void.",
+    "Answer pick of x.",
+    checks=(
+        "wrap of 1 gives 1, trusted 120.",
+        "wrap of 2 gives 2, trusted 120.",
+        "wrap of 3 gives 3, trusted 120.",
+    ),
+)
+capped = prog(PICK + WRAP)
+ok(capped.reports["wrap"].trust == 217 and capped.reports["pick"].trust == 183, "own trusts")
+got = apply_program(capped, "wrap", (9,), trust=256)
+ok(got.trust == 183, "a caller's answer is capped by what its helper's Checks earned (4.3)")
+broken = prog(
+    STATS.replace(
+        "total of the list of 1, 2 and 3 gives 6", "total of the list of 1, 2 and 3 gives 7"
+    )
+)
+ok(broken.reports["total"].stage == "checks", "a wrong helper is refused at its Checks")
+ok(broken.reports["mean"].stage == "depends", "and its caller is refused because of it")
+ok("mean uses total, which was refused" in explain_program(broken), "the dependency is named")
+ok(apply_program(broken, "mean", ((1,),)).void, "a function resting on a refused one does not run")
+PING = program(
+    "To ping given n, answering an Int:",
+    "n is an Int, trusted 256 of 256.",
+    "It never repeats.",
+    "Make sure n is not void.",
+    "Answer pong of n.",
+)
+PONG = PING.replace("To ping", "To pong").replace("Answer pong of n.", "Answer ping of n.")
+cycle = prog(PING + PONG)
+ok(any("call each other" in e for e in cycle.errors), "mutual recursion is refused (R5)")
+undefined = prog(STATS.replace("(total of xs) divided by", "(sum of xs) divided by"))
+ok(any("'sum' is not defined in this program" in e for e in undefined.reports["mean"].errors),
+   "a call to an undefined function is refused")  # fmt: skip
+arity = prog(STATS.replace("(total of xs) divided by", "(total of xs and xs) divided by"))
+ok(any("total called with 2 args, takes 1" in e for e in arity.reports["mean"].errors),
+   "a call with the wrong number of arguments is refused")  # fmt: skip
+ok(any("two functions are named pick" in e for e in prog(PICK + PICK).errors), "duplicate names")
+EDGELESS = no_edge
+USES = program(
+    "To judge given s, answering a Text:",
+    "s is a Float, trusted 256 of 256.",
+    "It never repeats.",
+    "Make sure s is not void.",
+    "Answer classify of s.",
+    checks=(
+        'judge of 128 gives "Uncertain", trusted 100.',
+        'judge of 200 gives "Certain", trusted 100.',
+    ),
+)
+leaned = prog(EDGELESS + USES)
+ok(leaned.reports["classify"].stage == "coverage", "a caller's Checks do not cover a helper")
+ok(leaned.reports["judge"].stage == "depends", "so the caller waits on the helper's own Checks")
+try:
+    parse.parse(STATS)
+    one = ""
+except AccordError as err:
+    one = err.message
+ok("use program()" in one, "parse() is for one function; a program is read with program()")
+
 # ── fill: the person writes the intent, Claude writes the body, Accord decides ─
 import fill  # noqa: E402
 
@@ -409,6 +498,48 @@ ok(fast["speed"] == "fast" and "fast-mode-2026-02-01" in fast["betas"], "--fast 
 slow = fill.request(fill.MODEL, False, "s", [])
 ok("speed" not in slow and slow["model"] == "claude-opus-5", "the default is standard Opus 5")
 ok(slow["fallbacks"] == "default", "refusal fallbacks are on")
+
+STATS_INTENT = """To total given xs, answering an Int:
+  xs is a List of Int, trusted 256 of 256.
+Check: total of the empty list gives 0, trusted 120.
+Check: total of the list of 1, 2 and 3 gives 6, trusted 120.
+To mean given xs, answering a Float:
+  xs is a List of Int, trusted 256 of 256.
+Check: mean of the list of 1, 2 and 3 gives 2.0, trusted 120.
+Check: mean of the list of 4 gives 4.0, trusted 120.
+"""
+TOTAL_BODY = """```accord total
+  It shrinks by xs.
+  Make sure xs is not void.
+  If the length of xs is equal to 0:
+    Answer 0.
+  Otherwise:
+    Answer the first of xs plus total of the rest of xs.
+```"""
+MEAN_BODY = """```accord mean
+  It never repeats.
+  Make sure xs is not void.
+  Answer (total of xs) divided by (the length of xs).
+```"""
+ok([p.name for p in fill.intents(STATS_INTENT)] == ["total", "mean"], "a multi-function intent")
+ask, calls = scripted(TOTAL_BODY + "\n" + MEAN_BODY)
+out = fill.fill(STATS_INTENT, ask)
+ok(out.code == 0 and out.report.accepted, "fill writes every body of a program in one reply")
+ok("mean" in calls[0][1][0]["content"] and "```accord total" in calls[0][1][0]["content"],
+   "and asks for one labelled block per function")  # fmt: skip
+ask, calls = scripted(TOTAL_BODY, TOTAL_BODY + "\n" + MEAN_BODY)
+out = fill.fill(STATS_INTENT, ask)
+ok(out.code == 0 and out.attempts == 2, "a missing body is sent back and then supplied")
+ok("no body for mean" in calls[1][1][-1]["content"], "Claude is told which body is missing")
+unlabelled = TOTAL_BODY.replace("```accord total", "```accord") + "\n" + MEAN_BODY
+ask, calls = scripted(unlabelled, TOTAL_BODY + "\n" + MEAN_BODY)
+ok(fill.fill(STATS_INTENT, ask).attempts == 2, "an unlabelled body in a program is refused")
+ok("label each body" in calls[1][1][-1]["content"], "and Claude is told to label it")
+one_check = STATS_INTENT.replace("Check: mean of the list of 4 gives 4.0, trusted 120.\n", "")
+ask, calls = scripted(TOTAL_BODY + "\n" + MEAN_BODY)
+out = fill.fill(one_check, ask)
+ok(out.code == 4 and len(calls) == 1, "one function short of Checks is the person's turn")
+ok(out.report.reports["mean"].stage == "floor", "and it names that function's floor")
 
 # ── the pieces stay apart: semantics never imports syntax ───────────────────
 ok("import parse" not in (HERE / "core.py").read_text(), "core.py does not depend on the syntax")

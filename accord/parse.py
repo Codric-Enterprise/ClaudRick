@@ -126,9 +126,29 @@ def split(source: str) -> list[Sentence]:
 
 
 def parse(source: str) -> Function:
+    """One function. A source with several is a program: use `program`."""
+    functions = program(source)
+    if len(functions) != 1:
+        raise AccordError(1, f"expected one function, found {len(functions)}: use program()")
+    return functions[0]
+
+
+def program(source: str) -> tuple[Function, ...]:
+    """Every function in a source, in order. Each starts at a 'To ...:' header at column 0."""
     sentences = split(source)
     if not sentences:
         raise AccordError(1, "empty program")
+    if sentences[0].indent or not sentences[0].is_word("to"):
+        raise AccordError(sentences[0].number, "a program starts with 'To ...:' at column 0")
+    groups: list[list[Sentence]] = []
+    for s in sentences:
+        if s.indent == 0 and s.is_word("to"):
+            groups.append([])
+        groups[-1].append(s)
+    return tuple(_function(group) for group in groups)
+
+
+def _function(sentences: list[Sentence]) -> Function:
     head = sentences[0]
     if head.indent:
         raise AccordError(head.number, "'To ...' must start at column 0")

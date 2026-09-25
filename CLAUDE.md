@@ -82,7 +82,7 @@ Key design decisions:
 │   └── LICENSE               # MIT — everything except pro-commands/ (see notice at top of file)
 ├── .github/workflows/ci.yml           # ruff + pytest (3.11-3.13) + docker build + `languages`
 │   #   `languages` job: ezr's 29-suite gate, the forge (81), the rhyming corpus (35),
-│   #   the Java runtime (98), Rime (74) and Accord (94) — the suites the other jobs
+│   #   the Java runtime (98), Rime (74) and Accord (121) — the suites the other jobs
 │   #   never touch. Each suite step carries `if: !cancelled()`, so one red suite fails
 │   #   the job without skipping the others (it used to hide 288 assertions when it tripped).
 ├── .github/workflows/deploy-pages.yml # publishes mastery-system/ to GitHub Pages on push to main
@@ -125,8 +125,8 @@ Key design decisions:
 │   ├── core.py               # tree, checker (R1–R5), TAC, interpreter, verify (Checks, R6, trust, floor)
 │   ├── accord.py             # `check`, `run`, `tac`, `fill`; `explain` words each verdict in the language
 │   ├── fill.py               # headless: person's intent -> Claude's body -> verdict; only API caller
-│   ├── accord_test.py        # the gate: 94 assertions
-│   ├── examples/             # classify, fact, total, reverse (.accord); clamp.intent.accord for fill
+│   ├── accord_test.py        # the gate: 121 assertions
+│   ├── examples/             # classify, fact, total, reverse, stats (2 functions); clamp.intent for fill
 │   └── LANGUAGE.md           # the spec — start here
 ├── README.md
 └── .gitignore
@@ -495,7 +495,7 @@ refusal quotes the program back in Accord. The trust rules come from
 lazy [IF-T], examples earning trust (§4.2: 1 → 120, 2 → 183, 3 → 217),
 the answer cap (§4.3), and the 128 floor. It imports nothing from `ezr/`.
 
-- **Verify it:** `cd accord && python3 accord_test.py` — 94 assertions,
+- **Verify it:** `cd accord && python3 accord_test.py` — 121 assertions,
   a plain script with its own tally, run by CI's `languages` job. Try a
   program with `python3 accord.py check examples/classify.accord`.
 - **One syntax. Do not bring back a second surface.** v0.1–v0.3 made you
@@ -518,6 +518,12 @@ the answer cap (§4.3), and the 128 floor. It imports nothing from `ezr/`.
   imports `anthropic`, which it does lazily. The gate tests it with a
   scripted stand-in and must keep passing without the SDK installed; CI
   has no SDK and no key. Do not add a live API call to the gate.
+- **A program is several functions, verified helpers first** (`verify_program`).
+  Each is witnessed only by its own Checks: traces are keyed by function
+  name, so a caller's Checks can never count toward a helper's coverage.
+  A caller of a refused helper is refused (`depends`). Mutual recursion is
+  refused (R5), because a measure only proves self-recursion stops. Calls
+  across functions cap the answer at the helper's earned trust (§4.3).
 - **`core.py` never imports `parse.py`.** The gate asserts it. The
   semantics must not depend on the syntax.
 - **R6 counts what a Check executes, including recursive calls.** A Check

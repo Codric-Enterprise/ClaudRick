@@ -11,7 +11,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 
 import parse
-from core import AccordError, Report, verify
+from core import AccordError, ProgramReport, verify_program
 
 MODEL = "claude-opus-5"
 ATTEMPTS = 4
@@ -44,12 +44,13 @@ Expressions:
   arithmetic   a plus b | a minus b | a times b | a divided by b | negative 3
   lists        the list of 1, 2 and 3 | the empty list | the length of xs | the first of xs
                | the rest of xs | xs plus ys (joins two lists)
-  calls        f of a | f of a and b     (only the function itself; parenthesize a list argument)
+  calls        f of a | f of a and b     (this or another function; parenthesize a list argument)
   literals     12 | 1.5 | "text" | true | false
   grouping     (a plus b) times c
-There is no and/or/not, no remainder, no loops, and no other functions. Types: Int, Float, Text,
-Bool, and List of any of them. Reserved words (never names): list, empty, length, first, rest,
-trusted.
+There is no and/or/not, no remainder and no loops. A program may have several functions: call
+another by name, as "total of xs", but no functions may call each other in a cycle.
+Types: Int, Float, Text, Bool, and List of any of them.
+Reserved words (never names): list, empty, length, first, rest, trusted.
 
 Example body, for "To fact given n, answering an Int:" with n an Int:
 ```accord
@@ -68,11 +69,15 @@ class FillError(Exception):
 
 @dataclass
 class Intent:
-    """The person's part, kept as their exact text so the AI can never rewrite it."""
+    """One function's part, kept as the person's exact text so the AI can never rewrite it."""
 
     header: list[str]
     declarations: list[str]
     checks: list[str]
+
+    @property
+    def name(self) -> str:
+        return self.header[0].split()[1]
 
     @property
     def text(self) -> str:
@@ -83,18 +88,38 @@ class Intent:
 class Outcome:
     code: int
     program: str = ""
-    report: Report | None = None
+    report: ProgramReport | None = None
     attempts: int = 0
     log: list[str] = field(default_factory=list)
 
 
-def intent(source: str) -> Intent:
-    """Split a person's file: the header, one trust line per parameter, then the Checks."""
+def intents(source: str) -> list[Intent]:
+    """Every function's part: its header, one trust line per parameter, then its Checks."""
     lines = [ln for ln in source.splitlines() if ln.strip() and not ln.lstrip().startswith("#")]
     if not lines or not lines[0].startswith("To "):
         raise AccordError(
             1, "the file must start with a header: 'To name given ..., answering ...:'"
         )
+    groups: list[list[str]] = []
+    for ln in lines:
+        if ln.startswith("To "):
+            groups.append([])
+        groups[-1].append(ln)
+    parts = [_intent(group) for group in groups]
+    names = [p.name for p in parts]
+    for n in sorted({n for n in names if names.count(n) > 1}):
+        raise AccordError(1, f"R3: two functions are named {n}")
+    return parts
+
+
+def intent(source: str) -> Intent:
+    parts = intents(source)
+    if len(parts) != 1:
+        raise AccordError(1, f"expected one function, found {len(parts)}: use intents()")
+    return parts[0]
+
+
+def _intent(lines: list[str]) -> Intent:
     names = _parameters(lines[0])
     indented = [ln for ln in lines[1:] if ln.startswith(" ")]
     top = [ln for ln in lines[1:] if not ln.startswith(" ")]
@@ -114,9 +139,12 @@ def _parameters(header: str) -> list[str]:
     return [n for n in re.split(r",\s*|\s+and\s+", match.group(1)) if n]
 
 
+FENCE = re.compile(r"```accord(?:[ \t]+(\w+))?[ \t]*\n(.*?)```", re.S)
+
+
 def body_of(reply: str) -> list[str]:
     """The body lines from a reply, re-indented under the header. Rejects header or Check lines."""
-    fenced = re.search(r"```(?:accord)?\n(.*?)```", reply, re.S)
+    fenced = re.search(r"```(?:accord)?(?:[ \t]+\w+)?[ \t]*\n(.*?)```", reply, re.S)
     text = fenced.group(1) if fenced else reply
     lines = [ln.rstrip() for ln in text.splitlines() if ln.strip()]
     if not lines:
@@ -131,32 +159,63 @@ def body_of(reply: str) -> list[str]:
     return ["  " + ln[shift:] for ln in lines]
 
 
-def assemble(person: Intent, body: list[str]) -> str:
-    return "\n".join(person.header + person.declarations + body + person.checks) + "\n"
+def bodies(reply: str, names: list[str]) -> dict[str, list[str]]:
+    """One body per function. With one function, an unlabelled reply is that function's body."""
+    if len(names) == 1:
+        return {names[0]: body_of(reply)}
+    found: dict[str, list[str]] = {}
+    for label, text in FENCE.findall(reply):
+        if not label:
+            raise AccordError(1, "label each body with its function: ```accord NAME")
+        if label not in names:
+            raise AccordError(1, f"there is no function named {label}")
+        if label in found:
+            raise AccordError(1, f"two bodies for {label}")
+        found[label] = body_of(text)
+    missing = [n for n in names if n not in found]
+    if missing:
+        raise AccordError(1, f"no body for {', '.join(missing)}")
+    return found
 
 
-def prompt(person: Intent) -> str:
-    return f"Write the body for this program.\n\n```accord\n{person.text}```"
+def assemble(parts: list[Intent] | Intent, body) -> str:
+    if isinstance(parts, Intent):
+        parts, body = [parts], {parts.name: body}
+    return "".join(
+        "\n".join(p.header + p.declarations + body[p.name] + p.checks) + "\n" for p in parts
+    )
+
+
+def prompt(parts: list[Intent]) -> str:
+    text = "".join(p.text for p in parts)
+    if len(parts) == 1:
+        return f"Write the body for this program.\n\n```accord\n{text}```"
+    names = ", ".join(p.name for p in parts)
+    return (
+        f"Write the body of each function: {names}. Reply with one fenced block per function,"
+        f" labelled with its name, like ```accord {parts[0].name}.\n\n```accord\n{text}```"
+    )
 
 
 def fill(source: str, ask: Callable, attempts: int = ATTEMPTS, explain=None) -> Outcome:
     """The loop. `ask(system, messages) -> (text, content)` is all that talks to a model."""
     if explain is None:
-        from accord import explain
-    person = intent(source)
-    messages: list = [{"role": "user", "content": prompt(person)}]
+        from accord import explain_program as explain
+    parts = intents(source)
+    names = [p.name for p in parts]
+    messages: list = [{"role": "user", "content": prompt(parts)}]
     outcome = Outcome(code=1)
     for n in range(1, attempts + 1):
         outcome.attempts = n
         text, content = ask(CARD, messages)
         messages.append({"role": "assistant", "content": content})
         try:
-            program = assemble(person, body_of(text))
-            report = verify(parse.parse(program))
+            program = assemble(parts, bodies(text, names))
+            report = verify_program(parse.program(program))
         except AccordError as err:
             verdict = f"refused: {err}"
             outcome.log.append(f"attempt {n}: {verdict}")
-            messages.append({"role": "user", "content": _again(verdict)})
+            messages.append({"role": "user", "content": _again(verdict, len(parts))})
             continue
         outcome.program, outcome.report = program, report
         verdict = explain(report)
@@ -164,16 +223,20 @@ def fill(source: str, ask: Callable, attempts: int = ATTEMPTS, explain=None) -> 
         if report.accepted:
             outcome.code = 0
             return outcome
-        if report.stage in YOURS:
+        stages = [
+            r.stage for r in report.reports.values() if r.stage not in ("accepted", "depends")
+        ]
+        if not report.errors and stages and all(s in YOURS for s in stages):
             outcome.code = 4
             outcome.log.append("your turn: " + verdict)
             return outcome
-        messages.append({"role": "user", "content": _again(verdict)})
+        messages.append({"role": "user", "content": _again(verdict, len(parts))})
     return outcome
 
 
-def _again(verdict: str) -> str:
-    return f"Accord refused that body:\n\n{verdict}\n\nWrite the whole body again."
+def _again(verdict: str, functions: int) -> str:
+    ask = "Write the whole body again." if functions == 1 else "Write every body again."
+    return f"Accord refused that:\n\n{verdict}\n\n{ask}"
 
 
 # ── the one place that talks to Claude ───────────────────────────────────────

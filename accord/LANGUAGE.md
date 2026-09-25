@@ -1,4 +1,4 @@
-# Accord — v0.5
+# Accord — v0.6
 
 **One language for a person and an AI to write one program together.**
 
@@ -10,11 +10,12 @@ earned enough trust. Each refusal quotes your own program back to you.
 
 ```
 cd accord
-python3 accord_test.py                                  # the gate: 94 assertions
+python3 accord_test.py                                  # the gate: 121 assertions
 python3 accord.py check examples/classify.accord        # verify a program
 python3 accord.py run examples/classify.accord 200      # run it, if accepted
 python3 accord.py tac examples/fact.accord              # the compiled TAC
 python3 accord.py fill examples/clamp.intent.accord     # you write intent, Claude writes the body
+python3 accord.py run examples/stats.accord --fn mean the list of 1, 2 and 3   # a program
 ```
 
 ## One program, two authors
@@ -58,6 +59,32 @@ It asks the question you had not answered:
 refused: the Checks leave part of classify untried; add a Check for each
   no Check tries signal equal to threshold, the edge of 'signal is greater than threshold'
 ```
+
+## Programs: several functions
+
+A file can hold several functions (`examples/stats.accord`). Each has its
+own header, trust lines, body and Checks, and they call each other by
+name, as `total of xs`.
+
+- **Each function is witnessed by its own Checks, helpers first.** Its
+  coverage (R6), floor and earned trust are its own. A caller's Checks
+  never count toward a helper's coverage, and a caller does not have to
+  cover its helper's decisions.
+- **A caller is refused when anything it uses was refused**, and the
+  refusal names the helper: `mean uses total, which was refused`.
+- **An answer is capped by every function it passed through.** A call
+  answers at no more than the helper's earned trust (`SEMANTICS.md` §4.3,
+  applied to each call).
+- **Functions may not call each other in a cycle.** A measure proves only
+  that a function calling *itself* stops, so mutual recursion is refused
+  (R5). A call to an undefined function, a call with the wrong number of
+  arguments, and two functions with the same name are refused (R3).
+- `run FILE --fn NAME args` runs one function. The default is the last
+  one in the file.
+
+`fill` handles programs too. You write every function's header, trust
+lines and Checks; Claude replies with one block per function, labelled
+` ```accord NAME `; a missing, unknown or unlabelled body is sent back.
 
 ## Filling a body with Claude: `fill`
 
@@ -231,8 +258,9 @@ Accord's own list rules:
   answer depends on it. Accord cannot tell which Checks you *should*
   have written. It can only refuse a program whose decisions you have
   not examined.
-- One function per program, and it may call only itself. There are no
-  records, loops, modules, indexing, higher-order functions or I/O.
+- Records, loops, modules, indexing, higher-order functions and I/O.
+  Programs can have many functions, but they cannot call each other in
+  a cycle.
 - **[IF-Z] and [IF-AGREE]** (§5.2): a Z condition returns Z. No spans yet.
 - Trust is an **ordering, not a calibrated probability**. That is
   `SEMANTICS.md`'s own largest open claim, and Accord inherits it.
@@ -261,7 +289,7 @@ by asking you the question.
 | `accord.py` | the `check`, `run`, `tac` and `fill` commands, and `explain`, which words each verdict |
 | `fill.py` | the headless loop: your part, Claude's body, Accord's verdict; the only code that calls the API |
 | `accord_test.py` | the gate: a plain script that reports its own tally, like `realm_test.py` |
-| `examples/` | `classify`, `fact`, `total`, `reverse`, and `clamp.intent`: a person's part awaiting `fill` |
+| `examples/` | `classify`, `fact`, `total`, `reverse`; `stats`, a two-function program; and `clamp.intent`, a person's part awaiting `fill` |
 
 `core.py` never imports `parse.py`, and the gate asserts it. The
 semantics don't depend on the syntax, so a second syntax could never
