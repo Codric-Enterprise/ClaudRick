@@ -322,6 +322,95 @@ drop = program(
 ok(parse.parse(drop).examples[0].value == (3,), "a one-item list ends at ', trusted'")
 ok(parse_error(drop.replace("drop", "rest")) != "", "'rest' is reserved: no function named rest")
 
+# ── programs: several functions, each witnessed by its own Checks ──────────
+from accord import explain_program  # noqa: E402
+from core import apply_program, verify_program  # noqa: E402
+
+
+def prog(source: str):
+    return verify_program(parse.program(source))
+
+
+STATS = src("stats")
+report = prog(STATS)
+ok(report.accepted and list(report.reports) == ["total", "mean"], "a two-function program")
+ok(apply_program(report, "mean", ((1, 2, 3),)).value == 2.0, "mean calls total and answers 2.0")
+ok(apply_program(report, "mean", ((),)).void, "mean of the empty list is refused, not crashed")
+mean_first = STATS[STATS.index("To mean") :] + "\n" + STATS[: STATS.index("To mean")]
+ok(list(prog(mean_first).reports) == ["total", "mean"], "helpers are verified first")
+ok(report.reports["mean"].accepted, "a caller's Checks need not cover its helper's decisions")
+PICK = program(
+    "To pick given x, answering an Int:",
+    "x is an Int, trusted 256 of 256.",
+    "It never repeats.",
+    "Make sure x is not void.",
+    "Answer x.",
+    checks=("pick of 1 gives 1, trusted 120.", "pick of 2 gives 2, trusted 120."),
+)
+WRAP = program(
+    "To wrap given x, answering an Int:",
+    "x is an Int, trusted 256 of 256.",
+    "It never repeats.",
+    "Make sure x is not void.",
+    "Answer pick of x.",
+    checks=(
+        "wrap of 1 gives 1, trusted 120.",
+        "wrap of 2 gives 2, trusted 120.",
+        "wrap of 3 gives 3, trusted 120.",
+    ),
+)
+capped = prog(PICK + WRAP)
+ok(capped.reports["wrap"].trust == 217 and capped.reports["pick"].trust == 183, "own trusts")
+got = apply_program(capped, "wrap", (9,), trust=256)
+ok(got.trust == 183, "a caller's answer is capped by what its helper's Checks earned (4.3)")
+broken = prog(
+    STATS.replace(
+        "total of the list of 1, 2 and 3 gives 6", "total of the list of 1, 2 and 3 gives 7"
+    )
+)
+ok(broken.reports["total"].stage == "checks", "a wrong helper is refused at its Checks")
+ok(broken.reports["mean"].stage == "depends", "and its caller is refused because of it")
+ok("mean uses total, which was refused" in explain_program(broken), "the dependency is named")
+ok(apply_program(broken, "mean", ((1,),)).void, "a function resting on a refused one does not run")
+PING = program(
+    "To ping given n, answering an Int:",
+    "n is an Int, trusted 256 of 256.",
+    "It never repeats.",
+    "Make sure n is not void.",
+    "Answer pong of n.",
+)
+PONG = PING.replace("To ping", "To pong").replace("Answer pong of n.", "Answer ping of n.")
+cycle = prog(PING + PONG)
+ok(any("call each other" in e for e in cycle.errors), "mutual recursion is refused (R5)")
+undefined = prog(STATS.replace("(total of xs) divided by", "(sum of xs) divided by"))
+ok(any("'sum' is not defined in this program" in e for e in undefined.reports["mean"].errors),
+   "a call to an undefined function is refused")  # fmt: skip
+arity = prog(STATS.replace("(total of xs) divided by", "(total of xs and xs) divided by"))
+ok(any("total called with 2 args, takes 1" in e for e in arity.reports["mean"].errors),
+   "a call with the wrong number of arguments is refused")  # fmt: skip
+ok(any("two functions are named pick" in e for e in prog(PICK + PICK).errors), "duplicate names")
+EDGELESS = no_edge
+USES = program(
+    "To judge given s, answering a Text:",
+    "s is a Float, trusted 256 of 256.",
+    "It never repeats.",
+    "Make sure s is not void.",
+    "Answer classify of s.",
+    checks=(
+        'judge of 128 gives "Uncertain", trusted 100.',
+        'judge of 200 gives "Certain", trusted 100.',
+    ),
+)
+leaned = prog(EDGELESS + USES)
+ok(leaned.reports["classify"].stage == "coverage", "a caller's Checks do not cover a helper")
+ok(leaned.reports["judge"].stage == "depends", "so the caller waits on the helper's own Checks")
+try:
+    parse.parse(STATS)
+    one = ""
+except AccordError as err:
+    one = err.message
+ok("use program()" in one, "parse() is for one function; a program is read with program()")
+
 # ── fill: the person writes the intent, Claude writes the body, Accord decides ─
 import fill  # noqa: E402
 
@@ -409,6 +498,278 @@ ok(fast["speed"] == "fast" and "fast-mode-2026-02-01" in fast["betas"], "--fast 
 slow = fill.request(fill.MODEL, False, "s", [])
 ok("speed" not in slow and slow["model"] == "claude-opus-5", "the default is standard Opus 5")
 ok(slow["fallbacks"] == "default", "refusal fallbacks are on")
+
+STATS_INTENT = """To total given xs, answering an Int:
+  xs is a List of Int, trusted 256 of 256.
+Check: total of the empty list gives 0, trusted 120.
+Check: total of the list of 1, 2 and 3 gives 6, trusted 120.
+To mean given xs, answering a Float:
+  xs is a List of Int, trusted 256 of 256.
+Check: mean of the list of 1, 2 and 3 gives 2.0, trusted 120.
+Check: mean of the list of 4 gives 4.0, trusted 120.
+"""
+TOTAL_BODY = """```accord total
+  It shrinks by xs.
+  Make sure xs is not void.
+  If the length of xs is equal to 0:
+    Answer 0.
+  Otherwise:
+    Answer the first of xs plus total of the rest of xs.
+```"""
+MEAN_BODY = """```accord mean
+  It never repeats.
+  Make sure xs is not void.
+  Answer (total of xs) divided by (the length of xs).
+```"""
+ok([p.name for p in fill.intents(STATS_INTENT)] == ["total", "mean"], "a multi-function intent")
+ask, calls = scripted(TOTAL_BODY + "\n" + MEAN_BODY)
+out = fill.fill(STATS_INTENT, ask)
+ok(out.code == 0 and out.report.accepted, "fill writes every body of a program in one reply")
+ok("mean" in calls[0][1][0]["content"] and "```accord total" in calls[0][1][0]["content"],
+   "and asks for one labelled block per function")  # fmt: skip
+ask, calls = scripted(TOTAL_BODY, TOTAL_BODY + "\n" + MEAN_BODY)
+out = fill.fill(STATS_INTENT, ask)
+ok(out.code == 0 and out.attempts == 2, "a missing body is sent back and then supplied")
+ok("no body for mean" in calls[1][1][-1]["content"], "Claude is told which body is missing")
+unlabelled = TOTAL_BODY.replace("```accord total", "```accord") + "\n" + MEAN_BODY
+ask, calls = scripted(unlabelled, TOTAL_BODY + "\n" + MEAN_BODY)
+ok(fill.fill(STATS_INTENT, ask).attempts == 2, "an unlabelled body in a program is refused")
+ok("label each body" in calls[1][1][-1]["content"], "and Claude is told to label it")
+one_check = STATS_INTENT.replace("Check: mean of the list of 4 gives 4.0, trusted 120.\n", "")
+ask, calls = scripted(TOTAL_BODY + "\n" + MEAN_BODY)
+out = fill.fill(one_check, ask)
+ok(out.code == 4 and len(calls) == 1, "one function short of Checks is the person's turn")
+ok(out.report.reports["mean"].stage == "floor", "and it names that function's floor")
+
+# ── and, or, not: each is a decision, and a skipped side never counts ───────
+from core import Bin, Not  # noqa: E402
+
+report = verdict(src("leap"))
+ok(report.accepted and report.trust == 235, f"leap: accepted at 235 ({report.stage})")
+report = verdict(src("leap").replace("Check: leap of 2000 gives true, trusted 120.\n", ""))
+ok(report.stage == "coverage", "an or whose second side is never true is refused")
+ok("'(year modulo 400) is equal to 0' true" in explain(report), "and the refusal names that side")
+
+
+def logic(answer: str, a: int = 200, b: int = 60, checks: tuple = ()) -> str:
+    return program(
+        "To both given a and b, answering a Bool:",
+        f"a is a Bool, trusted {a} of 256.",
+        f"b is a Bool, trusted {b} of 256.",
+        "It never repeats.",
+        "Make sure a is not void.",
+        "Make sure b is not void.",
+        f"Answer {answer}.",
+        checks=checks,
+    )
+
+
+got = call(logic("a and b"), False, True)
+ok((got.value, got.trust) == (False, 120), "a false 'and' answers with its first side's trust")
+got = call(logic("a and b"), True, True)
+ok((got.value, got.trust) == (True, 60), "a true 'and' ran both sides: the chain rule's min")
+got = call(logic("a and b", a=60, b=200), True, True)
+ok((got.value, got.trust) == (True, 60), "when both sides run, the first side's trust still counts")
+got = call(logic("a or b"), True, False)
+ok((got.value, got.trust) == (True, 120), "a true 'or' never runs its second side")
+got = call(logic("a or b"), False, False)
+ok((got.value, got.trust) == (False, 60), "a false 'or' ran both sides")
+got = call(logic("not b"), True, True)
+ok((got.value, got.trust) == (False, 60), "not flips the value and keeps the trust")
+got = call(logic("a and (1 divided by 0 is equal to 1)"), False, True)
+ok(got.value is False and not got.void, "the skipped side never runs, so it cannot fail")
+got = call(logic("a and (1 divided by 0 is equal to 1)"), True, True)
+ok(got.void and "division by zero" in got.reason, "the side that runs can")
+got = call(logic("a and 1"), True, True)
+ok(got.void and "and needs a Bool" in got.reason, "and takes Bools only")
+got = call(logic("not 1"), True, True)
+ok(got.void and "not needs a Bool" in got.reason, "not takes Bools only")
+one_way = (
+    "both of true and true gives true, trusted 60.",
+    "both of false and true gives false, trusted 120.",
+)
+report = verdict(logic("a and b", checks=one_way))
+ok(report.stage == "coverage", "a Bool side never seen false is refused")
+ok("no Check makes 'b' false" in explain(report), "and named, in the language")
+all_ways = (*one_way, "both of true and false gives false, trusted 60.")
+ok(verdict(logic("a and b", checks=all_ways)).accepted, "with that Check added, it is accepted")
+
+# ── modulo: whole numbers, and the answer takes the divisor's sign ──────────
+mod = program(
+    "To rem given a and b, answering an Int:",
+    "a is an Int, trusted 256 of 256.",
+    "b is an Int, trusted 256 of 256.",
+    "It never repeats.",
+    "Make sure a is not void.",
+    "Make sure b is not void.",
+    "Answer a modulo b.",
+)
+ok([call(mod, a, b).value for a, b in ((7, 3), (-7, 3), (7, -3), (6, 3))] == [1, 2, -2, 0],
+   "modulo answers with the divisor's sign")  # fmt: skip
+got = call(mod, 7, 0)
+ok(got.void and "modulo by zero" in got.reason, "modulo by zero is refused")
+fmod = mod.replace("an Int:", "a Float:").replace("a is an Int", "a is a Float")
+got = run(lower(parse.parse(fmod)), (Thread(7.5, 120), Thread(2, 120)))
+ok(got.void and "whole numbers" in got.reason, "modulo takes whole numbers only")
+
+
+# ── the syntax of logic: or, then and, then not, then one comparison ────────
+def read(text: str):
+    return parse.expr(parse.Sentence(1, 0, parse.lex(text, 1)))
+
+
+a, b, c, x, y = (Name(v) for v in "abcxy")
+ok(read("a or b and c") == Bin("or", a, Bin("and", b, c)), "and binds tighter than or")
+ok(read("not a is equal to b") == Not(Bin("==", a, b)), "not takes a whole comparison")
+ok(read("f of x and y") == Call("f", (x, y)), "a call takes every 'and'")
+ok(read("(f of x) and y") == Bin("and", Call("f", (x,)), y), "unless parenthesized")
+ok(
+    read("a modulo b times c") == Bin("*", Bin("%", a, b), c),
+    "modulo binds like times, leftmost first",
+)
+texts = ("a and b or c", "not a and b", "not (a or b)", "not not a", "(f of x) and y")
+texts += ("the list of (f of x) and y", "x modulo 3 is equal to 0 and y")
+trees = [read(t) for t in texts]
+ok(all(read(parse.render(t)) == t for t in trees), "every logic tree reads back from its rendering")
+ok(parse_error(src("leap").replace("leap", "or")) != "", "'or' is reserved")
+ok(parse_error(src("leap").replace("year", "modulo")) != "", "'modulo' is reserved")
+
+# ── build: an accepted program becomes a standalone module, checked against Accord ──
+import contextlib  # noqa: E402
+import io  # noqa: E402
+import sys  # noqa: E402
+
+import accord  # noqa: E402
+import build  # noqa: E402
+
+built = {}
+for stem in ("classify", "fact", "total", "reverse", "stats", "leap"):
+    rep = prog(src(stem))
+    built[stem] = (rep, build.build(rep))
+ok(len(built) == 6, "every example builds")
+imports = {line for _, code in built.values() for line in code.splitlines() if "import" in line
+           and not line.startswith(" ")}  # fmt: skip
+ok(imports == {"from __future__ import annotations", "from dataclasses import dataclass"},
+   "a built module imports nothing from Accord")  # fmt: skip
+ok("accord_built" not in sys.modules, "loading a build leaves nothing behind in sys.modules")
+leap_rep, leap_code = built["leap"]
+m = build.load(leap_code)
+years = [(y, apply_program(leap_rep, "leap", (y,))) for y in range(1, 2401)]
+ok(all(m.trusted("leap", y) == (t.value, t.trust) for y, t in years),
+   "the built leap agrees with Accord on 2400 years, not only on its Checks")  # fmt: skip
+fact_rep, fact_code = built["fact"]
+m = build.load(fact_code)
+agree = True
+for n in (*range(0, 21), -3, 300):
+    want = apply_program(fact_rep, "fact", (n,))
+    try:
+        got = m.trusted("fact", n)
+        agree &= not want.void and got == (want.value, want.trust)
+    except m.Refused as refusal:
+        agree &= want.void and str(refusal) == want.reason
+agree &= apply_program(fact_rep, "fact", (300,)).void
+ok(agree, "the built fact agrees with Accord, refusals and their reasons included")
+m = build.load(built["stats"][1])
+ok(
+    (m.mean([1, 2, 3]), m.trusted("mean", (4,))) == (2.0, (4.0, 120)),
+    "a built program calls helpers",
+)
+QUAD = """To double given n, answering an Int:
+  n is an Int, trusted 256 of 256.
+  It never repeats.
+  Make sure n is not void.
+  Answer n plus n.
+Check: double of 2 gives 4, trusted 120.
+Check: double of 0 gives 0, trusted 120.
+
+To quad given n, answering an Int:
+  n is an Int, trusted 256 of 256.
+  It never repeats.
+  Make sure n is not void.
+  Answer double of (double of n).
+Check: quad of 1 gives 4, trusted 120.
+Check: quad of 3 gives 12, trusted 120.
+"""
+quad_rep = prog(QUAD)
+quad_code = build.build(quad_rep)
+want = apply_program(quad_rep, "quad", (5,), 256)
+got = build.load(quad_code).trusted("quad", 5, trust=256)
+ok(
+    got == (20, 183) == (want.value, want.trust),
+    "at full trust a helper's cap decides, as in Accord",
+)
+try:
+    m.mean([])
+    ok(False, "an empty mean is refused by the built module")
+except m.Refused as refusal:
+    ok("division by zero" in str(refusal), "an empty mean is refused by the built module")
+stats_rep, stats_code = built["stats"]
+for rep, good, old, new, label in (
+    (leap_rep, leap_code, "_binop('%', t13", "_binop('*', t13", "an operator"),
+    (leap_rep, leap_code, "_short('or', t6)", "_short('and', t6)", "a short circuit"),
+    (stats_rep, stats_code, "'mean': (_f_mean, 1, 183)", "'mean': (_f_mean, 1, 256)",
+     "an answer cap"),
+    (quad_rep, quad_code, "_depth=_depth + 1), 183)", "_depth=_depth + 1), 256)", "a helper's cap"),
+):  # fmt: skip
+    ok(old in good and build.differences(rep, good.replace(old, new)) != [],
+       f"a build with {label} changed is caught")  # fmt: skip
+ok(all(build.differences(r, code) == [] for r, code in built.values()), "and an honest one is not")
+low_first = ("both of true and true gives true, trusted 60.", "both of false and true gives false,"
+             " trusted 60.", "both of true and false gives false, trusted 60.")  # fmt: skip
+both = build.load(build.build(prog(logic("a and b", a=60, b=200, checks=low_first))))
+ok(both.trusted("both", True, True) == (True, 60), "a built 'and' keeps both sides' trust")
+honest = build.generate
+build.generate = lambda r: honest(r).replace("_binop('%', t13", "_binop('*', t13")
+try:
+    build.build(leap_rep)
+    ok(False, "build refuses a module that disagrees with Accord")
+except build.BuildError as err:
+    ok("disagrees" in str(err), "build refuses a module that disagrees with Accord")
+finally:
+    build.generate = honest
+try:
+    build.build(prog(src("leap").replace("Check: leap of 2000 gives true, trusted 120.\n", "")))
+    ok(False, "a refused program does not build")
+except build.BuildError as err:
+    ok("refused at coverage" in str(err), "a refused program does not build")
+kw = src("fact").replace("fact", "lambda")
+m = build.load(build.build(prog(kw)))
+ok(m.lambda_(5) == 120, "a function named like a Python keyword builds under a safe name")
+
+
+def main(*argv) -> tuple[int, str]:
+    out, err = io.StringIO(), io.StringIO()
+    with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+        code = accord.main(list(argv))
+    return code, out.getvalue() + err.getvalue()
+
+
+code, text = main("build", str(EX / "leap.accord"))
+ok(code == 0 and text == leap_code, "accord build prints the module")
+code, text = main("build", str(EX / "clamp.intent.accord"))
+ok(code == 1 and text.startswith("refused"), "accord build refuses a program without bodies")
+ok(main("build", str(EX / "leap.accord"), "--oops")[0] == 2, "accord build rejects stray arguments")
+
+# ── the specs: GRAMMAR.ebnf and SEMANTICS.md are held to the code ─────────
+import re  # noqa: E402
+
+import core  # noqa: E402
+
+grammar = (HERE / "GRAMMAR.ebnf").read_text()
+quoted = {w.lower() for w in re.findall(r'"([A-Za-z]+)"', grammar)}
+ok(quoted >= parse.RESERVED, f"every reserved word is in the grammar: {parse.RESERVED - quoted}")
+code = ((HERE / "parse.py").read_text() + (HERE / "core.py").read_text()).lower()
+unread = {w for w in quoted if f'"{w}"' not in code}
+ok(not unread, f"every word in the grammar is one the reader matches: {unread}")
+listed = re.search(r"A name may not be a reserved word:\n(.*?)\*\)", grammar, re.S)
+ok(listed is not None and set(listed.group(1).split()) == parse.RESERVED,
+   "the grammar's list of reserved words is parse.py's")  # fmt: skip
+semantics = (HERE / "SEMANTICS.md").read_text()
+cited = set(re.findall(r"`(_[a-z]+)`", semantics))
+ok(cited and all(hasattr(core, name) for name in cited), "every function SEMANTICS.md cites exists")
+copied = {obj.__name__ for obj in build.SEMANTICS if obj.__name__.startswith("_")}
+ok(copied - {"_num", "_whole", "_size", "_builtin", "_admit"} <= cited,
+   f"SEMANTICS.md names what a build copies: {copied - cited}")  # fmt: skip
 
 # ── the pieces stay apart: semantics never imports syntax ───────────────────
 ok("import parse" not in (HERE / "core.py").read_text(), "core.py does not depend on the syntax")

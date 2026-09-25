@@ -2,7 +2,9 @@
 
 python3 accord.py check examples/classify.accord
 python3 accord.py run examples/classify.accord 200
+python3 accord.py run examples/stats.accord --fn mean the list of 1, 2 and 3
 python3 accord.py tac examples/fact.accord
+python3 accord.py build examples/stats.accord [--out stats.py]
 python3 accord.py fill examples/clamp.intent.accord [--out F] [--attempts N] [--model M] [--fast]
 """
 
@@ -12,11 +14,11 @@ import sys
 from pathlib import Path
 
 import parse
-from core import EXECUTE_FLOOR, AccordError, apply, format_tac, tac_hash, verify
+from core import EXECUTE_FLOOR, AccordError, apply_program, format_tac, tac_hash, verify_program
 
 
 def load(path: str):
-    return parse.parse(Path(path).read_text())
+    return parse.program(Path(path).read_text())
 
 
 def explain(report) -> str:
@@ -67,6 +69,30 @@ def explain(report) -> str:
     )
 
 
+def explain_program(report) -> str:
+    """A program's verdict. One function reads exactly as `explain`; several get one line each."""
+    if report.errors:
+        return "refused: the program breaks a rule\n  " + "\n  ".join(report.errors)
+    if len(report.reports) == 1:
+        return explain(next(iter(report.reports.values())))
+    lines = []
+    for name, r in report.reports.items():
+        if r.accepted:
+            lines.append(f"accepted: {name}, trusted at most {r.trust} of 256")
+        elif r.stage == "depends":
+            lines.append("refused: " + "; ".join(r.errors))
+        else:
+            lines.append(explain(r))
+    total = len(report.reports)
+    refused = sum(not r.accepted for r in report.reports.values())
+    head = (
+        f"accepted: all {total} functions"
+        if report.accepted
+        else f"refused: {refused} of {total} functions"
+    )
+    return head + "\n" + "\n".join(lines)
+
+
 def fill_command(argv: list[str]) -> int:
     import fill
 
@@ -88,7 +114,7 @@ def fill_command(argv: list[str]) -> int:
     try:
         source = Path(paths[0]).read_text()
         ask = fill.claude(options["--model"], fast)
-        outcome = fill.fill(source, ask, int(options["--attempts"]), explain)
+        outcome = fill.fill(source, ask, int(options["--attempts"]), explain_program)
     except AccordError as err:
         print(f"refused: {err}", file=sys.stderr)
         return 1
@@ -105,34 +131,77 @@ def fill_command(argv: list[str]) -> int:
     return outcome.code
 
 
+def build_command(argv: list[str]) -> int:
+    """An accepted program, as a standalone Python module whose Checks agree with Accord."""
+    import build
+
+    out = None
+    if argv[1:3] and argv[1] == "--out" and len(argv) == 3:
+        out = argv[2]
+    elif len(argv) != 1:
+        print(__doc__, file=sys.stderr)
+        return 2
+    try:
+        report = verify_program(load(argv[0]))
+    except AccordError as err:
+        print(f"refused: {err}", file=sys.stderr)
+        return 1
+    if not report.accepted:
+        print(explain_program(report), file=sys.stderr)
+        return 1
+    try:
+        module = build.build(report)
+    except build.BuildError as err:
+        print(f"refused: {err}", file=sys.stderr)
+        return 1
+    if out:
+        Path(out).write_text(module)
+    else:
+        print(module, end="")
+    return 0
+
+
 def main(argv: list[str]) -> int:
     if argv and argv[0] == "fill":
         return fill_command(argv[1:])
+    if argv and argv[0] == "build" and len(argv) >= 2:
+        return build_command(argv[1:])
     if len(argv) >= 2 and argv[0] in ("check", "run", "tac"):
         try:
-            fn = load(argv[1])
+            functions = load(argv[1])
         except AccordError as err:
             print(f"refused: {err}")
             return 1
-        report = verify(fn)
+        report = verify_program(functions)
         if argv[0] == "tac":
-            print(format_tac(report.tac) if report.tac else explain(report))
-            if report.tac:
-                print(f"# sha256 {tac_hash(report.tac)}")
-            return 0 if report.tac else 1
+            lowered = [(n, r.tac) for n, r in report.reports.items() if r.tac]
+            if not lowered:
+                print(explain_program(report))
+                return 1
+            for name, tac in lowered:
+                print(f"# {name}\n{format_tac(tac)}\n# sha256 {tac_hash(tac)}")
+            return 0
         if argv[0] == "check" and len(argv) == 2:
-            print(explain(report))
+            print(explain_program(report))
             return 0 if report.accepted else 1
         if argv[0] == "run":
-            if not report.accepted:
-                print(explain(report))
+            rest = argv[2:]
+            name = functions[-1].name
+            if rest[:1] == ["--fn"] and len(rest) >= 2:
+                name, rest = rest[1], rest[2:]
+            target = report.reports.get(name)
+            if target is None:
+                print(f"refused: {name} is not a function of this program")
+                return 1
+            if not target.accepted:
+                print(explain_program(report))
                 return 1
             try:
-                args = parse.values(" ".join(argv[2:]))
+                args = parse.values(" ".join(rest))
             except AccordError as err:
                 print(f"refused: the arguments: {err.message}")
                 return 1
-            got = apply(report, args)
+            got = apply_program(report, name, args)
             if got.void:
                 print(f"refused: {got.reason}")
                 return 1

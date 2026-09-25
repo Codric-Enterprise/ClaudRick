@@ -1,4 +1,4 @@
-# Accord — v0.5
+# Accord — v0.7
 
 **One language for a person and an AI to write one program together.**
 
@@ -10,11 +10,14 @@ earned enough trust. Each refusal quotes your own program back to you.
 
 ```
 cd accord
-python3 accord_test.py                                  # the gate: 94 assertions
+python3 accord_test.py                                  # the gate: 173 assertions
+python3 finish.py                                       # the gate and everything around it
 python3 accord.py check examples/classify.accord        # verify a program
 python3 accord.py run examples/classify.accord 200      # run it, if accepted
 python3 accord.py tac examples/fact.accord              # the compiled TAC
+python3 accord.py build examples/stats.accord --out stats.py   # a standalone Python module
 python3 accord.py fill examples/clamp.intent.accord     # you write intent, Claude writes the body
+python3 accord.py run examples/stats.accord --fn mean the list of 1, 2 and 3   # a program
 ```
 
 ## One program, two authors
@@ -59,6 +62,32 @@ refused: the Checks leave part of classify untried; add a Check for each
   no Check tries signal equal to threshold, the edge of 'signal is greater than threshold'
 ```
 
+## Programs: several functions
+
+A file can hold several functions (`examples/stats.accord`). Each has its
+own header, trust lines, body and Checks, and they call each other by
+name, as `total of xs`.
+
+- **Each function is witnessed by its own Checks, helpers first.** Its
+  coverage (R6), floor and earned trust are its own. A caller's Checks
+  never count toward a helper's coverage, and a caller does not have to
+  cover its helper's decisions.
+- **A caller is refused when anything it uses was refused**, and the
+  refusal names the helper: `mean uses total, which was refused`.
+- **An answer is capped by every function it passed through.** A call
+  answers at no more than the helper's earned trust (`SEMANTICS.md` §4.3,
+  applied to each call).
+- **Functions may not call each other in a cycle.** A measure proves only
+  that a function calling *itself* stops, so mutual recursion is refused
+  (R5). A call to an undefined function, a call with the wrong number of
+  arguments, and two functions with the same name are refused (R3).
+- `run FILE --fn NAME args` runs one function. The default is the last
+  one in the file.
+
+`fill` handles programs too. You write every function's header, trust
+lines and Checks; Claude replies with one block per function, labelled
+` ```accord NAME `; a missing, unknown or unlabelled body is sent back.
+
 ## Filling a body with Claude: `fill`
 
 You write only your part: the header, one trust line per parameter, and
@@ -94,6 +123,25 @@ falls back to the standard speed on a rate limit. `fill` needs the
 `anthropic` SDK and a credential (`ANTHROPIC_API_KEY` or `ant auth
 login`). Nothing else in Accord does: the gate tests `fill` against a
 scripted stand-in and passes with the SDK absent.
+
+## Building: `build`
+
+```
+python3 accord.py build examples/leap.accord --out leap.py
+python3 -c "import leap; print(leap.leap(2024), leap.trusted('leap', 1900))"
+# True (False, 120)
+```
+
+`build` compiles an accepted program's TAC into one Python module that
+imports nothing from Accord. Its semantics are `core.py`'s own
+functions, copied in by source. Before the module is written, every
+Check runs through it at trust 120 and again at 256, and it must give
+the interpreter's value, trust and reason exactly. A program that was
+refused does not build, and neither does a module that disagrees with
+the interpreter (exit 1). `f(*values)` returns the answer, and
+`trusted(name, *values)` returns `(answer, trust)`. Both raise
+`Refused` instead of returning void. `SEMANTICS.md` §8 gives the full
+contract.
 
 ## How a program is accepted
 
@@ -169,6 +217,14 @@ Accord's own additions, stated as such:
   `unbounded`. A call chain 256 deep is also `unbounded`. That is an
   implementation limit, so the answer is Z rather than a host stack overflow.
 - R6, coverage.
+- `and`, `or` and `not` (ezr has none). A side that is skipped never
+  runs and never counts, so `false and x` answers at the trust of that
+  `false`. When both sides run, the answer takes the `min`. Each side is
+  a decision that R6 requires the Checks to try both ways.
+- `modulo` takes whole numbers, and its answer has the divisor's sign.
+
+`SEMANTICS.md` states every rule, with the source of each and the
+function that carries it out.
 
 ## The syntax: one sentence form per construct
 
@@ -183,16 +239,21 @@ Accord's own additions, stated as such:
 | answer | `Answer the first of xs plus total of the rest of xs.` |
 | Check | `Check: total of the list of 1, 2 and 3 gives 6, trusted 120.` |
 | comparison | `is greater than`, `is less than`, `is at least`, `is at most`, `is equal to`, `is not equal to` |
-| arithmetic | `plus`, `minus`, `times`, `divided by`, `negative 3` |
+| logic | `a and b`, `a or b`, `not a`: Bools only, and a side that is skipped never runs |
+| arithmetic | `plus`, `minus`, `times`, `divided by`, `modulo`, `negative 3` |
 | lists | `the list of 1, 2 and 3`, `the empty list`, `a List of Int` |
 | builtins | `the length of xs`, `the first of xs`, `the rest of xs` |
 | call | `total of xs`; more arguments with `and`: `f of a and b` |
 
 `the list of …` takes every `, item` and `and item` that follows, so a
 second argument after a list needs parentheses:
-`f of (the list of 1 and 2) and 3`. `list`, `empty`, `length`, `first`,
-`rest` and `trusted` are reserved words, so no function or parameter
-may use them as a name.
+`f of (the list of 1 and 2) and 3`. A call takes every `and` too, so
+`f of x and y` is `f` given two arguments; write `(f of x) and y` for
+the conjunction. `or` binds looser than `and`, and `not` takes a whole
+comparison: `not x is equal to 0`. The words listed in `GRAMMAR.ebnf`
+are reserved, among them `list`, `empty`, `length`, `first`, `rest`,
+`trusted`, `or` and `modulo`, so no function or parameter may use them
+as a name. `GRAMMAR.ebnf` is the whole grammar.
 
 ## Lists
 
@@ -223,7 +284,7 @@ Accord's own list rules:
   extends ezr's own Text rule. A list joined with a number or Text is
   refused, and so is a mixed result bound to a `List of Int`.
 
-## What v0.4 does not do
+## What v0.7 does not do
 
 - **Coverage is not correctness.** R6 makes the Checks try every decision
   and every edge. An arithmetic slip that crosses no decision, such as
@@ -231,8 +292,9 @@ Accord's own list rules:
   answer depends on it. Accord cannot tell which Checks you *should*
   have written. It can only refuse a program whose decisions you have
   not examined.
-- One function per program, and it may call only itself. There are no
-  records, loops, modules, indexing, higher-order functions or I/O.
+- Records, loops, modules, indexing, higher-order functions and I/O.
+  Programs can have many functions, but they cannot call each other in
+  a cycle.
 - **[IF-Z] and [IF-AGREE]** (§5.2): a Z condition returns Z. No spans yet.
 - Trust is an **ordering, not a calibrated probability**. That is
   `SEMANTICS.md`'s own largest open claim, and Accord inherits it.
@@ -241,6 +303,38 @@ Accord's own list rules:
   records no authorship.
 - `fill` has been tested against a scripted stand-in, not yet against the
   live API.
+
+## Finishing a change: `finish`
+
+`python3 finish.py` runs everything a change must pass, and exits 0
+only if every step passes. CI's `languages` job runs the same command.
+`--quick` leaves out the mutants.
+
+| Step | Fails when |
+|---|---|
+| gate | `accord_test.py` fails; its tally is read back for the next step |
+| no-sdk | the gate fails with `anthropic` unimportable, as it is in CI |
+| counts | a document that states the gate's size (this file, `CLAUDE.md`, `ci.yml`) states a different number |
+| examples | an example is refused, will not build, or its built module fails when run alone |
+| mutants | a deliberate bug in `mutants.py` gets past the gate, or its text is no longer in the code (stale) |
+| lint | `ruff check` or `ruff format --check` fails, or ruff is not installed |
+
+It has been shown to fail on each of these: a drifted count, a broken
+Check, a broken operator, a stale mutant, a surviving mutant, and a
+missing ruff.
+
+**What stays with a person:**
+
+- **Whether the Checks are the right ones.** `finish` proves that the
+  gate refuses the bugs listed in `mutants.py`. It cannot know which
+  bugs are missing from that list. When you add a rule, add a mutant for
+  it.
+- **A surviving mutant.** It is either a gap in the gate or an
+  equivalent change that means the same program. Only a reader can tell
+  which. Fix the gate, or delete the mutant; never keep a survivor.
+- **Opening and merging the PR.** The repo opens PRs only when asked.
+- **`fill` against the live API.** It needs a key and costs money. The
+  gate uses a scripted stand-in, and CI has neither the SDK nor a key.
 
 ## Why there is one syntax, not two
 
@@ -258,10 +352,15 @@ by asking you the question.
 |---|---|
 | `parse.py` | the syntax: reads Accord, and writes expressions and values back in it |
 | `core.py` | the tree, the checker (R1–R5), lowering to TAC, the interpreter, and `verify`: Checks, coverage (R6), earned trust, the floor |
-| `accord.py` | the `check`, `run`, `tac` and `fill` commands, and `explain`, which words each verdict |
+| `accord.py` | the `check`, `run`, `tac`, `build` and `fill` commands, and `explain`, which words each verdict |
+| `build.py` | compiles an accepted program to a standalone Python module, and refuses one that disagrees with the interpreter |
+| `GRAMMAR.ebnf` | the grammar; the gate holds it to `parse.py` |
+| `SEMANTICS.md` | what a program means, rule by rule, each with its source and the code that carries it out |
 | `fill.py` | the headless loop: your part, Claude's body, Accord's verdict; the only code that calls the API |
 | `accord_test.py` | the gate: a plain script that reports its own tally, like `realm_test.py` |
-| `examples/` | `classify`, `fact`, `total`, `reverse`, and `clamp.intent`: a person's part awaiting `fill` |
+| `finish.py` | the gate and everything around it, in one command, as CI runs it |
+| `mutants.py` | the deliberate bugs the gate must catch |
+| `examples/` | `classify`, `fact`, `total`, `reverse`, `leap` (`and`/`or`/`modulo`); `stats`, a two-function program; and `clamp.intent`, a person's part awaiting `fill` |
 
 `core.py` never imports `parse.py`, and the gate asserts it. The
 semantics don't depend on the syntax, so a second syntax could never

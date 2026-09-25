@@ -1,0 +1,10 @@
+# and, or and modulo. Each side of and/or is a decision the Checks must try both ways.
+To leap given year, answering a Bool:
+  year is an Int, trusted 256 of 256.
+  It never repeats.
+  Make sure year is not void.
+  Answer (year modulo 4 is equal to 0 and year modulo 100 is not equal to 0) or year modulo 400 is equal to 0.
+Check: leap of 2024 gives true, trusted 120.
+Check: leap of 2023 gives false, trusted 120.
+Check: leap of 1900 gives false, trusted 120.
+Check: leap of 2000 gives true, trusted 120.
