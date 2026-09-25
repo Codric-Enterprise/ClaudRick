@@ -1,4 +1,4 @@
-# Accord — v0.1
+# Accord — v0.2
 
 A program is written twice: once in **Emit**, a dense surface an AI can
 produce without ambiguity, and once in **Prose**, controlled English a
@@ -13,7 +13,7 @@ runs.
 
 ```
 cd accord
-python3 accord_test.py                                          # the gate: 42 assertions
+python3 accord_test.py                                          # the gate: 70 assertions
 python3 accord.py agree examples/classify.emit examples/classify.prose
 python3 accord.py tac examples/fact.prose                       # print the lowered TAC
 ```
@@ -38,14 +38,18 @@ example: fact(5) == 120 @ 120                     Answer n times fact of (n minu
 |---|---|---|---|
 | **R1** | every parameter and binding states its trust (0–256) | both parsers, then the checker | behaviour that depended on an unstated default: awesome-llm-apps `0c49942`, git output decoded as cp1252 on Windows |
 | **R2** | a parameter is used only after a `require` checks it | the checker | ezr landmine: Z must be checked *before* arithmetic |
-| **R3** | types are closed (`Int Float Text Bool`); `Int` is bounded at ±2^53 | the checker; the interpreter at runtime | ezr `differential.py`: Python's `int` and Java's `double` disagree past 2^53 |
+| **R3** | types are closed (`Int Float Text Bool`, and `List[T]` of any of them); `Int` is bounded at ±2^53 | the checker; the interpreter at runtime | ezr `differential.py`: Python's `int` and Java's `double` disagree past 2^53 |
 | **R4** | at least one example; examples are executed, not asserted | the checker; `run_examples` | a test that simulated its subject and could not fail |
-| **R5** | every path answers; recursion names an `Int` measure that must shrink | both parsers (if needs else), the checker, the interpreter | ezr `FINDINGS.md` §3: 84% of defects were *unbounded* |
+| **R5** | every path answers; recursion names an `Int` or `List` measure that must shrink | both parsers (if needs else), the checker, the interpreter | ezr `FINDINGS.md` §3: 84% of defects were *unbounded* |
 
 Every rule has at least one test that must be **refused**, and the gate
 was mutation-checked: sabotaging the chain rule, the branch rule, R2, R4,
 R5, the measure, the Int bound, literal trust, `require`, the depth
-limit, or division-by-zero each turns it red.
+limit, or division-by-zero each turns it red. The same holds for each
+list rule below: empty `head`/`tail`, the trust of a list and of the
+empty list, Z absorption, element types, the list measure, the builtins'
+trust, strict equality, builtin arity and names, the trailing comma, and
+Prose's `, trusted` lookahead.
 
 ## Trust semantics — inherited, not invented
 
@@ -67,12 +71,71 @@ Accord's own additions, stated as such:
   `unbounded`. A call chain 256 deep is also `unbounded`. That is an
   implementation limit, so the answer is Z rather than a host stack overflow.
 
-## What v0.1 leaves out, deliberately
+## Lists
+
+```
+def total(xs: List[Int] [trust: 256]) -> Int    To total given xs, answering an Int:
+  measure: xs                                     xs is a List of Int, trusted 256 of 256.
+  require: not_void(xs)                           It shrinks by xs.
+  if len(xs) == 0:                                Make sure xs is not void.
+    return 0                                      If the length of xs is equal to 0:
+  else:                                             Answer 0.
+    return head(xs) + total(tail(xs))             Otherwise:
+example: total([1, 2, 3]) == 6 @ 120                Answer the first of xs plus total of the rest of xs.
+                                                Check: total of the list of 1, 2 and 3 gives 6, trusted 120.
+```
+
+| | Emit | Prose |
+|---|---|---|
+| type | `List[Int]`, `List[List[Int]]` | `a List of Int`, `a List of List of Int` |
+| literal | `[1, 2, 3]`, `[]` | `the list of 1, 2 and 3`, `the empty list` |
+| builtins | `len(xs)` `head(xs)` `tail(xs)` | `the length of xs`, `the first of xs`, `the rest of xs` |
+
+From ezr's `CORE.md` §1.2 and its Java runtime (`Eval.java`), unchanged:
+
+- The builtins are `len`, `head` and `tail`. Accord omits `show`
+  because it has no output.
+- A list's trust is the `min` over its elements (the chain rule applied
+  to elements), and a Z element makes the whole list Z.
+- `len`, `head` and `tail` answer with the **list's** trust.
+- `head([])` and `tail([])` are refusals (`unbound`). They are neither
+  exceptions nor a silent empty answer.
+- No trailing comma (`CORE.md` ruling 7, consensus 16/16).
+
+**One decision, recorded.** ezr's `CLAUDE.md` says indexing should
+read an element's own trust, not the container's. That rule belongs to
+the statement surface, where each element keeps its own trust. The
+ratified core keeps one trust for the whole list, and Accord follows
+the core: `head(tail([a@100, b@120]))` answers at 100, not 120. That is
+conservative, so it never over-trusts. Revisit it if Accord ever gains
+indexing.
+
+Accord's own list rules, stated as such:
+
+- A written `[]` enters at 120, like any literal. A non-empty list takes
+  the `min` of its elements, with no literal floor.
+- A recursive measure may be a `List` parameter. Its size is the list's
+  length, and like an `Int` measure it must strictly decrease.
+- Equality is strict at every depth: `[1] == [true]` is false.
+- `+` does not join lists. Nothing in the core does, so v0.2 lists can
+  be built from literals and taken apart, but not concatenated.
+- Prose's list has one form: commas between items, and `and` before the
+  last, with no comma before it. `the list of …` takes every `, item` and
+  `and item` that follows, so a second argument after a list needs
+  parentheses: `f of (the list of 1 and 2) and 3`.
+- Prose reserves `list`, `empty`, `length`, `first`, `rest` and
+  `trusted`. A function or parameter with one of those names parses in
+  Emit and is refused in Prose, so the pair is refused, never silently
+  split.
+
+## What v0.2 leaves out, deliberately
 
 - **[IF-Z] and [IF-AGREE]** (§5.2): a Z condition returns Z. No spans yet.
 - **Corroboration** (§2.2): nothing in v0.1 combines independent evidence.
-- One function per program, self-calls only; no lists, records, loops,
-  modules, or I/O.
+- One function per program, self-calls only; no records, loops, modules,
+  or I/O.
+- No way to build a list of computed length: no cons, concatenation, map
+  or indexing.
 - Trust is an **ordering, not a calibrated probability**. That is
   `SEMANTICS.md`'s own largest open claim, and Accord inherits it.
 

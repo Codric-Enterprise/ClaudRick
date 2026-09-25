@@ -7,7 +7,7 @@ from pathlib import Path
 import emit
 import prose
 from accord import agree
-from core import INT_BOUND, AccordError, Thread, check, lower, run, tac_hash
+from core import INT_BOUND, AccordError, Thread, check, equal, lower, run, tac_hash
 
 HERE = Path(__file__).parent
 EX = HERE / "examples"
@@ -39,7 +39,7 @@ def call(source_parse, source: str, *args) -> Thread:
 
 
 # ── the two example pairs agree end to end ───────────────────────────────────
-for stem in ("classify", "fact"):
+for stem in ("classify", "fact", "total"):
     r = agree(src(f"{stem}.emit"), src(f"{stem}.prose"))
     ok(r["stage"] == "agreed", f"{stem}: agreed ({r['stage']}: {r['errors']})")
     ok(r["examples"] == (2, 2), f"{stem}: both examples ran and held")
@@ -163,6 +163,113 @@ ok(held.void and held.reason == "unbound: x", "require stops a void input the an
 zero = src("classify.emit").replace("= 128", "= 128 / 0")
 got = call(emit.parse, zero, 200)
 ok(got.void and "division by zero" in got.reason, "Z from a division reaches the answer")
+
+
+# ── lists: CORE.md 1.2, with every refusal it names ─────────────────────────
+def program(signature: str, *body: str, example: str) -> str:
+    lines = [f"def {signature}", "  measure: none", *[f"  {b}" for b in body]]
+    return "\n".join(lines) + f"\nexample: {example}\n"
+
+
+first = program(
+    "first(xs: List[Int] [trust: 256]) -> Int",
+    "require: not_void(xs)",
+    "return head(xs)",
+    example="first([7]) == 7 @ 120",
+)
+got = call(emit.parse, first, ())
+ok(got.void and got.reason == "unbound: head of an empty list", "head of [] is a refusal")
+rest = first.replace("-> Int", "-> List[Int]").replace("head(xs)", "tail(xs)")
+got = call(emit.parse, rest, ())
+ok(got.void and got.reason == "unbound: tail of an empty list", "tail of [] is a refusal")
+ok(equal(call(emit.parse, rest, (1, 2, 3)).value, (2, 3)), "tail drops exactly the first")
+got = call(emit.parse, first.replace("List[Int]", "Int"), 5)
+ok(got.void and "needs a list" in got.reason, "head of a number is refused")
+
+e = parse_error(emit.parse, src("total.emit").replace("[1, 2, 3]", "[1, 2, 3,]"))
+ok("trailing comma" in e, "emit: a trailing comma in a list is refused (CORE ruling 7)")
+p = parse_error(prose.parse, src("total.prose").replace("1, 2 and 3", "1, 2, and 3"))
+ok("final 'and'" in p, "prose: one list form only, so no comma before 'and'")
+e = parse_error(emit.parse, src("total.emit").replace("List[Int] [trust", "List [trust"))
+ok(e.startswith("R3"), "emit: a List without an element type is refused")
+p = parse_error(prose.parse, src("total.prose").replace("a List of Int,", "a List,"))
+ok(p.startswith("R3"), "prose: a List without an element type is refused")
+
+got = call(emit.parse, src("total.emit"), ("a",))
+ok(got.void and "element 0" in got.reason, "a Text element in a List[Int] is refused")
+got = call(emit.parse, src("total.emit"), (1, INT_BOUND + 1))
+ok(got.void and "Int bound" in got.reason, "an element past 2^53 is refused, not rounded")
+ok(call(emit.parse, src("total.emit"), 5).void, "a number where a list is declared is refused")
+
+pair = program(
+    "pair(a: Int [trust: 100], b: Int [trust: 256]) -> List[Int]",
+    "require: not_void(a)",
+    "require: not_void(b)",
+    "return [a, b]",
+    example="pair(1, 2) == [1, 2] @ 100",
+)
+got = call(emit.parse, pair, 1, 2)
+ok(equal(got.value, (1, 2)) and got.trust == 100, "a list is as trusted as its weakest element")
+got = call(emit.parse, pair.replace("[a, b]", "[]"), 1, 2)
+ok(got.value == () and got.trust == 120, "the empty list is a written literal: 120")
+got = call(emit.parse, pair.replace("[a, b]", "[a, b / 0]"), 1, 2)
+ok(got.void and "division by zero" in got.reason, "a Z element makes the whole list Z")
+second = pair.replace("-> List[Int]", "-> Int").replace("[a, b]", "head(tail([a, b]))")
+got = call(emit.parse, second, 1, 2)
+ok(got.value == 2 and got.trust == 100, "tail keeps the whole list's trust, as CORE does")
+got = call(emit.parse, pair.replace("[a, b]", "[a] + [b]"), 1, 2)
+ok(got.void and "needs numbers" in got.reason, "+ does not join lists; CORE has no such op")
+same = pair.replace("-> List[Int]", "-> Bool").replace("[a, b]", "[a] == [true]")
+ok(call(emit.parse, same, 1, 2).value is False, "[1] == [true] is false at any depth")
+
+stuck = src("total.emit").replace("total(tail(xs))", "total(xs)")
+got = call(emit.parse, stuck, (1, 2))
+ok(got.void and "did not decrease" in got.reason, "a list measure must shrink too")
+text_measure = program(
+    "t(s: Text [trust: 256]) -> Int", "require: not_void(s)", "return 1", example="t(1) == 1 @ 120"
+).replace("measure: none", "measure: s")
+errors = check(emit.parse(text_measure))
+ok(any("must be an Int or List" in x for x in errors), "a Text measure is refused")
+errors = check(emit.parse(src("total.emit").replace("len(xs)", "len(xs, xs)")))
+ok(any("len takes 1 argument" in x for x in errors), "a builtin called with two arguments")
+errors = check(emit.parse(src("total.emit").replace("total", "len")))
+ok(any("cannot be redefined" in x for x in errors), "a function may not be named len")
+
+r = agree(src("total.emit"), src("total.prose").replace("List of Int", "List of Float"))
+ok(r["stage"] == "agree: tree", "List[Int] against List of Float is refused at the tree")
+nested_emit = program(
+    "count(xss: List[List[Int]] [trust: 256]) -> Int",
+    "require: not_void(xss)",
+    "return len(xss)",
+    example="count([[1], []]) == 2 @ 120",
+)
+nested_prose = """To count given xss, answering an Int:
+  xss is a List of List of Int, trusted 256 of 256.
+  It never repeats.
+  Make sure xss is not void.
+  Answer the length of xss.
+Check: count of the list of (the list of 1) and the empty list gives 2, trusted 120.
+"""
+r = agree(nested_emit, nested_prose)
+ok(r["stage"] == "agreed", f"nested lists agree across both surfaces ({r['errors']})")
+
+rest_emit = program(
+    "drop(xs: List[Int] [trust: 256]) -> List[Int]",
+    "require: not_void(xs)",
+    "return tail(xs)",
+    example="drop([2, 3]) == [3] @ 120",
+)
+rest_prose = """To drop given xs, answering a List of Int:
+  xs is a List of Int, trusted 256 of 256.
+  It never repeats.
+  Make sure xs is not void.
+  Answer the rest of xs.
+Check: drop of the list of 2 and 3 gives the list of 3, trusted 120.
+"""
+r = agree(rest_emit, rest_prose)
+ok(r["stage"] == "agreed", f"a one-item list ends at ', trusted' ({r['errors']})")
+r = agree(rest_emit.replace("drop", "rest"), rest_prose.replace("drop", "rest"))
+ok(r["stage"] == "prose: parse", "Prose reserves 'rest', so a function named rest is refused")
 
 # ── the two front ends are independent: neither imports the other ───────────
 ok("prose" not in (HERE / "emit.py").read_text(), "emit.py does not touch prose")
