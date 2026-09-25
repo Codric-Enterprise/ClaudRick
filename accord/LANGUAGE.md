@@ -1,4 +1,4 @@
-# Accord — v0.4
+# Accord — v0.5
 
 **One language for a person and an AI to write one program together.**
 
@@ -10,10 +10,11 @@ earned enough trust. Each refusal quotes your own program back to you.
 
 ```
 cd accord
-python3 accord_test.py                                  # the gate: 74 assertions
+python3 accord_test.py                                  # the gate: 94 assertions
 python3 accord.py check examples/classify.accord        # verify a program
 python3 accord.py run examples/classify.accord 200      # run it, if accepted
 python3 accord.py tac examples/fact.accord              # the compiled TAC
+python3 accord.py fill examples/clamp.intent.accord     # you write intent, Claude writes the body
 ```
 
 ## One program, two authors
@@ -57,6 +58,42 @@ It asks the question you had not answered:
 refused: the Checks leave part of classify untried; add a Check for each
   no Check tries signal equal to threshold, the edge of 'signal is greater than threshold'
 ```
+
+## Filling a body with Claude: `fill`
+
+You write only your part: the header, one trust line per parameter, and
+the Checks (`examples/clamp.intent.accord`). Then:
+
+```
+python3 accord.py fill examples/clamp.intent.accord --out clamp.accord
+python3 accord.py fill examples/clamp.intent.accord --fast        # Opus 5 fast mode
+```
+
+`fill` is headless. The program goes to stdout (or `--out`), progress to
+stderr, and the exit code says who acts next:
+
+| Exit | Meaning |
+|---|---|
+| 0 | accepted: the body satisfies your Checks, and they cover it |
+| 1 | Claude could not satisfy your Checks within `--attempts` (default 4) |
+| 2 | usage |
+| 3 | environment: no SDK, no credentials, or the API refused the request |
+| 4 | **your turn**: your Checks leave a decision untried, or earn too little trust |
+
+The loop:
+
+1. It sends Claude a card describing the language, plus your part verbatim.
+2. It takes back only a body.
+3. **It assembles the program itself**, from your exact text plus that body, so your Checks cannot be edited by the AI. A reply containing a header or a `Check:` line is refused.
+4. A body that is wrong (it doesn't parse, breaks R1–R5, or fails a Check) goes back to Claude with the refusal in Accord's words, and Claude tries again.
+5. A coverage or floor refusal is never sent to Claude, because only you can add Checks. It stops with exit 4 and asks you the question.
+
+The request uses `claude-opus-5` (change it with `--model`), adaptive
+thinking, and server-side refusal fallbacks. `--fast` adds fast mode and
+falls back to the standard speed on a rate limit. `fill` needs the
+`anthropic` SDK and a credential (`ANTHROPIC_API_KEY` or `ant auth
+login`). Nothing else in Accord does: the gate tests `fill` against a
+scripted stand-in and passes with the SDK absent.
 
 ## How a program is accepted
 
@@ -199,9 +236,11 @@ Accord's own list rules:
 - **[IF-Z] and [IF-AGREE]** (§5.2): a Z condition returns Z. No spans yet.
 - Trust is an **ordering, not a calibrated probability**. That is
   `SEMANTICS.md`'s own largest open claim, and Accord inherits it.
-- Nothing yet records *who* wrote a line. The roles above are how the
-  language is meant to be used, marked by comments in the examples,
-  but the language does not enforce them.
+- Roles are enforced only by `fill`, which assembles the program from
+  your text and refuses a reply that touches it. A file edited by hand
+  records no authorship.
+- `fill` has been tested against a scripted stand-in, not yet against the
+  live API.
 
 ## Why there is one syntax, not two
 
@@ -219,9 +258,10 @@ by asking you the question.
 |---|---|
 | `parse.py` | the syntax: reads Accord, and writes expressions and values back in it |
 | `core.py` | the tree, the checker (R1–R5), lowering to TAC, the interpreter, and `verify`: Checks, coverage (R6), earned trust, the floor |
-| `accord.py` | the `check`, `run` and `tac` commands, and `explain`, which words each verdict |
+| `accord.py` | the `check`, `run`, `tac` and `fill` commands, and `explain`, which words each verdict |
+| `fill.py` | the headless loop: your part, Claude's body, Accord's verdict; the only code that calls the API |
 | `accord_test.py` | the gate: a plain script that reports its own tally, like `realm_test.py` |
-| `examples/` | `classify`, `fact`, `total` and `reverse` |
+| `examples/` | `classify`, `fact`, `total`, `reverse`, and `clamp.intent`: a person's part awaiting `fill` |
 
 `core.py` never imports `parse.py`, and the gate asserts it. The
 semantics don't depend on the syntax, so a second syntax could never

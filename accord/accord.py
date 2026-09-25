@@ -3,6 +3,7 @@
 python3 accord.py check examples/classify.accord
 python3 accord.py run examples/classify.accord 200
 python3 accord.py tac examples/fact.accord
+python3 accord.py fill examples/clamp.intent.accord [--out F] [--attempts N] [--model M] [--fast]
 """
 
 from __future__ import annotations
@@ -66,7 +67,47 @@ def explain(report) -> str:
     )
 
 
+def fill_command(argv: list[str]) -> int:
+    import fill
+
+    options = {"--out": None, "--attempts": str(fill.ATTEMPTS), "--model": fill.MODEL}
+    fast, rest = "--fast" in argv, [a for a in argv if a != "--fast"]
+    paths = []
+    while rest:
+        arg = rest.pop(0)
+        if arg in options and rest:
+            options[arg] = rest.pop(0)
+        elif arg.startswith("-") or paths:
+            print(__doc__, file=sys.stderr)
+            return 2
+        else:
+            paths.append(arg)
+    if not paths or not options["--attempts"].isdigit():
+        print(__doc__, file=sys.stderr)
+        return 2
+    try:
+        source = Path(paths[0]).read_text()
+        ask = fill.claude(options["--model"], fast)
+        outcome = fill.fill(source, ask, int(options["--attempts"]), explain)
+    except AccordError as err:
+        print(f"refused: {err}", file=sys.stderr)
+        return 1
+    except fill.FillError as err:
+        print(f"stopped: {err}", file=sys.stderr)
+        return 3
+    for line in outcome.log:
+        print(line, file=sys.stderr)
+    if outcome.program:
+        if options["--out"]:
+            Path(options["--out"]).write_text(outcome.program)
+        else:
+            print(outcome.program, end="")
+    return outcome.code
+
+
 def main(argv: list[str]) -> int:
+    if argv and argv[0] == "fill":
+        return fill_command(argv[1:])
     if len(argv) >= 2 and argv[0] in ("check", "run", "tac"):
         try:
             fn = load(argv[1])

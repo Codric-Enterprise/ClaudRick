@@ -24,8 +24,12 @@ jobs:
           pip install -e ".[dev]"
           pip install pip-audit
 
+      # --skip-editable: `pip install -e .` puts ReVision itself in the audited set, and
+      # pip-audit looks it up on PyPI, where an unrelated project owns the name `revision`.
+      # PyPI answers a missing version with 503 (not 404), which crashes the audit. Our
+      # own package is not a dependency, so there is nothing of ours to audit there.
       - name: Audit Python dependencies
-        run: pip-audit
+        run: pip-audit --skip-editable
 
   npm-audit:
     runs-on: ubuntu-latest
