@@ -12,6 +12,7 @@ from core import (
     Function,
     If,
     Let,
+    ListLit,
     Lit,
     Name,
     Param,
@@ -25,7 +26,9 @@ TOKEN = re.compile(
 RESERVED = {
     "is", "of", "and", "plus", "minus", "times", "divided", "by", "the", "negative",
     "greater", "less", "than", "at", "least", "most", "equal", "to", "not", "true", "false",
+    "list", "empty", "length", "first", "rest", "trusted",
 }  # fmt: skip
+BUILTINS = {"length": "len", "first": "head", "rest": "tail"}
 COMPARE = [
     (("not", "equal", "to"), "!="),
     (("greater", "than"), ">"),
@@ -144,7 +147,7 @@ def parse(source: str) -> Function:
     head.punct(",")
     head.word("answering")
     head.article()
-    returns = head.name()
+    returns = type_name(head)
     head.end(":")
 
     body = [s for s in sentences[1:] if s.indent > 0]
@@ -165,7 +168,7 @@ def parse(source: str) -> Function:
             raise AccordError(s.number, f"declare {pname} here, not {declared}")
         s.word("is")
         s.article()
-        kind = s.name()
+        kind = type_name(s)
         if s.peek() == ("p", "."):
             raise AccordError(s.number, f"R1: {pname} says nothing about how far it is trusted")
         s.punct(",")
@@ -194,6 +197,19 @@ def parse(source: str) -> Function:
     return Function(fn, tuple(params), returns, measure, tuple(stmts), examples)
 
 
+def type_name(s: Sentence) -> str:
+    kind, value = s.peek()
+    if kind != "word":
+        raise AccordError(s.number, f"expected a type, found {value!r}")
+    s.i += 1
+    if value != "List":
+        return value
+    if not s.is_word("of"):
+        raise AccordError(s.number, "R3: a List needs an element type, as 'a List of Int'")
+    s.word("of")
+    return f"List[{type_name(s)}]"
+
+
 def trusted(s: Sentence) -> int:
     s.word("trusted")
     trust = s.whole()
@@ -219,7 +235,7 @@ def block(sentences: list[Sentence], indent: int):
             name = s.name()
             s.word("be")
             s.article()
-            kind = s.name()
+            kind = type_name(s)
             if s.peek() != ("p", ","):
                 raise AccordError(s.number, f"R1: {name} says nothing about how far it is trusted")
             s.punct(",")
@@ -323,6 +339,25 @@ def atom(s: Sentence):
         return inner
     if s.is_word("the"):
         s.word("the")
+    if s.is_word("empty", "list"):
+        s.word("empty", "list")
+        return ListLit(())
+    if s.is_word("list", "of"):
+        s.word("list", "of")
+        items = [atom(s)]
+        while s.peek() == ("p", ",") and not s.is_word("trusted", offset=1):
+            s.punct(",")
+            if s.is_word("and"):
+                raise AccordError(s.number, "no comma before a list's final 'and'")
+            items.append(atom(s))
+        if s.is_word("and"):
+            s.word("and")
+            items.append(atom(s))
+        return ListLit(tuple(items))
+    for word, builtin in BUILTINS.items():
+        if s.is_word(word, "of"):
+            s.word(word, "of")
+            return Call(builtin, (atom(s),))
     name = s.name()
     if s.is_word("of"):
         s.word("of")
@@ -357,7 +392,12 @@ def check_sentence(s: Sentence, fn: str) -> Example:
 
 
 def literal(s: Sentence):
-    node = unary(s)
-    if not isinstance(node, Lit):
-        raise AccordError(s.number, "check values must be literals")
-    return node.value
+    return _value(s, unary(s))
+
+
+def _value(s: Sentence, node):
+    if isinstance(node, Lit):
+        return node.value
+    if isinstance(node, ListLit):
+        return tuple(_value(s, item) for item in node.items)
+    raise AccordError(s.number, "check values must be literals")

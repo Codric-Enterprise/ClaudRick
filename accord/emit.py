@@ -12,6 +12,7 @@ from core import (
     Function,
     If,
     Let,
+    ListLit,
     Lit,
     Name,
     Param,
@@ -107,7 +108,7 @@ def parse(source: str) -> Function:
             head.take("op", ",")
     head.take("op", ")")
     head.take("op", "->")
-    returns = head.take("name")
+    returns = type_name(head)
     head.done()
 
     body_lines = [ln for ln in lines[1:] if ln.indent > 0]
@@ -129,10 +130,22 @@ def parse(source: str) -> Function:
     return Function(name, tuple(params), returns, measure, tuple(body), examples)
 
 
+def type_name(line: Line) -> str:
+    kind = line.take("name")
+    if kind != "List":
+        return kind
+    if not line.at("op", "[") or line.peek(1) == ("name", "trust"):
+        raise AccordError(line.number, "R3: a List needs an element type, as List[Int]")
+    line.take("op", "[")
+    inner = type_name(line)
+    line.take("op", "]")
+    return f"List[{inner}]"
+
+
 def param(line: Line) -> Param:
     name = line.take("name")
     line.take("op", ":")
-    kind = line.take("name")
+    kind = type_name(line)
     if not line.at("op", "["):
         raise AccordError(line.number, f"R1: {name} has no [trust: N]")
     line.take("op", "[")
@@ -160,7 +173,7 @@ def block(lines: list[Line], indent: int) -> tuple[list, list[Line]]:
             ln.take("kw", "let")
             name = ln.take("name")
             ln.take("op", ":")
-            kind = ln.take("name")
+            kind = type_name(ln)
             if not ln.at("op", "["):
                 raise AccordError(ln.number, f"R1: {name} has no [trust: N]")
             ln.take("op", "[")
@@ -246,6 +259,19 @@ def atom(line: Line):
         inner = expr(line)
         line.take("op", ")")
         return inner
+    if kind == "op" and value == "[":
+        line.take("op", "[")
+        items = []
+        while not line.at("op", "]"):
+            items.append(expr(line))
+            if line.at("op", ","):
+                line.take("op", ",")
+                if line.at("op", "]"):
+                    raise AccordError(line.number, "a list takes no trailing comma")
+            elif not line.at("op", "]"):
+                raise AccordError(line.number, f"expected ',' or ']', found {line.peek()[1]!r}")
+        line.take("op", "]")
+        return ListLit(tuple(items))
     if kind == "name":
         line.i += 1
         if line.at("op", "("):
@@ -283,7 +309,12 @@ def example(line: Line, fn: str) -> Example:
 
 
 def literal(line: Line):
-    node = unary(line)
-    if not isinstance(node, Lit):
-        raise AccordError(line.number, "example values must be literals")
-    return node.value
+    return _value(line, unary(line))
+
+
+def _value(line: Line, node):
+    if isinstance(node, Lit):
+        return node.value
+    if isinstance(node, ListLit):
+        return tuple(_value(line, item) for item in node.items)
+    raise AccordError(line.number, "example values must be literals")

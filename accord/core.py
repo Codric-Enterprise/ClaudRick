@@ -11,6 +11,7 @@ INT_BOUND = 2**53  # past this, a double-backed runtime and an int-backed one di
 DEPTH_LIMIT = 256  # an implementation limit, reported as Z rather than a host stack overflow
 TYPES = ("Int", "Float", "Text", "Bool")
 PREDICATES = ("not_void",)
+BUILTINS = ("len", "head", "tail")  # ezr CORE.md 1.2, less `show`: Accord has no output
 
 
 class AccordError(Exception):
@@ -20,12 +21,28 @@ class AccordError(Exception):
         self.message = message
 
 
+def element_type(kind: str) -> str | None:
+    if kind.startswith("List[") and kind.endswith("]"):
+        return kind[5:-1]
+    return None
+
+
+def valid_type(kind: str) -> bool:
+    inner = element_type(kind)
+    return valid_type(inner) if inner is not None else kind in TYPES
+
+
 # ── the tree ─────────────────────────────────────────────────────────────────
 
 
 @dataclass(frozen=True)
 class Lit:
     value: int | float | str | bool
+
+
+@dataclass(frozen=True)
+class ListLit:
+    items: tuple
 
 
 @dataclass(frozen=True)
@@ -82,7 +99,7 @@ class Param:
 @dataclass(frozen=True)
 class Example:
     args: tuple
-    value: int | float | str | bool
+    value: object
     trust: int
 
 
@@ -102,23 +119,25 @@ class Function:
 def check(fn: Function) -> list[str]:
     errors: list[str] = []
     names = [p.name for p in fn.params]
+    if fn.name in BUILTINS:
+        errors.append(f"R3: {fn.name!r} is a builtin and cannot be redefined")
     if len(set(names)) != len(names):
         errors.append("R3: a parameter is declared twice")
     for p in fn.params:
-        if p.type not in TYPES:
+        if not valid_type(p.type):
             errors.append(f"R3: {p.name} has unknown type {p.type!r}")
         if not 0 <= p.trust <= CERTAIN:
             errors.append(f"R1: {p.name} trust {p.trust} is outside 0..256")
-    if fn.returns not in TYPES:
+    if not valid_type(fn.returns):
         errors.append(f"R3: unknown return type {fn.returns!r}")
 
     recursive = _calls(fn.body, fn.name)
     if recursive and fn.measure is None:
         errors.append(f"R5: {fn.name} calls itself but names no measure")
     if fn.measure is not None:
-        kinds = {p.name: p.type for p in fn.params}
-        if kinds.get(fn.measure) != "Int":
-            errors.append(f"R5: measure {fn.measure!r} must be an Int parameter")
+        kind = {p.name: p.type for p in fn.params}.get(fn.measure, "")
+        if kind != "Int" and element_type(kind) is None:
+            errors.append(f"R5: measure {fn.measure!r} must be an Int or List parameter")
     if not fn.examples:
         errors.append("R4: no examples; nothing shows the function does what it says")
     for ex in fn.examples:
@@ -145,7 +164,7 @@ def _check_block(fn, block, params, required, errors, locals_=None):
                 errors.append(f"R2: require names {stmt.name!r}, which is not a parameter")
             required.add(stmt.name)
         elif isinstance(stmt, Let):
-            if stmt.type not in TYPES:
+            if not valid_type(stmt.type):
                 errors.append(f"R3: {stmt.name} has unknown type {stmt.type!r}")
             if not 0 <= stmt.trust <= CERTAIN:
                 errors.append(f"R1: {stmt.name} trust {stmt.trust} is outside 0..256")
@@ -174,10 +193,16 @@ def _check_expr(fn, e, params, required, locals_, errors):
     elif isinstance(e, Bin):
         _check_expr(fn, e.left, params, required, locals_, errors)
         _check_expr(fn, e.right, params, required, locals_, errors)
+    elif isinstance(e, ListLit):
+        for item in e.items:
+            _check_expr(fn, item, params, required, locals_, errors)
     elif isinstance(e, Call):
-        if e.fn != fn.name:
-            errors.append(f"R3: {e.fn!r} is not defined (v0.1 allows only self-calls)")
-        if len(e.args) != len(fn.params):
+        if e.fn in BUILTINS:
+            if len(e.args) != 1:
+                errors.append(f"R3: {e.fn} takes 1 argument, given {len(e.args)}")
+        elif e.fn != fn.name:
+            errors.append(f"R3: {e.fn!r} is not defined (only self-calls and {BUILTINS})")
+        elif len(e.args) != len(fn.params):
             errors.append(f"R3: {e.fn} called with {len(e.args)} args, takes {len(fn.params)}")
         for a in e.args:
             _check_expr(fn, a, params, required, locals_, errors)
@@ -188,6 +213,8 @@ def _calls(node, name) -> bool:
         return any(_calls(n, name) for n in node)
     if isinstance(node, Call):
         return node.fn == name or _calls(node.args, name)
+    if isinstance(node, ListLit):
+        return _calls(node.items, name)
     if isinstance(node, Bin):
         return _calls(node.left, name) or _calls(node.right, name)
     if isinstance(node, (Let, Return)):
@@ -222,7 +249,14 @@ def lower(fn: Function) -> list[tuple]:
         elif isinstance(e, Call):
             args = tuple(expr(a) for a in e.args)
             t = temp()
-            out.append(("call", t, e.fn, args))
+            if e.fn in BUILTINS:
+                out.append(("builtin", t, e.fn, args[0]))
+            else:
+                out.append(("call", t, e.fn, args))
+        elif isinstance(e, ListLit):
+            items = tuple(expr(i) for i in e.items)
+            t = temp()
+            out.append(("list", t, items))
         elif isinstance(e, Lit):
             t = temp()
             out.append(("const", t, type(e.value).__name__, e.value))
@@ -278,6 +312,17 @@ def Z(reason: str) -> Thread:
 
 
 def _admit(value, kind: str, trust: int) -> Thread:
+    inner = element_type(kind)
+    if inner is not None:
+        if not isinstance(value, tuple):
+            return Z(f"misbound: expected {kind}, got {value!r}")
+        items = []
+        for i, item in enumerate(value):
+            admitted = _admit(item, inner, trust)
+            if admitted.void:
+                return Z(f"{admitted.reason} (element {i} of {kind})")
+            items.append(admitted.value)
+        return Thread(tuple(items), trust)
     if kind == "Int":
         if isinstance(value, bool) or not isinstance(value, int):
             return Z(f"misbound: expected Int, got {value!r}")
@@ -299,6 +344,20 @@ def _num(v) -> bool:
     return isinstance(v, (int, float)) and not isinstance(v, bool)
 
 
+def equal(x, y) -> bool:
+    """Equality that never lets True stand in for 1, at any depth of nesting."""
+    if isinstance(x, tuple) or isinstance(y, tuple):
+        return (
+            isinstance(x, tuple)
+            and isinstance(y, tuple)
+            and len(x) == len(y)
+            and all(equal(a, b) for a, b in zip(x, y, strict=True))
+        )
+    if isinstance(x, bool) or isinstance(y, bool):
+        return type(x) is type(y) and x == y
+    return x == y
+
+
 def _binop(op: str, a: Thread, b: Thread) -> Thread:
     if a.void:
         return a
@@ -310,7 +369,7 @@ def _binop(op: str, a: Thread, b: Thread) -> Thread:
         same_kind = (_num(x) and _num(y)) or type(x) is type(y)
         if not same_kind:
             return Z(f"misbound: cannot compare {x!r} with {y!r}")
-        return Thread((x == y) == (op == "=="), trust)
+        return Thread(equal(x, y) == (op == "=="), trust)
     if op in ("<", ">", "<=", ">="):
         if not ((_num(x) and _num(y)) or (isinstance(x, str) and isinstance(y, str))):
             return Z(f"misbound: cannot order {x!r} and {y!r}")
@@ -330,6 +389,25 @@ def _binop(op: str, a: Thread, b: Thread) -> Thread:
     return Thread(result, trust)
 
 
+def _builtin(name: str, a: Thread) -> Thread:
+    # CORE.md 1.2: each obeys the chain rule, so the answer carries the list's own trust.
+    if a.void:
+        return a
+    if not isinstance(a.value, tuple):
+        return Z(f"misbound: {name} needs a list, got {a.value!r}")
+    if name == "len":
+        return Thread(len(a.value), a.trust)
+    if not a.value:
+        return Z(f"unbound: {name} of an empty list")
+    if name == "head":
+        return Thread(a.value[0], a.trust)
+    return Thread(a.value[1:], a.trust)
+
+
+def _size(value) -> int:
+    return len(value) if isinstance(value, tuple) else value
+
+
 def run(
     tac: list[tuple], args: tuple[Thread, ...], _measure: int | None = None, _depth: int = 0
 ) -> Thread:
@@ -343,8 +421,10 @@ def run(
     for (_, pname, kind, trust), arg in zip(params, args, strict=True):
         env[pname] = arg if arg.void else _admit(arg.value, kind, min(arg.trust, trust))
     if measure is not None and _measure is not None:
-        m = env[measure].value
-        if env[measure].void or m < 0 or m >= _measure:
+        if env[measure].void:
+            return env[measure]
+        m = _size(env[measure].value)
+        if m < 0 or m >= _measure:
             return Z(f"unbounded: measure {measure} did not decrease ({_measure} -> {m})")
     temps: dict[str, Thread] = {}
     path = CERTAIN
@@ -359,9 +439,19 @@ def run(
             temps[ins[1]] = env.get(ins[2]) or Z(f"unbound: {ins[2]}")
         elif op == "bin":
             temps[ins[1]] = _binop(ins[2], temps[ins[3]], temps[ins[4]])
+        elif op == "list":
+            items = [temps[t] for t in ins[2]]
+            void = next((i for i in items if i.void), None)
+            if void is not None:
+                temps[ins[1]] = void
+            else:
+                trust = min((i.trust for i in items), default=LITERAL)
+                temps[ins[1]] = Thread(tuple(i.value for i in items), trust)
+        elif op == "builtin":
+            temps[ins[1]] = _builtin(ins[2], temps[ins[3]])
         elif op == "call":
             call_args = tuple(temps[t] for t in ins[3])
-            here = env[measure].value if measure is not None else None
+            here = _size(env[measure].value) if measure is not None else None
             temps[ins[1]] = run(tac, call_args, here, _depth + 1)
         elif op == "require":
             if env[ins[2]].void:
@@ -381,8 +471,7 @@ def run(
             r = temps[ins[1]]
             if r.void:
                 return r
-            answer = _admit(r.value, tac[0][2], min(r.trust, path))
-            return answer
+            return _admit(r.value, tac[0][2], min(r.trust, path))
         elif op == "label":
             raise RuntimeError(f"{name}: fell into {ins[1]}; the checker should have refused this")
     raise RuntimeError(f"{name}: ran off the end; the checker should have refused this")
@@ -398,8 +487,6 @@ def run_examples(fn: Function, tac: list[tuple]) -> Verdict:
     verdict = Verdict()
     for ex in fn.examples:
         got = run(tac, tuple(Thread(a, LITERAL) for a in ex.args))
-        ok = not got.void and got.value == ex.value and got.trust == ex.trust
-        if isinstance(ex.value, bool) != isinstance(got.value, bool):
-            ok = False
+        ok = not got.void and equal(got.value, ex.value) and got.trust == ex.trust
         (verdict.passed if ok else verdict.failed).append((ex, got))
     return verdict

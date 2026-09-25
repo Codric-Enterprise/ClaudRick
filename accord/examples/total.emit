@@ -1,0 +1,10 @@
+# A list is taken apart with head and tail; its length is the measure that shrinks.
+def total(xs: List[Int] [trust: 256]) -> Int
+  measure: xs
+  require: not_void(xs)
+  if len(xs) == 0:
+    return 0
+  else:
+    return head(xs) + total(tail(xs))
+example: total([]) == 0 @ 120
+example: total([1, 2, 3]) == 6 @ 120
