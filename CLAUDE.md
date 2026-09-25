@@ -82,7 +82,7 @@ Key design decisions:
 │   └── LICENSE               # MIT — everything except pro-commands/ (see notice at top of file)
 ├── .github/workflows/ci.yml           # ruff + pytest (3.11-3.13) + docker build + `languages`
 │   #   `languages` job: ezr's 29-suite gate, the forge (81), the rhyming corpus (35),
-│   #   the Java runtime (98), Rime (74) and Accord (183) — the suites the other jobs
+│   #   the Java runtime (98), Rime (74) and Accord (186) — the suites the other jobs
 │   #   never touch. Each suite step carries `if: !cancelled()`, so one red suite fails
 │   #   the job without skipping the others (it used to hide 288 assertions when it tripped).
 ├── .github/workflows/deploy-pages.yml # publishes mastery-system/ to GitHub Pages on push to main
@@ -126,10 +126,10 @@ Key design decisions:
 │   ├── accord.py             # `check`, `run`, `tac`, `build`, `fill`; `explain` words each verdict
 │   ├── fill.py               # headless: person's intent -> Claude's body -> verdict; only API caller
 │   ├── build.py              # `build`: accepted program -> standalone Python module, Checks re-run on it
-│   ├── accord_test.py        # the gate: 183 assertions
+│   ├── accord_test.py        # the gate: 186 assertions
 │   ├── finish.py             # gate + no-SDK gate + doc counts + examples built + mutants + ruff
 │   ├── mutants.py            # the deliberate bugs the gate must catch (stale or surviving = fail)
-│   ├── examples/             # classify, fact, total, reverse, leap, stats (2); clamp+leap.intent for fill
+│   ├── examples/             # classify, fact, total, reverse, leap, odd, stats (2); clamp+leap.intent
 │   ├── GRAMMAR.ebnf          # the grammar; the gate holds it to parse.py's reserved words and matches
 │   ├── SEMANTICS.md          # every rule, its source (ezr § or Accord's own) and the function doing it
 │   └── LANGUAGE.md           # the spec — start here
@@ -500,7 +500,7 @@ refusal quotes the program back in Accord. The trust rules come from
 lazy [IF-T], examples earning trust (§4.2: 1 → 120, 2 → 183, 3 → 217),
 the answer cap (§4.3), and the 128 floor. It imports nothing from `ezr/`.
 
-- **Verify it:** `cd accord && python3 accord_test.py` — 183 assertions,
+- **Verify it:** `cd accord && python3 accord_test.py` — 186 assertions,
   a plain script with its own tally. **Before calling a change done, run
   `python3 finish.py`**. CI's `languages` job runs the same command.
   It runs the gate, the gate again with the SDK blocked, a check that every doc
@@ -558,7 +558,12 @@ the answer cap (§4.3), and the 128 floor. It imports nothing from `ezr/`.
   the interpreter gives. A new TAC op needs a case in `build._function`
   *and* its helper added to `build.SEMANTICS`. Put the semantics in a
   core function the interpreter calls, never inline in `run`, or the
-  two drift apart.
+  two drift apart. Landed this way once already: `not` had a
+  `build._function` case and a `build.SEMANTICS` entry from day one
+  (v0.7), but no example used `not`, so nothing ever built it --
+  `examples/odd.accord` closed that, and `finish.py`'s "examples" step
+  now compiles it every run. A construct isn't covered by having a
+  case; it's covered by an example that reaches that case.
 - **`GRAMMAR.ebnf` and `SEMANTICS.md` are gated.** The gate checks the
   grammar's quoted words and reserved list against `parse.py`, and the
   functions `SEMANTICS.md` cites against `core.py`. Adding a keyword

@@ -10,7 +10,7 @@ earned enough trust. Each refusal quotes your own program back to you.
 
 ```
 cd accord
-python3 accord_test.py                                  # the gate: 183 assertions
+python3 accord_test.py                                  # the gate: 186 assertions
 python3 finish.py                                       # the gate and everything around it
 python3 accord.py check examples/classify.accord        # verify a program
 python3 accord.py run examples/classify.accord 200      # run it, if accepted
@@ -375,7 +375,7 @@ by asking you the question.
 | `accord_test.py` | the gate: a plain script that reports its own tally, like `realm_test.py` |
 | `finish.py` | the gate and everything around it, in one command, as CI runs it |
 | `mutants.py` | the deliberate bugs the gate must catch |
-| `examples/` | `classify`, `fact`, `total`, `reverse`, `leap` (`and`/`or`/`modulo`); `stats`, a two-function program; and `clamp.intent`/`leap.intent`, a person's part awaiting `fill` |
+| `examples/` | `classify`, `fact`, `total`, `reverse`, `leap` (`and`/`or`/`modulo`), `odd` (`not`); `stats`, a two-function program; and `clamp.intent`/`leap.intent`, a person's part awaiting `fill` |
 
 `core.py` never imports `parse.py`, and the gate asserts it. The
 semantics don't depend on the syntax, so a second syntax could never
