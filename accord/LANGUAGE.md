@@ -124,6 +124,17 @@ falls back to the standard speed on a rate limit. `fill` needs the
 login`). Nothing else in Accord does: the gate tests `fill` against a
 scripted stand-in and passes with the SDK absent.
 
+Verified live once, by hand: `fill examples/clamp.intent.accord --fast`
+sent the header, trust lines and five Checks to Claude, which returned
+only a body (a two-level `If`/`Otherwise` clamp). `fill` assembled the
+program and Accord accepted it on attempt 1, trust 245 of 256. The
+saved program was then re-checked and re-run independently of `fill`,
+on arguments outside its Checks (`clamp of negative 3 and 0 and 10`
+gave `0`; `clamp of 12 and 0 and 10` gave `10`), confirming `fill`'s own
+verdict rather than trusting it. This was a manual run against a real
+key, not a CI step — CI still has no SDK and no key, so this is not
+re-verified automatically.
+
 ## Building: `build`
 
 ```
@@ -301,8 +312,10 @@ Accord's own list rules:
 - Roles are enforced only by `fill`, which assembles the program from
   your text and refuses a reply that touches it. A file edited by hand
   records no authorship.
-- `fill` has been tested against a scripted stand-in, not yet against the
-  live API.
+- `fill` is tested in the gate only against a scripted stand-in. It has
+  also been verified once, by hand, against the live API (see "Filling
+  a body with Claude" above) — that run is not repeated automatically,
+  since CI has no SDK and no key.
 
 ## Finishing a change: `finish`
 
@@ -333,8 +346,10 @@ missing ruff.
   equivalent change that means the same program. Only a reader can tell
   which. Fix the gate, or delete the mutant; never keep a survivor.
 - **Opening and merging the PR.** The repo opens PRs only when asked.
-- **`fill` against the live API.** It needs a key and costs money. The
-  gate uses a scripted stand-in, and CI has neither the SDK nor a key.
+- **`fill` against the live API.** It needs a key and costs money, so
+  `finish` does not run it. It has been verified once by hand (see
+  "Filling a body with Claude" above); the gate itself still uses a
+  scripted stand-in, and CI has neither the SDK nor a key.
 
 ## Why there is one syntax, not two
 
