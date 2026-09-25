@@ -31,7 +31,7 @@ import re
 import sys
 
 from contract import Fail, LexOut, Tok
-from lexers import PUNCT, SPACE, keywords
+from lexers import SPACE, keywords
 
 # ── the historical defect, reproduced exactly ────────────────────────
 
