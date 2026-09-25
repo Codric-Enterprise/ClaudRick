@@ -82,7 +82,7 @@ Key design decisions:
 │   └── LICENSE               # MIT — everything except pro-commands/ (see notice at top of file)
 ├── .github/workflows/ci.yml           # ruff + pytest (3.11-3.13) + docker build + `languages`
 │   #   `languages` job: ezr's 29-suite gate, the forge (81), the rhyming corpus (35),
-│   #   the Java runtime (98), Rime (74) and Accord (173) — the suites the other jobs
+│   #   the Java runtime (98), Rime (74) and Accord (183) — the suites the other jobs
 │   #   never touch. Each suite step carries `if: !cancelled()`, so one red suite fails
 │   #   the job without skipping the others (it used to hide 288 assertions when it tripped).
 ├── .github/workflows/deploy-pages.yml # publishes mastery-system/ to GitHub Pages on push to main
@@ -126,10 +126,10 @@ Key design decisions:
 │   ├── accord.py             # `check`, `run`, `tac`, `build`, `fill`; `explain` words each verdict
 │   ├── fill.py               # headless: person's intent -> Claude's body -> verdict; only API caller
 │   ├── build.py              # `build`: accepted program -> standalone Python module, Checks re-run on it
-│   ├── accord_test.py        # the gate: 173 assertions
+│   ├── accord_test.py        # the gate: 183 assertions
 │   ├── finish.py             # gate + no-SDK gate + doc counts + examples built + mutants + ruff
 │   ├── mutants.py            # the deliberate bugs the gate must catch (stale or surviving = fail)
-│   ├── examples/             # classify, fact, total, reverse, leap, stats (2 functions); clamp.intent
+│   ├── examples/             # classify, fact, total, reverse, leap, stats (2); clamp+leap.intent for fill
 │   ├── GRAMMAR.ebnf          # the grammar; the gate holds it to parse.py's reserved words and matches
 │   ├── SEMANTICS.md          # every rule, its source (ezr § or Accord's own) and the function doing it
 │   └── LANGUAGE.md           # the spec — start here
@@ -500,7 +500,7 @@ refusal quotes the program back in Accord. The trust rules come from
 lazy [IF-T], examples earning trust (§4.2: 1 → 120, 2 → 183, 3 → 217),
 the answer cap (§4.3), and the 128 floor. It imports nothing from `ezr/`.
 
-- **Verify it:** `cd accord && python3 accord_test.py` — 173 assertions,
+- **Verify it:** `cd accord && python3 accord_test.py` — 183 assertions,
   a plain script with its own tally. **Before calling a change done, run
   `python3 finish.py`**. CI's `languages` job runs the same command.
   It runs the gate, the gate again with the SDK blocked, a check that every doc
