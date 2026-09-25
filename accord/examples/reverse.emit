@@ -1,0 +1,10 @@
+# Joining lists builds one whose length is computed; the input still has to shrink.
+def reverse(xs: List[Int] [trust: 256]) -> List[Int]
+  measure: xs
+  require: not_void(xs)
+  if len(xs) == 0:
+    return []
+  else:
+    return reverse(tail(xs)) + [head(xs)]
+example: reverse([]) == [] @ 120
+example: reverse([1, 2, 3]) == [3, 2, 1] @ 120

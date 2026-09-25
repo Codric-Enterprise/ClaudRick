@@ -1,4 +1,4 @@
-# Accord — v0.2
+# Accord — v0.3
 
 A program is written twice: once in **Emit**, a dense surface an AI can
 produce without ambiguity, and once in **Prose**, controlled English a
@@ -13,7 +13,7 @@ runs.
 
 ```
 cd accord
-python3 accord_test.py                                          # the gate: 70 assertions
+python3 accord_test.py                                          # the gate: 80 assertions
 python3 accord.py agree examples/classify.emit examples/classify.prose
 python3 accord.py tac examples/fact.prose                       # print the lowered TAC
 ```
@@ -48,8 +48,9 @@ R5, the measure, the Int bound, literal trust, `require`, the depth
 limit, or division-by-zero each turns it red. The same holds for each
 list rule below: empty `head`/`tail`, the trust of a list and of the
 empty list, Z absorption, element types, the list measure, the builtins'
-trust, strict equality, builtin arity and names, the trailing comma, and
-Prose's `, trusted` lookahead.
+trust, strict equality, builtin arity and names, the trailing comma,
+Prose's `, trusted` lookahead, and list joining (its presence, its
+order, its trust, and its refusal of a non-list side).
 
 ## Trust semantics — inherited, not invented
 
@@ -117,8 +118,33 @@ Accord's own list rules, stated as such:
 - A recursive measure may be a `List` parameter. Its size is the list's
   length, and like an `Int` measure it must strictly decrease.
 - Equality is strict at every depth: `[1] == [true]` is false.
-- `+` does not join lists. Nothing in the core does, so v0.2 lists can
-  be built from literals and taken apart, but not concatenated.
+- `+` joins two lists, left then right, at `min` of the two sides'
+  trust: `[a@100] + [b@120]` is `[a, b]` at 100. **This departs from
+  ezr**, where `Eval.java` refuses it ("'+' over two texts is
+  concatenation; everything else needs numbers"). It extends the rule
+  Accord already takes from ezr for Text, rather than adding a new
+  operator or a fourth builtin. Prose reads it as `plus`.
+- A list joined with a number or a Text is refused (`misbound`). The two
+  sides' element types are not compared at the join. `[1] + ["x"]` is
+  refused where it is bound to a `List[Int]`, exactly as the literal
+  `[1, "x"]` would be.
+- Joining a written `[]` costs literal trust: `[] + xs` is at most 120,
+  because `[]` is a literal and the chain rule takes the `min`.
+- A list that grows cannot be a measure. `grow(xs + [1])` is stopped as
+  `unbounded` on the first call, since the measure must strictly shrink.
+
+```
+def reverse(xs: List[Int] [trust: 256]) -> List[Int]
+  measure: xs
+  require: not_void(xs)
+  if len(xs) == 0:
+    return []
+  else:
+    return reverse(tail(xs)) + [head(xs)]
+example: reverse([1, 2, 3]) == [3, 2, 1] @ 120
+
+    Answer reverse of the rest of xs plus the list of the first of xs.   (Prose)
+```
 - Prose's list has one form: commas between items, and `and` before the
   last, with no comma before it. `the list of …` takes every `, item` and
   `and item` that follows, so a second argument after a list needs
@@ -128,14 +154,14 @@ Accord's own list rules, stated as such:
   Emit and is refused in Prose, so the pair is refused, never silently
   split.
 
-## What v0.2 leaves out, deliberately
+## What v0.3 leaves out, deliberately
 
 - **[IF-Z] and [IF-AGREE]** (§5.2): a Z condition returns Z. No spans yet.
 - **Corroboration** (§2.2): nothing in v0.1 combines independent evidence.
 - One function per program, self-calls only; no records, loops, modules,
   or I/O.
-- No way to build a list of computed length: no cons, concatenation, map
-  or indexing.
+- No indexing, and no higher-order functions, so no `map`. A list of
+  computed length is built by recursion and `+`, as `reverse` does.
 - Trust is an **ordering, not a calibrated probability**. That is
   `SEMANTICS.md`'s own largest open claim, and Accord inherits it.
 

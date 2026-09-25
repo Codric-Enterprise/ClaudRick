@@ -82,7 +82,7 @@ Key design decisions:
 │   └── LICENSE               # MIT — everything except pro-commands/ (see notice at top of file)
 ├── .github/workflows/ci.yml           # ruff + pytest (3.11-3.13) + docker build + `languages`
 │   #   `languages` job: ezr's 29-suite gate, the forge (81), the rhyming corpus (35),
-│   #   the Java runtime (98), Rime (74) and Accord (70) — the suites the other jobs
+│   #   the Java runtime (98), Rime (74) and Accord (80) — the suites the other jobs
 │   #   never touch. Each suite step carries `if: !cancelled()`, so one red suite fails
 │   #   the job without skipping the others (it used to hide 288 assertions when it tripped).
 ├── .github/workflows/deploy-pages.yml # publishes mastery-system/ to GitHub Pages on push to main
@@ -124,7 +124,7 @@ Key design decisions:
 │   ├── core.py               # the tree, the checker (R1–R5), lowering to TAC, the TAC interpreter
 │   ├── emit.py prose.py      # two independent front ends; neither imports the other
 │   ├── accord.py             # `agree` and `tac` commands
-│   ├── accord_test.py        # the gate: 70 assertions
+│   ├── accord_test.py        # the gate: 80 assertions
 │   ├── examples/             # each program as a .emit / .prose pair
 │   └── LANGUAGE.md           # the spec — start here
 ├── README.md
@@ -490,7 +490,7 @@ on that TAC and holds. Its trust rules are inherited from
 `ezr/SEMANTICS.md` (literal 120, chain `min`, lazy [IF-T]) and cited
 there, not re-derived. It imports nothing from `ezr/`.
 
-- **Verify it:** `cd accord && python3 accord_test.py` — 70 assertions,
+- **Verify it:** `cd accord && python3 accord_test.py` — 80 assertions,
   a plain script with its own tally, run by CI's `languages` job.
 - **Every rule must be seen to refuse.** Each of R1–R5 has a test that
   must be rejected, not only examples that pass. A gate that could not
@@ -507,7 +507,10 @@ there, not re-derived. It imports nothing from `ezr/`.
   element's own trust" landmine belongs to `runtime.py`, where elements
   are tracked one by one. Do not "fix" Accord toward it without adding
   indexing and deciding that deliberately; `accord/LANGUAGE.md` records
-  the choice, and a test pins it.
+  the choice, and a test pins it. The one deliberate departure is `+` on
+  two lists, which joins them: ezr's `Eval.java` refuses it, while Accord
+  extends ezr's own Text-concatenation rule. That makes it an Accord rule,
+  labelled as one, and not a claim about ezr.
 - **Mutation-check with `PYTHONDONTWRITEBYTECODE=1`.** When checking the
   gate by sabotaging `core.py` in a copy, clear `__pycache__` first. A
   same-size edit (`min(` → `max(`) can reuse stale bytecode and read as

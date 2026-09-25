@@ -377,6 +377,8 @@ def _binop(op: str, a: Thread, b: Thread) -> Thread:
         return Thread(result, trust)
     if op == "+" and isinstance(x, str) and isinstance(y, str):
         return Thread(x + y, trust)
+    if op == "+" and isinstance(x, tuple) and isinstance(y, tuple):
+        return Thread(x + y, trust)  # Accord's own: ezr refuses this; Text's rule, extended
     if not (_num(x) and _num(y)):
         return Z(f"misbound: {op} needs numbers, got {x!r} and {y!r}")
     if op == "/":

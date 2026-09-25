@@ -39,7 +39,7 @@ def call(source_parse, source: str, *args) -> Thread:
 
 
 # ── the two example pairs agree end to end ───────────────────────────────────
-for stem in ("classify", "fact", "total"):
+for stem in ("classify", "fact", "total", "reverse"):
     r = agree(src(f"{stem}.emit"), src(f"{stem}.prose"))
     ok(r["stage"] == "agreed", f"{stem}: agreed ({r['stage']}: {r['errors']})")
     ok(r["examples"] == (2, 2), f"{stem}: both examples ran and held")
@@ -217,8 +217,33 @@ ok(got.void and "division by zero" in got.reason, "a Z element makes the whole l
 second = pair.replace("-> List[Int]", "-> Int").replace("[a, b]", "head(tail([a, b]))")
 got = call(emit.parse, second, 1, 2)
 ok(got.value == 2 and got.trust == 100, "tail keeps the whole list's trust, as CORE does")
+# + joins lists: Accord's own rule (ezr refuses it), extending Text's, so trust is min
 got = call(emit.parse, pair.replace("[a, b]", "[a] + [b]"), 1, 2)
-ok(got.void and "needs numbers" in got.reason, "+ does not join lists; CORE has no such op")
+ok(equal(got.value, (1, 2)) and got.trust == 100, "[a] + [b] joins, at the weaker side's trust")
+got = call(emit.parse, pair.replace("[a, b]", "[b] + [a]"), 1, 2)
+ok(equal(got.value, (2, 1)), "joining keeps the left list first")
+widen = pair.replace("[trust: 100]", "[trust: 256]")
+got = run(lower(emit.parse(widen.replace("[a, b]", "[] + [a]"))), (Thread(1, 256), Thread(2, 256)))
+ok(equal(got.value, (1,)) and got.trust == 120, "joining a written [] costs literal trust 120")
+got = call(emit.parse, pair.replace("[a, b]", "[a] + [b / 0]"), 1, 2)
+ok(got.void and "division by zero" in got.reason, "a Z side makes the join Z")
+got = call(emit.parse, pair.replace("[a, b]", "[a] + b"), 1, 2)
+ok(got.void and "needs numbers" in got.reason, "a list plus a number is refused")
+got = call(emit.parse, pair.replace("[a, b]", '"a" + [b]'), 1, 2)
+ok(got.void and "needs numbers" in got.reason, "Text plus a list is refused")
+got = call(emit.parse, pair.replace("[a, b]", '[a] + ["x"]'), 1, 2)
+ok(got.void and "element 1" in got.reason, "a joined Text element is refused at List[Int]")
+grow = program(
+    "grow(xs: List[Int] [trust: 256]) -> Int",
+    "require: not_void(xs)",
+    "if len(xs) > 5:",
+    "  return 0",
+    "else:",
+    "  return grow(xs + [1])",
+    example="grow([]) == 0 @ 120",
+).replace("measure: none", "measure: xs")
+got = call(emit.parse, grow, ())
+ok(got.void and "did not decrease (0 -> 1)" in got.reason, "a list measure that grows is stopped")
 same = pair.replace("-> List[Int]", "-> Bool").replace("[a, b]", "[a] == [true]")
 ok(call(emit.parse, same, 1, 2).value is False, "[1] == [true] is false at any depth")
 
