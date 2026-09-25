@@ -1,0 +1,12 @@
+# A decision can be no more trusted than what it was decided on.
+To classify given signal, answering a Text:
+  signal is a Float, trusted 100 of 256.
+  It never repeats.
+  Make sure signal is not void.
+  Let threshold be a Float, trusted 256 of 256, equal to 128.
+  If the signal is greater than the threshold:
+    Answer "Certain".
+  Otherwise:
+    Answer "Uncertain".
+Check: classify of 200 gives "Certain", trusted 100.
+Check: classify of 50 gives "Uncertain", trusted 100.

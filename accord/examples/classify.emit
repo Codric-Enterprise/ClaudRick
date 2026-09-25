@@ -1,0 +1,11 @@
+# A decision can be no more trusted than what it was decided on.
+def classify(signal: Float [trust: 100]) -> Text
+  measure: none
+  require: not_void(signal)
+  let threshold: Float [trust: 256] = 128
+  if signal > threshold:
+    return "Certain"
+  else:
+    return "Uncertain"
+example: classify(200) == "Certain" @ 100
+example: classify(50) == "Uncertain" @ 100
