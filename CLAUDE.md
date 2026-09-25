@@ -275,8 +275,9 @@ Done:
   proxies Anthropic's SSE stream straight through; the frontend's `callClaude`
   reads it incrementally and reports live progress on each tool's button
   while still returning/parsing the full text once the stream ends.
-- ✅ Dependency auditing — `.github/workflows/security.yml` runs `pip-audit`
-  (root Python deps) and `npm audit --audit-level=high` (`power-pack/`) on
+- ✅ Dependency auditing — `.github/workflows/security.yml` runs `pip-audit
+  --skip-editable` (root Python deps; ReVision itself is skipped because an
+  unrelated PyPI project owns the name `revision`) and `npm audit --audit-level=high` (`power-pack/`) on
   push/PR plus a weekly cron.
 
 - ✅ Release pipelines — `publish-image.yml` builds the image, proves it
