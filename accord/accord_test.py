@@ -499,6 +499,53 @@ slow = fill.request(fill.MODEL, False, "s", [])
 ok("speed" not in slow and slow["model"] == "claude-opus-5", "the default is standard Opus 5")
 ok(slow["fallbacks"] == "default", "refusal fallbacks are on")
 
+# ── fill and logic/modulo: the card documents them, and a filled body can use them ──
+ok("a and b | a or b | not a" in fill.CARD and "a modulo b" in fill.CARD,
+   "the card documents and/or/not/modulo")  # fmt: skip
+
+LEAP_INTENT = src("leap.intent")
+LEAP_ANSWER = (
+    "  Answer (year modulo 4 is equal to 0 and year modulo 100 is not equal to 0)"
+    " {op} year modulo 400 is equal to 0.\n"
+)
+LEAP_GOOD = "```accord\n  It never repeats.\n  Make sure year is not void.\n"
+LEAP_GOOD += LEAP_ANSWER.format(op="or") + "```"
+LEAP_WRONG = "```accord\n  It never repeats.\n  Make sure year is not void.\n"
+LEAP_WRONG += LEAP_ANSWER.format(op="and") + "```"
+
+leap_person = fill.intent(LEAP_INTENT)
+ok(len(leap_person.declarations) == 1 and len(leap_person.checks) == 4,
+   "the leap intent is split by role")  # fmt: skip
+ask, calls = scripted(LEAP_GOOD)
+out = fill.fill(LEAP_INTENT, ask)
+ok(out.code == 0 and out.attempts == 1, "a body using and/or/modulo is accepted on the first try")
+ok(verify(parse.parse(out.program)).trust == 235, "leap's four Checks earn 235 (SEMANTICS.md 4.2)")
+ok(" and " in out.program and " or " in out.program and " modulo " in out.program,
+   "and, or and modulo pass through the body unchanged")  # fmt: skip
+ask, calls = scripted(LEAP_WRONG, LEAP_GOOD)
+out = fill.fill(LEAP_INTENT, ask)
+ok(out.code == 0 and out.attempts == 2, "an and/or slip is refused, then fixed")
+feedback = calls[1][1][-1]["content"]
+ok("leap of 2024 should give true" in feedback, "the refusal names the Check it broke, in Accord")
+
+ODD_INTENT = "To odd given n, answering a Bool:\n  n is an Int, trusted 256 of 256.\n"
+ODD_INTENT += (
+    "Check: odd of 4 gives false, trusted 120.\nCheck: odd of 5 gives true, trusted 120.\n"
+)
+ODD_GOOD = "```accord\n  It never repeats.\n  Make sure n is not void.\n"
+ODD_GOOD += "  Answer not (n modulo 2 is equal to 0).\n```"
+ODD_MISSING_NOT = "```accord\n  It never repeats.\n  Make sure n is not void.\n"
+ODD_MISSING_NOT += "  Answer n modulo 2 is equal to 0.\n```"
+
+ask, calls = scripted(ODD_GOOD)
+out = fill.fill(ODD_INTENT, ask)
+ok(out.code == 0 and out.attempts == 1 and verify(parse.parse(out.program)).trust == 183,
+   "a body using not is accepted, and its two Checks earn 183")  # fmt: skip
+ok("not (" in out.program, "not passes through the body unchanged")
+ask, calls = scripted(ODD_MISSING_NOT, ODD_GOOD)
+out = fill.fill(ODD_INTENT, ask)
+ok(out.code == 0 and out.attempts == 2, "a body missing not is refused, then fixed")
+
 STATS_INTENT = """To total given xs, answering an Int:
   xs is a List of Int, trusted 256 of 256.
 Check: total of the empty list gives 0, trusted 120.

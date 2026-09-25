@@ -158,7 +158,7 @@ jobs:
       # standalone, every mutant in mutants.py caught, and ruff. Its lint step
       # fails rather than skips when ruff is absent, so this job installs it
       # with the same floor pyproject.toml's dev extra pins.
-      - name: Accord — one language, Checks decide trust (173 assertions)
+      - name: Accord — one language, Checks decide trust (183 assertions)
         if: ${{ !cancelled() }}
         working-directory: accord
         run: |
