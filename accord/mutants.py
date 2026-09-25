@@ -34,6 +34,7 @@ MUTANTS = (
     ('build.py', '    found = differences(report, source)', '    found = []', 'build never verifies'),
     ('build.py', '        while keyword.iskeyword(name) or name in taken:', '        while name in taken:', 'keywords not escaped'),
     ('build.py', '                out.append(f"{pad}{ins[1]} = _join({ins[2]!r}, {ins[3]}, {ins[4]})")', '                out.append(f"{pad}{ins[1]} = {ins[4]}")', 'build join drops trust'),
+    ('build.py', '                out.append(f"{pad}{ins[1]} = _not({ins[2]})")', '                out.append(f"{pad}{ins[1]} = {ins[2]}")', 'build not codegen drops the negation'),
     ('build.py', '    del sys.modules[module.__name__]', '    pass', 'load leaves module'),
     ('GRAMMAR.ebnf', '| "modulo" ) , unary', ') , unary', 'grammar loses modulo'),
     ('GRAMMAR.ebnf', 'builtin        = "length" | "first" | "rest" ;', 'builtin        = "length" | "first" | "rest" | "last" ;', 'grammar invents a builtin'),

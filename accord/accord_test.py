@@ -690,10 +690,10 @@ import accord  # noqa: E402
 import build  # noqa: E402
 
 built = {}
-for stem in ("classify", "fact", "total", "reverse", "stats", "leap"):
+for stem in ("classify", "fact", "total", "reverse", "stats", "leap", "odd"):
     rep = prog(src(stem))
     built[stem] = (rep, build.build(rep))
-ok(len(built) == 6, "every example builds")
+ok(len(built) == 7, "every example builds")
 imports = {line for _, code in built.values() for line in code.splitlines() if "import" in line
            and not line.startswith(" ")}  # fmt: skip
 ok(imports == {"from __future__ import annotations", "from dataclasses import dataclass"},
@@ -704,6 +704,12 @@ m = build.load(leap_code)
 years = [(y, apply_program(leap_rep, "leap", (y,))) for y in range(1, 2401)]
 ok(all(m.trusted("leap", y) == (t.value, t.trust) for y, t in years),
    "the built leap agrees with Accord on 2400 years, not only on its Checks")  # fmt: skip
+odd_rep, odd_code = built["odd"]
+m = build.load(odd_code)
+odds = [(n, apply_program(odd_rep, "odd", (n,))) for n in range(-50, 51)]
+ok(all(m.trusted("odd", n) == (t.value, t.trust) for n, t in odds),
+   "the built odd agrees with Accord on 101 values: build's not case is exercised")  # fmt: skip
+ok("_not(" in odd_code, "the built module calls _not, not a hand-written negation")
 fact_rep, fact_code = built["fact"]
 m = build.load(fact_code)
 agree = True
@@ -754,6 +760,7 @@ stats_rep, stats_code = built["stats"]
 for rep, good, old, new, label in (
     (leap_rep, leap_code, "_binop('%', t13", "_binop('*', t13", "an operator"),
     (leap_rep, leap_code, "_short('or', t6)", "_short('and', t6)", "a short circuit"),
+    (odd_rep, odd_code, "t6 = _not(t5)", "t6 = t5", "a dropped not"),
     (stats_rep, stats_code, "'mean': (_f_mean, 1, 183)", "'mean': (_f_mean, 1, 256)",
      "an answer cap"),
     (quad_rep, quad_code, "_depth=_depth + 1), 183)", "_depth=_depth + 1), 256)", "a helper's cap"),
