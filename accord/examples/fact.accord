@@ -1,4 +1,5 @@
-# Recursion is admitted only with a measure that must shrink on every call.
+# You write the header, the trust you give each input, and the Checks.
+# The AI writes the body. It is a claim until your Checks witness it.
 To fact given n, answering an Int:
   n is an Int, trusted 256 of 256.
   It shrinks by n.

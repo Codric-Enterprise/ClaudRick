@@ -1,7 +1,8 @@
-"""accord — the gate: two surfaces, one tree, one TAC, examples that actually run.
+"""accord — one language: you state what you want, the AI writes the body, Checks decide trust.
 
-python3 accord.py agree examples/classify.emit examples/classify.prose
-python3 accord.py tac examples/fact.prose
+python3 accord.py check examples/classify.accord
+python3 accord.py run examples/classify.accord 200
+python3 accord.py tac examples/fact.accord
 """
 
 from __future__ import annotations
@@ -9,94 +10,93 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-import emit
-import prose
-from core import AccordError, check, format_tac, lower, run_examples, tac_hash
-
-SURFACES = {".emit": emit.parse, ".prose": prose.parse}
+import parse
+from core import EXECUTE_FLOOR, AccordError, apply, format_tac, tac_hash, verify
 
 
 def load(path: str):
-    suffix = Path(path).suffix
-    if suffix not in SURFACES:
-        raise SystemExit(f"{path}: unknown surface {suffix!r} (want .emit or .prose)")
-    return SURFACES[suffix](Path(path).read_text())
+    return parse.parse(Path(path).read_text())
 
 
-def agree(emit_source: str, prose_source: str) -> dict:
-    report: dict = {"stage": None, "errors": [], "hash": None, "examples": None}
-    trees = {}
-    for label, parse, source in (
-        ("emit", emit.parse, emit_source),
-        ("prose", prose.parse, prose_source),
-    ):
-        try:
-            trees[label] = parse(source)
-        except AccordError as err:
-            report["stage"] = f"{label}: parse"
-            report["errors"] = [str(err)]
-            return report
-        errors = check(trees[label])
-        if errors:
-            report["stage"] = f"{label}: check"
-            report["errors"] = errors
-            return report
-    if trees["emit"] != trees["prose"]:
-        report["stage"] = "agree: tree"
-        report["errors"] = [_first_difference(trees["emit"], trees["prose"])]
-        return report
-    tacs = {k: lower(v) for k, v in trees.items()}
-    hashes = {k: tac_hash(v) for k, v in tacs.items()}
-    if hashes["emit"] != hashes["prose"]:
-        report["stage"] = "agree: tac"
-        report["errors"] = ["trees agree but TAC differs: the lowering is not deterministic"]
-        return report
-    report["hash"] = hashes["emit"]
-    verdicts = {k: run_examples(trees[k], tacs[k]) for k in trees}
-    report["examples"] = (len(verdicts["emit"].passed), len(trees["emit"].examples))
-    for label, verdict in verdicts.items():
-        for ex, got in verdict.failed:
-            shown = got.reason if got.void else f"{got.value!r} @ {got.trust}"
-            report["errors"].append(
-                f"{label}: {ex.args} should give {ex.value!r} @ {ex.trust}, gave {shown}"
+def explain(report) -> str:
+    """The verdict, in words a person can act on, quoting the program in its own language."""
+    name = report.fn.name if report.fn else "program"
+    if report.stage == "check":
+        return "refused: " + "\n  ".join([f"{name} breaks a rule", *report.errors])
+    if report.stage == "checks":
+        lines = [f"refused: {name} does not do what its Checks say"]
+        for ex, got in report.failed:
+            shown = [parse.render_value(a) for a in ex.args]
+            if len(shown) > 1:
+                shown = [
+                    f"({s})" if isinstance(a, tuple) else s
+                    for a, s in zip(ex.args, shown, strict=True)
+                ]
+            call = f"{name} of " + " and ".join(shown)
+            want = f"{parse.render_value(ex.value)}, trusted {ex.trust}"
+            gave = (
+                got.reason if got.void else f"{parse.render_value(got.value)}, trusted {got.trust}"
             )
-    report["stage"] = "examples" if report["errors"] else "agreed"
-    return report
-
-
-def _first_difference(a, b) -> str:
-    for field in ("name", "params", "returns", "measure", "body", "examples"):
-        if getattr(a, field) != getattr(b, field):
-            left, right = getattr(a, field), getattr(b, field)
-            return f"the surfaces disagree on {field}:\n  emit:  {left}\n  prose: {right}"
-    return "the surfaces disagree"
+            lines.append(f"{call} should give {want}; it gave {gave}")
+        return "\n  ".join(lines)
+    if report.stage == "coverage":
+        lines = [f"refused: the Checks leave part of {name} untried; add a Check for each"]
+        for kind, i, outcome in report.gaps:
+            node = report.notes[i]
+            if kind == "edge":
+                left, right = parse.render(node.left), parse.render(node.right)
+                lines.append(
+                    f"no Check tries {left} equal to {right}, the edge of '{parse.render(node)}'"
+                )
+            else:
+                truth = "true" if outcome else "false"
+                lines.append(f"no Check makes '{parse.render(node)}' {truth}")
+        return "\n  ".join(lines)
+    if report.stage == "floor":
+        held = len(report.fn.examples)
+        return (
+            f"refused: only {held} Check holds, which earns trust {report.trust}; "
+            f"one case proves nothing, and nothing runs below {EXECUTE_FLOOR}. Add a Check."
+        )
+    held = len(report.fn.examples)
+    return (
+        f"accepted: {name}\n"
+        f"  {held} Checks hold, so its answers are trusted at most {report.trust} of 256\n"
+        f"  every decision was tried both ways, and every comparison at its edge"
+    )
 
 
 def main(argv: list[str]) -> int:
-    if len(argv) == 3 and argv[0] == "agree":
-        report = agree(Path(argv[1]).read_text(), Path(argv[2]).read_text())
-        if report["stage"] == "agreed":
-            passed, total = report["examples"]
-            print(f"agreed  tac {report['hash'][:16]}  examples {passed}/{total}")
-            return 0
-        print(f"refused at {report['stage']}")
-        for err in report["errors"]:
-            print(f"  {err}")
-        return 1
-    if len(argv) == 2 and argv[0] == "tac":
+    if len(argv) >= 2 and argv[0] in ("check", "run", "tac"):
         try:
             fn = load(argv[1])
         except AccordError as err:
-            print(f"refused at parse: {err}")
+            print(f"refused: {err}")
             return 1
-        errors = check(fn)
-        if errors:
-            print("refused at check:\n  " + "\n  ".join(errors))
-            return 1
-        tac = lower(fn)
-        print(format_tac(tac))
-        print(f"# sha256 {tac_hash(tac)}")
-        return 0
+        report = verify(fn)
+        if argv[0] == "tac":
+            print(format_tac(report.tac) if report.tac else explain(report))
+            if report.tac:
+                print(f"# sha256 {tac_hash(report.tac)}")
+            return 0 if report.tac else 1
+        if argv[0] == "check" and len(argv) == 2:
+            print(explain(report))
+            return 0 if report.accepted else 1
+        if argv[0] == "run":
+            if not report.accepted:
+                print(explain(report))
+                return 1
+            try:
+                args = parse.values(" ".join(argv[2:]))
+            except AccordError as err:
+                print(f"refused: the arguments: {err.message}")
+                return 1
+            got = apply(report, args)
+            if got.void:
+                print(f"refused: {got.reason}")
+                return 1
+            print(f"{parse.render_value(got.value)}, trusted {got.trust} of 256")
+            return 0
     print(__doc__)
     return 2
 

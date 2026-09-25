@@ -1,4 +1,5 @@
-# A decision can be no more trusted than what it was decided on.
+# You write the header, the trust you give each input, and the Checks.
+# The AI writes the body. It is a claim until your Checks witness it.
 To classify given signal, answering a Text:
   signal is a Float, trusted 100 of 256.
   It never repeats.
@@ -10,3 +11,4 @@ To classify given signal, answering a Text:
     Answer "Uncertain".
 Check: classify of 200 gives "Certain", trusted 100.
 Check: classify of 50 gives "Uncertain", trusted 100.
+Check: classify of 128 gives "Uncertain", trusted 100.
