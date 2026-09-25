@@ -150,6 +150,13 @@ jobs:
         working-directory: realm
         run: python3 realm_test.py
 
+      # accord/ IS linted by the test job (it is not in extend-exclude), but
+      # its gate is a plain script like realm's, so pytest never runs it.
+      - name: Accord — two surfaces must agree (42 assertions)
+        if: ${{ !cancelled() }}
+        working-directory: accord
+        run: python3 accord_test.py
+
       # Deliberately NOT run: ezr/5-runtime-java/differential.py. It is red
       # on purpose -- 5 of 128 programs diverge, and each divergence is a
       # recorded finding about the language (ezr/FINDINGS.md 7), not a bug

@@ -82,9 +82,9 @@ Key design decisions:
 │   └── LICENSE               # MIT — everything except pro-commands/ (see notice at top of file)
 ├── .github/workflows/ci.yml           # ruff + pytest (3.11-3.13) + docker build + `languages`
 │   #   `languages` job: ezr's 29-suite gate, the forge (81), the rhyming corpus (35),
-│   #   the Java runtime (98) and Rime (74) — the suites the other jobs never touch.
-│   #   Each suite step carries `if: !cancelled()`, so one red suite fails the job
-│   #   without skipping the other five (it used to hide 288 assertions when it tripped).
+│   #   the Java runtime (98), Rime (74) and Accord (42) — the suites the other jobs
+│   #   never touch. Each suite step carries `if: !cancelled()`, so one red suite fails
+│   #   the job without skipping the others (it used to hide 288 assertions when it tripped).
 ├── .github/workflows/deploy-pages.yml # publishes mastery-system/ to GitHub Pages on push to main
 ├── .github/workflows/publish-image.yml # GHCR image publish — v*.*.* tag or manual; dry_run defaults true
 ├── .github/workflows/publish-npm.yml  # power-pack/ -> npm as `slash-pack`; manual only, needs NPM_TOKEN
@@ -119,6 +119,13 @@ Key design decisions:
 │   ├── rhyme.py              # the rhyme rule, run backwards as a generator
 │   ├── realm.py              # the matrix, the laws, the corpus, the CLI
 │   ├── realm_test.py         # the gate: 74 assertions
+│   └── LANGUAGE.md           # the spec — start here
+├── accord/                   # Accord — one program, two surfaces that must agree (see below)
+│   ├── core.py               # the tree, the checker (R1–R5), lowering to TAC, the TAC interpreter
+│   ├── emit.py prose.py      # two independent front ends; neither imports the other
+│   ├── accord.py             # `agree` and `tac` commands
+│   ├── accord_test.py        # the gate: 42 assertions
+│   ├── examples/             # each program as a .emit / .prose pair
 │   └── LANGUAGE.md           # the spec — start here
 ├── README.md
 └── .gitignore
@@ -471,6 +478,37 @@ keeps its own conventions, its vocabulary table is hand-aligned so a
 rhyme class reads as a block, and `ruff format` would explode it. So
 ReVision's gate does not cover `realm/`, and `realm_test.py` does not
 cover ReVision. Run whichever matches what you touched.
+
+## Accord (`accord/`) — a fourth project in the same repo
+
+`accord/` is **not part of ReVision, EZR or Rime**. Each program is
+written twice: in **Emit**, a dense surface an AI can produce without
+ambiguity, and in **Prose**, controlled English a person can check. It
+is accepted only if both front ends build the same tree, the checker
+passes it, both lower to the same TAC (SHA-256), and every example runs
+on that TAC and holds. Its trust rules are inherited from
+`ezr/SEMANTICS.md` (literal 120, chain `min`, lazy [IF-T]) and cited
+there, not re-derived. It imports nothing from `ezr/`.
+
+- **Verify it:** `cd accord && python3 accord_test.py` — 42 assertions,
+  a plain script with its own tally, run by CI's `languages` job.
+- **Every rule must be seen to refuse.** Each of R1–R5 has a test that
+  must be rejected, not only examples that pass. A gate that could not
+  fail has already happened once here: a test that built the same tree
+  twice and compared the hashes.
+- **Keep `emit.py` and `prose.py` independent.** They share only
+  `core.py`'s tree types, and the gate asserts neither imports the
+  other. A defect in `core.py` is common to both surfaces, so the
+  agreement check cannot see it. That is why the checker and the
+  interpreter have their own refusal tests.
+- **Mutation-check with `PYTHONDONTWRITEBYTECODE=1`.** When checking the
+  gate by sabotaging `core.py` in a copy, clear `__pycache__` first. A
+  same-size edit (`min(` → `max(`) can reuse stale bytecode and read as
+  a surviving mutant when it was caught.
+
+Unlike `ezr/` and `realm/`, `accord/` is **not** in ruff's
+`extend-exclude`. It is ordinary Python and passes `ruff check` and
+`ruff format --check` with the rest of the repo.
 
 ## Two gotchas that cost real time
 
