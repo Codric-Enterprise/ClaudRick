@@ -15,6 +15,7 @@ from core import (
     ListLit,
     Lit,
     Name,
+    Not,
     Param,
     Require,
     Return,
@@ -26,7 +27,7 @@ TOKEN = re.compile(
 RESERVED = {
     "is", "of", "and", "plus", "minus", "times", "divided", "by", "the", "negative",
     "greater", "less", "than", "at", "least", "most", "equal", "to", "not", "true", "false",
-    "list", "empty", "length", "first", "rest", "trusted",
+    "list", "empty", "length", "first", "rest", "trusted", "or", "modulo",
 }  # fmt: skip
 BUILTINS = {"length": "len", "first": "head", "rest": "tail"}
 COMPARE = [
@@ -301,6 +302,30 @@ def nested(sentences: list[Sentence], indent: int, owner: Sentence):
 
 
 def expr(s: Sentence):
+    """or binds loosest, then and, then not, then one comparison. Both and/or read left to right."""
+    left = conjunction(s)
+    while s.is_word("or"):
+        s.word("or")
+        left = Bin("or", left, conjunction(s))
+    return left
+
+
+def conjunction(s: Sentence):
+    left = negation(s)
+    while s.is_word("and"):
+        s.word("and")
+        left = Bin("and", left, negation(s))
+    return left
+
+
+def negation(s: Sentence):
+    if s.is_word("not"):
+        s.word("not")
+        return Not(negation(s))
+    return comparison(s)
+
+
+def comparison(s: Sentence):
     left = additive(s)
     if s.is_word("is"):
         s.word("is")
@@ -323,10 +348,10 @@ def additive(s: Sentence):
 
 def multiplicative(s: Sentence):
     left = unary(s)
-    while s.is_word("times") or s.is_word("divided", "by"):
-        if s.is_word("times"):
-            s.word("times")
-            op = "*"
+    while s.is_word("times") or s.is_word("modulo") or s.is_word("divided", "by"):
+        if s.is_word("times") or s.is_word("modulo"):
+            op = "*" if s.is_word("times") else "%"
+            s.i += 1
         else:
             s.word("divided", "by")
             op = "/"
@@ -426,7 +451,7 @@ def _value(s: Sentence, node):
 # ── speaking the language back: every message a person reads is written in it ─
 
 WORDS = {op: " ".join(words) for words, op in COMPARE}
-ARITHMETIC = {"+": "plus", "-": "minus", "*": "times", "/": "divided by"}
+ARITHMETIC = {"+": "plus", "-": "minus", "*": "times", "/": "divided by", "%": "modulo"}
 SPOKEN = {builtin: word for word, builtin in BUILTINS.items()}
 
 
@@ -439,7 +464,7 @@ def render(e) -> str:
     if isinstance(e, ListLit):
         if not e.items:
             return "the empty list"
-        items = [_operand(i) for i in e.items]
+        items = [_operand(i, in_call=True) for i in e.items]
         if len(items) == 1:
             return f"the list of {items[0]}"
         return f"the list of {', '.join(items[:-1])} and {items[-1]}"
@@ -447,7 +472,12 @@ def render(e) -> str:
         if e.fn in SPOKEN:
             return f"the {SPOKEN[e.fn]} of {_operand(e.args[0])}"
         return f"{e.fn} of " + " and ".join(_operand(a, in_call=True) for a in e.args)
+    if isinstance(e, Not):
+        return f"not {_operand(e.expr)}"
     if isinstance(e, Bin):
+        if e.op in ("and", "or"):
+            # a call or a list reads 'and' as its own; parenthesized, it cannot
+            return f"{_operand(e.left, in_call=True)} {e.op} {_operand(e.right, in_call=True)}"
         if e.op in WORDS:
             return f"{_operand(e.left)} is {WORDS[e.op]} {_operand(e.right)}"
         return f"{_operand(e.left)} {ARITHMETIC[e.op]} {_operand(e.right)}"
@@ -455,7 +485,7 @@ def render(e) -> str:
 
 
 def _operand(e, in_call: bool = False) -> str:
-    wrap = isinstance(e, Bin) or (in_call and isinstance(e, (ListLit, Call)))
+    wrap = isinstance(e, (Bin, Not)) or (in_call and isinstance(e, (ListLit, Call)))
     wrap = wrap or (isinstance(e, Lit) and _num(e.value) and e.value < 0)
     return f"({render(e)})" if wrap else render(e)
 

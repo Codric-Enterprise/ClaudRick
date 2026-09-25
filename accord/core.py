@@ -14,6 +14,7 @@ DEPTH_LIMIT = 256  # an implementation limit, reported as Z rather than a host s
 EXECUTE_FLOOR = 128  # SEMANTICS.md 0 / ir.py E_EXECUTE_FLOOR: nothing runs below it
 ORDERING = ("<", ">", "<=", ">=")
 COMPARISONS = ("==", "!=", *ORDERING)
+LOGIC = ("and", "or")  # Accord's own: ezr has neither; each is an If whose skipped side never runs
 TYPES = ("Int", "Float", "Text", "Bool")
 PREDICATES = ("not_void",)
 BUILTINS = ("len", "head", "tail")  # ezr CORE.md 1.2, less `show`: Accord has no output
@@ -60,6 +61,11 @@ class Bin:
     op: str
     left: object
     right: object
+
+
+@dataclass(frozen=True)
+class Not:
+    expr: object
 
 
 @dataclass(frozen=True)
@@ -198,6 +204,8 @@ def _check_expr(fn, known, e, params, required, locals_, errors):
     elif isinstance(e, Bin):
         _check_expr(fn, known, e.left, params, required, locals_, errors)
         _check_expr(fn, known, e.right, params, required, locals_, errors)
+    elif isinstance(e, Not):
+        _check_expr(fn, known, e.expr, params, required, locals_, errors)
     elif isinstance(e, ListLit):
         for item in e.items:
             _check_expr(fn, known, item, params, required, locals_, errors)
@@ -228,7 +236,7 @@ def _calls(node, name) -> bool:
         return _calls(node.items, name)
     if isinstance(node, Bin):
         return _calls(node.left, name) or _calls(node.right, name)
-    if isinstance(node, (Let, Return)):
+    if isinstance(node, (Let, Return, Not)):
         return _calls(node.expr, name)
     if isinstance(node, If):
         return _calls(node.cond, name) or _calls(node.then, name) or _calls(node.orelse, name)
@@ -253,7 +261,22 @@ def lower(fn: Function, notes: dict | None = None) -> list[tuple]:
         return f"L{counter['L']}"
 
     def expr(e):
-        if isinstance(e, Bin):
+        if isinstance(e, Bin) and e.op in LOGIC:
+            a = expr(e.left)
+            t, skip = temp(), label()
+            if notes is not None:
+                notes[len(out)] = e.left
+            out.append(("short", t, e.op, a, skip))
+            b = expr(e.right)
+            if notes is not None:
+                notes[len(out)] = e.right
+            out.append(("join", t, e.op, a, b))
+            out.append(("mark", skip))
+        elif isinstance(e, Not):
+            a = expr(e.expr)
+            t = temp()
+            out.append(("not", t, a))
+        elif isinstance(e, Bin):
             a, b = expr(e.left), expr(e.right)
             t = temp()
             if notes is not None:
@@ -359,6 +382,10 @@ def _num(v) -> bool:
     return isinstance(v, (int, float)) and not isinstance(v, bool)
 
 
+def _whole(v) -> bool:
+    return isinstance(v, int) and not isinstance(v, bool)
+
+
 def equal(x, y) -> bool:
     """Equality that never lets True stand in for 1, at any depth of nesting."""
     if isinstance(x, tuple) or isinstance(y, tuple):
@@ -394,6 +421,12 @@ def _binop(op: str, a: Thread, b: Thread) -> Thread:
         return Thread(x + y, trust)
     if op == "+" and isinstance(x, tuple) and isinstance(y, tuple):
         return Thread(x + y, trust)  # Accord's own: ezr refuses this; Text's rule, extended
+    if op == "%":  # Accord's own: whole numbers only, and the answer takes the divisor's sign
+        if not (_whole(x) and _whole(y)):
+            return Z(f"misbound: modulo needs whole numbers, got {x!r} and {y!r}")
+        if y == 0:
+            return Z("misbound: modulo by zero")
+        return Thread(x % y, trust)
     if not (_num(x) and _num(y)):
         return Z(f"misbound: {op} needs numbers, got {x!r} and {y!r}")
     if op == "/":
@@ -425,6 +458,71 @@ def _size(value) -> int:
     return len(value) if isinstance(value, tuple) else value
 
 
+def _list(items: list) -> Thread:
+    # CORE.md 1.2: a list carries one trust, the min of its elements; a void element absorbs it.
+    void = next((i for i in items if i.void), None)
+    if void is not None:
+        return void
+    return Thread(tuple(i.value for i in items), min((i.trust for i in items), default=LITERAL))
+
+
+def _truth(word: str, a: Thread) -> Thread | None:
+    """A refusal if `a` cannot be a condition, else None."""
+    if a.void:
+        return a
+    if not isinstance(a.value, bool):
+        return Z(f"misbound: {word} needs a Bool, got {a.value!r}")
+    return None
+
+
+def _short(op: str, a: Thread) -> Thread | None:
+    """`and` stops at false, `or` at true. The skipped side never runs; its trust never counts."""
+    refused = _truth(op, a)
+    if refused is not None:
+        return refused
+    return a if a.value == (op == "or") else None
+
+
+def _join(op: str, a: Thread, b: Thread) -> Thread:
+    """Both sides ran: the answer is the second side's, at the chain rule's min."""
+    refused = _truth(op, b)
+    return refused if refused is not None else Thread(b.value, min(a.trust, b.trust))
+
+
+def _not(a: Thread) -> Thread:
+    refused = _truth("not", a)
+    return refused if refused is not None else Thread(not a.value, a.trust)
+
+
+def _bind(src: Thread, kind: str, trust: int) -> Thread:
+    """A declared trust is a ceiling: a value is admitted at the lower of the two."""
+    return src if src.void else _admit(src.value, kind, min(src.trust, trust))
+
+
+def _cap(got: Thread, cap: int) -> Thread:
+    """SEMANTICS.md 4.3 [APP]: an answer is never more trusted than the function that gave it."""
+    return got if got.void else Thread(got.value, min(got.trust, cap), got.reason)
+
+
+def _answer(r: Thread, kind: str, path: int) -> Thread:
+    # [IF-T]: every condition passed on the way to an Answer caps it.
+    return r if r.void else _admit(r.value, kind, min(r.trust, path))
+
+
+def _enter(name: str, params: tuple, measure, args: tuple, prior, depth: int):
+    """The environment for one call, or the refusal that stops it before it starts."""
+    if depth >= DEPTH_LIMIT:
+        return Z(f"unbounded: {name} is {DEPTH_LIMIT} calls deep")
+    env = {p: _bind(arg, kind, trust) for (p, kind, trust), arg in zip(params, args, strict=True)}
+    if measure is not None and prior is not None:
+        if env[measure].void:
+            return env[measure]
+        m = _size(env[measure].value)
+        if m < 0 or m >= prior:
+            return Z(f"unbounded: measure {measure} did not decrease ({prior} -> {m})")
+    return env
+
+
 def run(
     tac: list[tuple],
     args: tuple[Thread, ...],
@@ -434,20 +532,12 @@ def run(
     program: dict | None = None,
 ) -> Thread:
     name = tac[0][1]
-    if _depth >= DEPTH_LIMIT:
-        return Z(f"unbounded: {name} is {DEPTH_LIMIT} calls deep")
-    params = [ins for ins in tac if ins[0] == "param"]
+    params = tuple(ins[1:] for ins in tac if ins[0] == "param")
     measure = next(ins[1] for ins in tac if ins[0] == "measure")
-    labels = {ins[1]: i for i, ins in enumerate(tac) if ins[0] == "label"}
-    env: dict[str, Thread] = {}
-    for (_, pname, kind, trust), arg in zip(params, args, strict=True):
-        env[pname] = arg if arg.void else _admit(arg.value, kind, min(arg.trust, trust))
-    if measure is not None and _measure is not None:
-        if env[measure].void:
-            return env[measure]
-        m = _size(env[measure].value)
-        if m < 0 or m >= _measure:
-            return Z(f"unbounded: measure {measure} did not decrease ({_measure} -> {m})")
+    labels = {ins[1]: i for i, ins in enumerate(tac) if ins[0] in ("label", "mark")}
+    env = _enter(name, params, measure, args, _measure, _depth)
+    if isinstance(env, Thread):
+        return env
     temps: dict[str, Thread] = {}
     path = CERTAIN
     pc = next(i for i, ins in enumerate(tac) if ins[0] == "measure") + 1
@@ -467,13 +557,7 @@ def run(
                 if ins[2] in ORDERING and equal(left.value, right.value):
                     trace[("edge", name, pc - 1)] = True
         elif op == "list":
-            items = [temps[t] for t in ins[2]]
-            void = next((i for i in items if i.void), None)
-            if void is not None:
-                temps[ins[1]] = void
-            else:
-                trust = min((i.trust for i in items), default=LITERAL)
-                temps[ins[1]] = Thread(tuple(i.value for i in items), trust)
+            temps[ins[1]] = _list([temps[t] for t in ins[2]])
         elif op == "builtin":
             temps[ins[1]] = _builtin(ins[2], temps[ins[3]])
         elif op == "call":
@@ -483,31 +567,42 @@ def run(
                 temps[ins[1]] = run(tac, call_args, here, _depth + 1, trace, program)
             elif program and ins[2] in program:
                 callee, cap = program[ins[2]]  # SEMANTICS.md 4.3: min(c_f, ...)
-                got = run(callee, call_args, None, _depth + 1, None, program)
-                temps[ins[1]] = got if got.void else Thread(got.value, min(got.trust, cap))
+                temps[ins[1]] = _cap(run(callee, call_args, None, _depth + 1, None, program), cap)
             else:
                 temps[ins[1]] = Z(f"unbound: {ins[2]} is not a verified function here")
         elif op == "require":
             if env[ins[2]].void:
                 return env[ins[2]]
         elif op == "let":
-            src = temps[ins[4]]
-            env[ins[1]] = src if src.void else _admit(src.value, ins[2], min(src.trust, ins[3]))
+            env[ins[1]] = _bind(temps[ins[4]], ins[2], ins[3])
         elif op == "br":
             c = temps[ins[1]]
-            if c.void:
-                return c
-            if not isinstance(c.value, bool):
-                return Z(f"misbound: condition is {c.value!r}, not a Bool")
+            refused = _truth("a condition", c)
+            if refused is not None:
+                return refused
             path = min(path, c.trust)
             if trace is not None:
                 trace.setdefault(("br", name, pc - 1), set()).add(c.value)
             pc = labels[ins[2]] + 1 if c.value else labels[ins[3]] + 1
+        elif op == "short":
+            a = temps[ins[3]]
+            if trace is not None and _truth(ins[2], a) is None:
+                trace.setdefault(("br", name, pc - 1), set()).add(a.value)
+            decided = _short(ins[2], a)
+            if decided is not None:
+                temps[ins[1]] = decided
+                pc = labels[ins[4]] + 1
+        elif op == "join":
+            b = temps[ins[4]]
+            if trace is not None and _truth(ins[2], b) is None:
+                trace.setdefault(("br", name, pc - 1), set()).add(b.value)
+            temps[ins[1]] = _join(ins[2], temps[ins[3]], b)
+        elif op == "not":
+            temps[ins[1]] = _not(temps[ins[2]])
+        elif op == "mark":
+            pass
         elif op == "ret":
-            r = temps[ins[1]]
-            if r.void:
-                return r
-            return _admit(r.value, tac[0][2], min(r.trust, path))
+            return _answer(temps[ins[1]], tac[0][2], path)
         elif op == "label":
             raise RuntimeError(f"{name}: fell into {ins[1]}; the checker should have refused this")
     raise RuntimeError(f"{name}: ran off the end; the checker should have refused this")
@@ -553,11 +648,16 @@ def coverage(tac: list[tuple], trace: dict) -> list[tuple]:
                     gaps.append(("never", i, outcome))
             if ins[2] in ORDERING and ("edge", name, i) not in trace:
                 gaps.append(("edge", i, None))
-        elif ins[0] == "br" and ins[1] not in produced_by_comparison:
+        elif ins[0] in ("br", "short", "join") and _operand(ins) not in produced_by_comparison:
             for outcome in (True, False):
                 if outcome not in trace.get(("br", name, i), set()):
                     gaps.append(("never", i, outcome))
     return gaps
+
+
+def _operand(ins: tuple) -> str:
+    """The temp a decision tests: a branch's condition, or the side of and/or just evaluated."""
+    return ins[{"br": 1, "short": 3, "join": 4}[ins[0]]]
 
 
 @dataclass
@@ -606,8 +706,7 @@ def apply(report: Report, args: tuple, trust: int = LITERAL) -> Thread:
         return Z(
             f"unbound: {report.fn.name if report.fn else 'program'} was refused at {report.stage}"
         )
-    got = run(report.tac, tuple(Thread(a, trust) for a in args))
-    return got if got.void else Thread(got.value, min(got.trust, report.trust), got.reason)
+    return _cap(run(report.tac, tuple(Thread(a, trust) for a in args)), report.trust)
 
 
 # ── programs: several functions, each witnessed by its own Checks ────────────
@@ -630,7 +729,7 @@ def callees(fn: Function) -> set[str]:
         elif isinstance(node, Bin):
             walk(node.left)
             walk(node.right)
-        elif isinstance(node, (Let, Return)):
+        elif isinstance(node, (Let, Return, Not)):
             walk(node.expr)
         elif isinstance(node, If):
             walk(node.cond)
@@ -717,4 +816,4 @@ def apply_program(report: ProgramReport, name: str, args: tuple, trust: int = LI
         return Z(f"unbound: {name} was refused at {fn_report.stage}")
     program = {n: (r.tac, r.trust) for n, r in report.reports.items() if r.accepted}
     got = run(fn_report.tac, tuple(Thread(a, trust) for a in args), program=program)
-    return got if got.void else Thread(got.value, min(got.trust, fn_report.trust), got.reason)
+    return _cap(got, fn_report.trust)

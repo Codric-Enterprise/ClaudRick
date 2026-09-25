@@ -1,4 +1,4 @@
-# Accord — v0.6
+# Accord — v0.7
 
 **One language for a person and an AI to write one program together.**
 
@@ -10,10 +10,11 @@ earned enough trust. Each refusal quotes your own program back to you.
 
 ```
 cd accord
-python3 accord_test.py                                  # the gate: 121 assertions
+python3 accord_test.py                                  # the gate: 173 assertions
 python3 accord.py check examples/classify.accord        # verify a program
 python3 accord.py run examples/classify.accord 200      # run it, if accepted
 python3 accord.py tac examples/fact.accord              # the compiled TAC
+python3 accord.py build examples/stats.accord --out stats.py   # a standalone Python module
 python3 accord.py fill examples/clamp.intent.accord     # you write intent, Claude writes the body
 python3 accord.py run examples/stats.accord --fn mean the list of 1, 2 and 3   # a program
 ```
@@ -122,6 +123,25 @@ falls back to the standard speed on a rate limit. `fill` needs the
 login`). Nothing else in Accord does: the gate tests `fill` against a
 scripted stand-in and passes with the SDK absent.
 
+## Building: `build`
+
+```
+python3 accord.py build examples/leap.accord --out leap.py
+python3 -c "import leap; print(leap.leap(2024), leap.trusted('leap', 1900))"
+# True (False, 120)
+```
+
+`build` compiles an accepted program's TAC into one Python module that
+imports nothing from Accord. Its semantics are `core.py`'s own
+functions, copied in by source. Before the module is written, every
+Check runs through it at trust 120 and again at 256, and it must give
+the interpreter's value, trust and reason exactly. A program that was
+refused does not build, and neither does a module that disagrees with
+the interpreter (exit 1). `f(*values)` returns the answer, and
+`trusted(name, *values)` returns `(answer, trust)`. Both raise
+`Refused` instead of returning void. `SEMANTICS.md` §8 gives the full
+contract.
+
 ## How a program is accepted
 
 Five stages, in order. The first refusal wins.
@@ -196,6 +216,14 @@ Accord's own additions, stated as such:
   `unbounded`. A call chain 256 deep is also `unbounded`. That is an
   implementation limit, so the answer is Z rather than a host stack overflow.
 - R6, coverage.
+- `and`, `or` and `not` (ezr has none). A side that is skipped never
+  runs and never counts, so `false and x` answers at the trust of that
+  `false`. When both sides run, the answer takes the `min`. Each side is
+  a decision that R6 requires the Checks to try both ways.
+- `modulo` takes whole numbers, and its answer has the divisor's sign.
+
+`SEMANTICS.md` states every rule, with the source of each and the
+function that carries it out.
 
 ## The syntax: one sentence form per construct
 
@@ -210,16 +238,21 @@ Accord's own additions, stated as such:
 | answer | `Answer the first of xs plus total of the rest of xs.` |
 | Check | `Check: total of the list of 1, 2 and 3 gives 6, trusted 120.` |
 | comparison | `is greater than`, `is less than`, `is at least`, `is at most`, `is equal to`, `is not equal to` |
-| arithmetic | `plus`, `minus`, `times`, `divided by`, `negative 3` |
+| logic | `a and b`, `a or b`, `not a`: Bools only, and a side that is skipped never runs |
+| arithmetic | `plus`, `minus`, `times`, `divided by`, `modulo`, `negative 3` |
 | lists | `the list of 1, 2 and 3`, `the empty list`, `a List of Int` |
 | builtins | `the length of xs`, `the first of xs`, `the rest of xs` |
 | call | `total of xs`; more arguments with `and`: `f of a and b` |
 
 `the list of …` takes every `, item` and `and item` that follows, so a
 second argument after a list needs parentheses:
-`f of (the list of 1 and 2) and 3`. `list`, `empty`, `length`, `first`,
-`rest` and `trusted` are reserved words, so no function or parameter
-may use them as a name.
+`f of (the list of 1 and 2) and 3`. A call takes every `and` too, so
+`f of x and y` is `f` given two arguments; write `(f of x) and y` for
+the conjunction. `or` binds looser than `and`, and `not` takes a whole
+comparison: `not x is equal to 0`. The words listed in `GRAMMAR.ebnf`
+are reserved, among them `list`, `empty`, `length`, `first`, `rest`,
+`trusted`, `or` and `modulo`, so no function or parameter may use them
+as a name. `GRAMMAR.ebnf` is the whole grammar.
 
 ## Lists
 
@@ -250,7 +283,7 @@ Accord's own list rules:
   extends ezr's own Text rule. A list joined with a number or Text is
   refused, and so is a mixed result bound to a `List of Int`.
 
-## What v0.4 does not do
+## What v0.7 does not do
 
 - **Coverage is not correctness.** R6 makes the Checks try every decision
   and every edge. An arithmetic slip that crosses no decision, such as
@@ -286,10 +319,13 @@ by asking you the question.
 |---|---|
 | `parse.py` | the syntax: reads Accord, and writes expressions and values back in it |
 | `core.py` | the tree, the checker (R1–R5), lowering to TAC, the interpreter, and `verify`: Checks, coverage (R6), earned trust, the floor |
-| `accord.py` | the `check`, `run`, `tac` and `fill` commands, and `explain`, which words each verdict |
+| `accord.py` | the `check`, `run`, `tac`, `build` and `fill` commands, and `explain`, which words each verdict |
+| `build.py` | compiles an accepted program to a standalone Python module, and refuses one that disagrees with the interpreter |
+| `GRAMMAR.ebnf` | the grammar; the gate holds it to `parse.py` |
+| `SEMANTICS.md` | what a program means, rule by rule, each with its source and the code that carries it out |
 | `fill.py` | the headless loop: your part, Claude's body, Accord's verdict; the only code that calls the API |
 | `accord_test.py` | the gate: a plain script that reports its own tally, like `realm_test.py` |
-| `examples/` | `classify`, `fact`, `total`, `reverse`; `stats`, a two-function program; and `clamp.intent`, a person's part awaiting `fill` |
+| `examples/` | `classify`, `fact`, `total`, `reverse`, `leap` (`and`/`or`/`modulo`); `stats`, a two-function program; and `clamp.intent`, a person's part awaiting `fill` |
 
 `core.py` never imports `parse.py`, and the gate asserts it. The
 semantics don't depend on the syntax, so a second syntax could never

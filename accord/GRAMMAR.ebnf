@@ -1,0 +1,80 @@
+(* Accord's grammar, v0.7, in ISO 14977 EBNF.
+
+   This is what parse.py reads. The gate checks the two against each other: every
+   reserved word must appear here, and every quoted word here must be one parse.py
+   or core.py actually matches. What the grammar lets through, the checker (R1-R5)
+   may still refuse. Those refusals are listed in SEMANTICS.md, not here.
+
+   Lexical conventions:
+   - One sentence is one line. A line's leading spaces are its indentation; tabs are refused.
+   - '#' starts a comment that runs to the end of the line.
+   - Keywords match in any case ("To", "to"). Names and type names are case-sensitive.
+   - A name may not be a reserved word:
+       is of and or not plus minus times divided by modulo the negative greater less than
+       at least most equal to true false list empty length first rest trusted *)
+
+program        = function , { function } ;
+
+(* A function starts at a header in column 0. Its body is indented; its Checks return to
+   column 0 and come after the whole body. *)
+function       = header , { declaration } , repetition , block , { check } ;
+
+header         = "To" , name , [ "given" , parameters ] , "," , "answering" , article , type , ":" ;
+parameters     = name , { "," , name } , [ "and" , name ] ;
+
+(* One declaration per parameter, in the header's order: R1, trust is always written. *)
+declaration    = name , "is" , article , type , "," , trust , "." ;
+repetition     = "It" , ( "never" , "repeats" | "shrinks" , "by" , name ) , "." ;
+
+type           = "Int" | "Float" | "Text" | "Bool" | "List" , "of" , type ;
+article        = "a" | "an" ;
+trust          = "trusted" , whole , "of" , "256" ;
+
+(* The checker adds: a block ends in an Answer or an If, and an If is the last statement
+   of its block (R5); a parameter is named in a Make sure before it is used (R2). *)
+block          = statement , { statement } ;
+statement      = require | let | answer | decision ;
+require        = "Make" , "sure" , name , "is" , "not" , "void" , "." ;
+let            = "Let" , name , "be" , article , type , "," , trust , "," , "equal" , "to" ,
+                 expression , "." ;
+answer         = "Answer" , expression , "." ;
+decision       = "If" , expression , ":" , INDENT , block , DEDENT ,
+                 "Otherwise" , ":" , INDENT , block , DEDENT ;
+
+check          = "Check" , ":" , name , [ "of" , value , { "and" , value } ] ,
+                 "gives" , value , "," , "trusted" , whole , "." ;
+
+(* Expressions, loosest first. 'and' and 'or' read left to right. *)
+expression     = conjunction , { "or" , conjunction } ;
+conjunction    = negation , { "and" , negation } ;
+negation       = "not" , negation | comparison ;
+comparison     = additive , [ "is" , comparator , additive ] ;
+comparator     = "not" , "equal" , "to" | "equal" , "to"
+               | "greater" , "than" | "less" , "than"
+               | "at" , "least" | "at" , "most" ;
+additive       = multiplicative , { ( "plus" | "minus" ) , multiplicative } ;
+multiplicative = unary , { ( "times" | "divided" , "by" | "modulo" ) , unary } ;
+unary          = "negative" , unary | atom ;
+
+(* A call, a list and a Check all take every 'and' that follows them, so
+   'f of x and y' is f applied to x and y. Write '(f of x) and y' for a conjunction. *)
+atom           = number | text | "true" | "false"
+               | "(" , expression , ")"
+               | [ "the" ] , ( "empty" , "list"
+                            | "list" , "of" , items
+                            | builtin , "of" , atom
+                            | name , "of" , atom , { "and" , atom }
+                            | name ) ;
+builtin        = "length" | "first" | "rest" ;
+
+(* No comma before the final 'and'. A ',' followed by 'trusted' ends the list. *)
+items          = atom , { "," , atom } , [ "and" , atom ] ;
+
+(* A Check's values are literals: a number, text, true, false, 'negative' before a
+   number, or a list of values. *)
+value          = unary ;
+
+name           = ( letter | "_" ) , { letter | digit | "_" } ;
+number         = whole , [ "." , whole ] ;
+whole          = digit , { digit } ;
+text           = '"' , { character - ( '"' | "\" ) } , '"' ;

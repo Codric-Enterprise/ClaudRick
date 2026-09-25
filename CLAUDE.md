@@ -82,7 +82,7 @@ Key design decisions:
 │   └── LICENSE               # MIT — everything except pro-commands/ (see notice at top of file)
 ├── .github/workflows/ci.yml           # ruff + pytest (3.11-3.13) + docker build + `languages`
 │   #   `languages` job: ezr's 29-suite gate, the forge (81), the rhyming corpus (35),
-│   #   the Java runtime (98), Rime (74) and Accord (121) — the suites the other jobs
+│   #   the Java runtime (98), Rime (74) and Accord (173) — the suites the other jobs
 │   #   never touch. Each suite step carries `if: !cancelled()`, so one red suite fails
 │   #   the job without skipping the others (it used to hide 288 assertions when it tripped).
 ├── .github/workflows/deploy-pages.yml # publishes mastery-system/ to GitHub Pages on push to main
@@ -123,10 +123,13 @@ Key design decisions:
 ├── accord/                   # Accord — one language a person and an AI write one program in (see below)
 │   ├── parse.py              # the one syntax: reads Accord, and writes expressions/values back in it
 │   ├── core.py               # tree, checker (R1–R5), TAC, interpreter, verify (Checks, R6, trust, floor)
-│   ├── accord.py             # `check`, `run`, `tac`, `fill`; `explain` words each verdict in the language
+│   ├── accord.py             # `check`, `run`, `tac`, `build`, `fill`; `explain` words each verdict
 │   ├── fill.py               # headless: person's intent -> Claude's body -> verdict; only API caller
-│   ├── accord_test.py        # the gate: 121 assertions
-│   ├── examples/             # classify, fact, total, reverse, stats (2 functions); clamp.intent for fill
+│   ├── build.py              # `build`: accepted program -> standalone Python module, Checks re-run on it
+│   ├── accord_test.py        # the gate: 173 assertions
+│   ├── examples/             # classify, fact, total, reverse, leap, stats (2 functions); clamp.intent
+│   ├── GRAMMAR.ebnf          # the grammar; the gate holds it to parse.py's reserved words and matches
+│   ├── SEMANTICS.md          # every rule, its source (ezr § or Accord's own) and the function doing it
 │   └── LANGUAGE.md           # the spec — start here
 ├── README.md
 └── .gitignore
@@ -495,7 +498,7 @@ refusal quotes the program back in Accord. The trust rules come from
 lazy [IF-T], examples earning trust (§4.2: 1 → 120, 2 → 183, 3 → 217),
 the answer cap (§4.3), and the 128 floor. It imports nothing from `ezr/`.
 
-- **Verify it:** `cd accord && python3 accord_test.py` — 121 assertions,
+- **Verify it:** `cd accord && python3 accord_test.py` — 173 assertions,
   a plain script with its own tally, run by CI's `languages` job. Try a
   program with `python3 accord.py check examples/classify.accord`.
 - **One syntax. Do not bring back a second surface.** v0.1–v0.3 made you
@@ -538,6 +541,23 @@ the answer cap (§4.3), and the 128 floor. It imports nothing from `ezr/`.
   which joins them: ezr's `Eval.java` refuses it, and Accord extends
   ezr's own Text-concatenation rule. That makes it an Accord rule,
   labelled as one.
+- **`and`/`or`/`not` and `modulo` are Accord's own** (ezr has none), and
+  `accord/SEMANTICS.md` §4 states them. A skipped side never runs and
+  never counts: `false and x` answers at that `false`'s trust, not
+  `min` with `x`'s. Each side is an R6 decision. `modulo` takes whole
+  numbers and follows the divisor's sign.
+- **`build` shares semantics with the interpreter by copying source.**
+  `build.py` pastes `core.py`'s own functions (`build.SEMANTICS`) into
+  the module rather than re-implementing them, and it refuses a module
+  unless every Check, run at trust 120 and at 256, gives exactly what
+  the interpreter gives. A new TAC op needs a case in `build._function`
+  *and* its helper added to `build.SEMANTICS`. Put the semantics in a
+  core function the interpreter calls, never inline in `run`, or the
+  two drift apart.
+- **`GRAMMAR.ebnf` and `SEMANTICS.md` are gated.** The gate checks the
+  grammar's quoted words and reserved list against `parse.py`, and the
+  functions `SEMANTICS.md` cites against `core.py`. Adding a keyword
+  means editing all three.
 - **Mutation-check with `PYTHONDONTWRITEBYTECODE=1`.** When checking the
   gate by sabotaging `core.py` in a copy, clear `__pycache__` first. A
   same-size edit (`min(` → `max(`) can reuse stale bytecode and read as

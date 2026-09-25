@@ -4,6 +4,7 @@ python3 accord.py check examples/classify.accord
 python3 accord.py run examples/classify.accord 200
 python3 accord.py run examples/stats.accord --fn mean the list of 1, 2 and 3
 python3 accord.py tac examples/fact.accord
+python3 accord.py build examples/stats.accord [--out stats.py]
 python3 accord.py fill examples/clamp.intent.accord [--out F] [--attempts N] [--model M] [--fast]
 """
 
@@ -130,9 +131,41 @@ def fill_command(argv: list[str]) -> int:
     return outcome.code
 
 
+def build_command(argv: list[str]) -> int:
+    """An accepted program, as a standalone Python module whose Checks agree with Accord."""
+    import build
+
+    out = None
+    if argv[1:3] and argv[1] == "--out" and len(argv) == 3:
+        out = argv[2]
+    elif len(argv) != 1:
+        print(__doc__, file=sys.stderr)
+        return 2
+    try:
+        report = verify_program(load(argv[0]))
+    except AccordError as err:
+        print(f"refused: {err}", file=sys.stderr)
+        return 1
+    if not report.accepted:
+        print(explain_program(report), file=sys.stderr)
+        return 1
+    try:
+        module = build.build(report)
+    except build.BuildError as err:
+        print(f"refused: {err}", file=sys.stderr)
+        return 1
+    if out:
+        Path(out).write_text(module)
+    else:
+        print(module, end="")
+    return 0
+
+
 def main(argv: list[str]) -> int:
     if argv and argv[0] == "fill":
         return fill_command(argv[1:])
+    if argv and argv[0] == "build" and len(argv) >= 2:
+        return build_command(argv[1:])
     if len(argv) >= 2 and argv[0] in ("check", "run", "tac"):
         try:
             functions = load(argv[1])

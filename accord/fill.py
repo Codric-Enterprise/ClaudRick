@@ -41,16 +41,18 @@ have an Otherwise. A Let's trust is written "trusted N of 256".
 Expressions:
   comparison   a is greater than b | is less than | is at least | is at most | is equal to
                | is not equal to
-  arithmetic   a plus b | a minus b | a times b | a divided by b | negative 3
+  logic        a and b | a or b | not a     (Bools only; the side that is skipped never runs)
+  arithmetic   a plus b | a minus b | a times b | a divided by b | a modulo b | negative 3
   lists        the list of 1, 2 and 3 | the empty list | the length of xs | the first of xs
                | the rest of xs | xs plus ys (joins two lists)
-  calls        f of a | f of a and b     (this or another function; parenthesize a list argument)
+  calls        f of a | f of a and b     (a call takes every 'and': write (f of a) and b)
   literals     12 | 1.5 | "text" | true | false
   grouping     (a plus b) times c
-There is no and/or/not, no remainder and no loops. A program may have several functions: call
-another by name, as "total of xs", but no functions may call each other in a cycle.
+modulo takes whole numbers and answers with the divisor's sign. There are no loops.
+A program may have several functions: call another by name, as "total of xs", but no functions
+may call each other in a cycle.
 Types: Int, Float, Text, Bool, and List of any of them.
-Reserved words (never names): list, empty, length, first, rest, trusted.
+Reserved words (never names): list, empty, length, first, rest, trusted, or, modulo.
 
 Example body, for "To fact given n, answering an Int:" with n an Int:
 ```accord
