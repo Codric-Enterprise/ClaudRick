@@ -152,10 +152,18 @@ jobs:
 
       # accord/ IS linted by the test job (it is not in extend-exclude), but
       # its gate is a plain script like realm's, so pytest never runs it.
+      # finish.py is the gate and everything around it: the gate again with the
+      # anthropic SDK unimportable, every doc that states the gate's size
+      # checked against its tally, every example built to Python and run
+      # standalone, every mutant in mutants.py caught, and ruff. Its lint step
+      # fails rather than skips when ruff is absent, so this job installs it
+      # with the same floor pyproject.toml's dev extra pins.
       - name: Accord — one language, Checks decide trust (173 assertions)
         if: ${{ !cancelled() }}
         working-directory: accord
-        run: python3 accord_test.py
+        run: |
+          python3 -m pip install --quiet "ruff>=0.6"
+          python3 finish.py
 
       # Deliberately NOT run: ezr/5-runtime-java/differential.py. It is red
       # on purpose -- 5 of 128 programs diverge, and each divergence is a

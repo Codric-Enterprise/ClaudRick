@@ -127,6 +127,8 @@ Key design decisions:
 │   ├── fill.py               # headless: person's intent -> Claude's body -> verdict; only API caller
 │   ├── build.py              # `build`: accepted program -> standalone Python module, Checks re-run on it
 │   ├── accord_test.py        # the gate: 173 assertions
+│   ├── finish.py             # gate + no-SDK gate + doc counts + examples built + mutants + ruff
+│   ├── mutants.py            # the deliberate bugs the gate must catch (stale or surviving = fail)
 │   ├── examples/             # classify, fact, total, reverse, leap, stats (2 functions); clamp.intent
 │   ├── GRAMMAR.ebnf          # the grammar; the gate holds it to parse.py's reserved words and matches
 │   ├── SEMANTICS.md          # every rule, its source (ezr § or Accord's own) and the function doing it
@@ -499,8 +501,11 @@ lazy [IF-T], examples earning trust (§4.2: 1 → 120, 2 → 183, 3 → 217),
 the answer cap (§4.3), and the 128 floor. It imports nothing from `ezr/`.
 
 - **Verify it:** `cd accord && python3 accord_test.py` — 173 assertions,
-  a plain script with its own tally, run by CI's `languages` job. Try a
-  program with `python3 accord.py check examples/classify.accord`.
+  a plain script with its own tally. **Before calling a change done, run
+  `python3 finish.py`**. CI's `languages` job runs the same command.
+  It runs the gate, the gate again with the SDK blocked, a check that every doc
+  states this tally, every example built and run standalone, the mutants
+  and ruff. Try a program with `python3 accord.py check examples/classify.accord`.
 - **One syntax. Do not bring back a second surface.** v0.1–v0.3 made you
   write every program twice (Emit and Prose) and compared them. That is
   two languages, the thing Accord exists to avoid, and two versions
@@ -558,6 +563,11 @@ the answer cap (§4.3), and the 128 floor. It imports nothing from `ezr/`.
   grammar's quoted words and reserved list against `parse.py`, and the
   functions `SEMANTICS.md` cites against `core.py`. Adding a keyword
   means editing all three.
+- **New rule, new mutant.** Add the bug the rule prevents to
+  `accord/mutants.py`. `finish.py` fails when a mutant survives, and
+  also when its text has gone stale because the code moved. Never keep a
+  mutant that survives because it changes nothing (an equivalent
+  mutant). Delete it.
 - **Mutation-check with `PYTHONDONTWRITEBYTECODE=1`.** When checking the
   gate by sabotaging `core.py` in a copy, clear `__pycache__` first. A
   same-size edit (`min(` → `max(`) can reuse stale bytecode and read as

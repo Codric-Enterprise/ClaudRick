@@ -11,6 +11,7 @@ earned enough trust. Each refusal quotes your own program back to you.
 ```
 cd accord
 python3 accord_test.py                                  # the gate: 173 assertions
+python3 finish.py                                       # the gate and everything around it
 python3 accord.py check examples/classify.accord        # verify a program
 python3 accord.py run examples/classify.accord 200      # run it, if accepted
 python3 accord.py tac examples/fact.accord              # the compiled TAC
@@ -303,6 +304,38 @@ Accord's own list rules:
 - `fill` has been tested against a scripted stand-in, not yet against the
   live API.
 
+## Finishing a change: `finish`
+
+`python3 finish.py` runs everything a change must pass, and exits 0
+only if every step passes. CI's `languages` job runs the same command.
+`--quick` leaves out the mutants.
+
+| Step | Fails when |
+|---|---|
+| gate | `accord_test.py` fails; its tally is read back for the next step |
+| no-sdk | the gate fails with `anthropic` unimportable, as it is in CI |
+| counts | a document that states the gate's size (this file, `CLAUDE.md`, `ci.yml`) states a different number |
+| examples | an example is refused, will not build, or its built module fails when run alone |
+| mutants | a deliberate bug in `mutants.py` gets past the gate, or its text is no longer in the code (stale) |
+| lint | `ruff check` or `ruff format --check` fails, or ruff is not installed |
+
+It has been shown to fail on each of these: a drifted count, a broken
+Check, a broken operator, a stale mutant, a surviving mutant, and a
+missing ruff.
+
+**What stays with a person:**
+
+- **Whether the Checks are the right ones.** `finish` proves that the
+  gate refuses the bugs listed in `mutants.py`. It cannot know which
+  bugs are missing from that list. When you add a rule, add a mutant for
+  it.
+- **A surviving mutant.** It is either a gap in the gate or an
+  equivalent change that means the same program. Only a reader can tell
+  which. Fix the gate, or delete the mutant; never keep a survivor.
+- **Opening and merging the PR.** The repo opens PRs only when asked.
+- **`fill` against the live API.** It needs a key and costs money. The
+  gate uses a scripted stand-in, and CI has neither the SDK nor a key.
+
 ## Why there is one syntax, not two
 
 v0.1–v0.3 made you write every program twice, once in a symbolic form
@@ -325,6 +358,8 @@ by asking you the question.
 | `SEMANTICS.md` | what a program means, rule by rule, each with its source and the code that carries it out |
 | `fill.py` | the headless loop: your part, Claude's body, Accord's verdict; the only code that calls the API |
 | `accord_test.py` | the gate: a plain script that reports its own tally, like `realm_test.py` |
+| `finish.py` | the gate and everything around it, in one command, as CI runs it |
+| `mutants.py` | the deliberate bugs the gate must catch |
 | `examples/` | `classify`, `fact`, `total`, `reverse`, `leap` (`and`/`or`/`modulo`); `stats`, a two-function program; and `clamp.intent`, a person's part awaiting `fill` |
 
 `core.py` never imports `parse.py`, and the gate asserts it. The
