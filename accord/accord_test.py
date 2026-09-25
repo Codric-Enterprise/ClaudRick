@@ -322,6 +322,94 @@ drop = program(
 ok(parse.parse(drop).examples[0].value == (3,), "a one-item list ends at ', trusted'")
 ok(parse_error(drop.replace("drop", "rest")) != "", "'rest' is reserved: no function named rest")
 
+# ── fill: the person writes the intent, Claude writes the body, Accord decides ─
+import fill  # noqa: E402
+
+INTENT = src("clamp.intent")
+GOOD = """```accord
+  It never repeats.
+  Make sure x is not void.
+  Make sure low is not void.
+  Make sure high is not void.
+  If x is less than low:
+    Answer low.
+  Otherwise:
+    If x is greater than high:
+      Answer high.
+    Otherwise:
+      Answer x.
+```"""
+SWAPPED = GOOD.replace("Answer low.", "Answer high.")
+
+
+def scripted(*replies):
+    calls = []
+
+    def ask(system, messages):
+        calls.append((system, list(messages)))
+        reply = replies[min(len(calls), len(replies)) - 1]
+        return reply, reply
+
+    return ask, calls
+
+
+person = fill.intent(INTENT)
+ok(len(person.declarations) == 3 and len(person.checks) == 5, "the intent file is split by role")
+ask, calls = scripted(GOOD)
+out = fill.fill(INTENT, ask)
+ok(out.code == 0 and out.attempts == 1, "a correct body is accepted on the first attempt")
+ok(all(c in out.program for c in person.checks), "the person's Checks survive verbatim")
+ok(verify(parse.parse(out.program)).trust == 245, "five Checks earn 245 (SEMANTICS.md 4.2)")
+ok(calls[0][0] == fill.CARD and "Check: clamp of 12" in calls[0][1][0]["content"],
+   "Claude is given the language card and the person's part")  # fmt: skip
+ask, calls = scripted(SWAPPED, GOOD)
+out = fill.fill(INTENT, ask)
+ok(out.code == 0 and out.attempts == 2, "a wrong body is sent back and then fixed")
+feedback = calls[1][1][-1]["content"]
+ok("clamp of negative 3 and 0 and 10 should give 0" in feedback, "the refusal goes back in Accord")
+tamper = GOOD.replace("```\n", "").replace(
+    "      Answer x.", "      Answer x.\nCheck: clamp of 5 and 0 and 10 gives 99, trusted 120."
+)
+ask, calls = scripted(tamper, GOOD)
+out = fill.fill(INTENT, ask)
+ok(out.code == 0 and out.attempts == 2, "a reply that rewrites a Check is refused")
+ok("gives 99" not in out.program, "and the person's Checks are never touched")
+ok("may not change" in calls[1][1][-1]["content"], "Claude is told why")
+ask, calls = scripted(SWAPPED)
+out = fill.fill(INTENT, ask, attempts=3)
+ok(out.code == 1 and out.attempts == 3, "a body that never satisfies the Checks runs out of tries")
+no_edges = "\n".join(
+    x for x in INTENT.splitlines() if "of 0 and 0" not in x and "of 10 and 0" not in x
+)
+ask, calls = scripted(GOOD)
+out = fill.fill(no_edges, ask)
+ok(out.code == 4 and len(calls) == 1, "an untried edge is the person's turn, not Claude's")
+ok(any("no Check tries x equal to low" in line for line in out.log), "and the question is asked")
+one = "To keep given x, answering an Int:\n  x is an Int, trusted 256 of 256.\n"
+one += "Check: keep of 3 gives 3, trusted 120.\n"
+ask, calls = scripted("  It never repeats.\n  Make sure x is not void.\n  Answer x.")
+out = fill.fill(one, ask)
+ok(out.code == 4 and out.report.stage == "floor", "too few Checks is the person's turn too")
+try:
+    fill.intent(src("classify"))
+    has_body = ""
+except AccordError as err:
+    has_body = err.message
+ok("already has a body" in has_body, "fill refuses a file that already has a body")
+try:
+    fill.intent(INTENT.replace("  high is an Int, trusted 256 of 256.\n", ""))
+    missing = ""
+except AccordError as err:
+    missing = err.message
+ok(missing.startswith("R1"), "every parameter's trust must be declared by the person")
+flat = "It never repeats.\nIf x is less than low:\n  Answer low.\nOtherwise:\n  Answer x."
+ok(fill.body_of(flat)[2] == "    Answer low.", "an unindented reply keeps its nesting")
+fast = fill.request(fill.MODEL, True, "s", [])
+ok(fast["speed"] == "fast" and "fast-mode-2026-02-01" in fast["betas"], "--fast asks for fast mode")
+slow = fill.request(fill.MODEL, False, "s", [])
+ok("speed" not in slow and slow["model"] == "claude-opus-5", "the default is standard Opus 5")
+ok(slow["fallbacks"] == "default", "refusal fallbacks are on")
+
 # ── the pieces stay apart: semantics never imports syntax ───────────────────
 ok("import parse" not in (HERE / "core.py").read_text(), "core.py does not depend on the syntax")
 

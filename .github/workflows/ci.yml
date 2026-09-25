@@ -152,7 +152,7 @@ jobs:
 
       # accord/ IS linted by the test job (it is not in extend-exclude), but
       # its gate is a plain script like realm's, so pytest never runs it.
-      - name: Accord — one language, Checks decide trust (74 assertions)
+      - name: Accord — one language, Checks decide trust (94 assertions)
         if: ${{ !cancelled() }}
         working-directory: accord
         run: python3 accord_test.py

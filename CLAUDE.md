@@ -82,7 +82,7 @@ Key design decisions:
 │   └── LICENSE               # MIT — everything except pro-commands/ (see notice at top of file)
 ├── .github/workflows/ci.yml           # ruff + pytest (3.11-3.13) + docker build + `languages`
 │   #   `languages` job: ezr's 29-suite gate, the forge (81), the rhyming corpus (35),
-│   #   the Java runtime (98), Rime (74) and Accord (74) — the suites the other jobs
+│   #   the Java runtime (98), Rime (74) and Accord (94) — the suites the other jobs
 │   #   never touch. Each suite step carries `if: !cancelled()`, so one red suite fails
 │   #   the job without skipping the others (it used to hide 288 assertions when it tripped).
 ├── .github/workflows/deploy-pages.yml # publishes mastery-system/ to GitHub Pages on push to main
@@ -123,9 +123,10 @@ Key design decisions:
 ├── accord/                   # Accord — one language a person and an AI write one program in (see below)
 │   ├── parse.py              # the one syntax: reads Accord, and writes expressions/values back in it
 │   ├── core.py               # tree, checker (R1–R5), TAC, interpreter, verify (Checks, R6, trust, floor)
-│   ├── accord.py             # `check`, `run`, `tac`; `explain` words each verdict in the language
-│   ├── accord_test.py        # the gate: 74 assertions
-│   ├── examples/             # classify, fact, total, reverse (.accord)
+│   ├── accord.py             # `check`, `run`, `tac`, `fill`; `explain` words each verdict in the language
+│   ├── fill.py               # headless: person's intent -> Claude's body -> verdict; only API caller
+│   ├── accord_test.py        # the gate: 94 assertions
+│   ├── examples/             # classify, fact, total, reverse (.accord); clamp.intent.accord for fill
 │   └── LANGUAGE.md           # the spec — start here
 ├── README.md
 └── .gitignore
@@ -493,7 +494,7 @@ refusal quotes the program back in Accord. The trust rules come from
 lazy [IF-T], examples earning trust (§4.2: 1 → 120, 2 → 183, 3 → 217),
 the answer cap (§4.3), and the 128 floor. It imports nothing from `ezr/`.
 
-- **Verify it:** `cd accord && python3 accord_test.py` — 74 assertions,
+- **Verify it:** `cd accord && python3 accord_test.py` — 94 assertions,
   a plain script with its own tally, run by CI's `languages` job. Try a
   program with `python3 accord.py check examples/classify.accord`.
 - **One syntax. Do not bring back a second surface.** v0.1–v0.3 made you
@@ -506,6 +507,16 @@ the answer cap (§4.3), and the 128 floor. It imports nothing from `ezr/`.
   answer cap has a test that must be rejected, not only examples that
   pass. A gate that could not fail has already happened once here: a
   test that built the same tree twice and compared the hashes.
+- **`fill` is the bridge's AI end, and it owns the roles.** It sends
+  Claude the language card plus the person's header, trust lines and
+  Checks, takes back only a body, and assembles the program itself, so
+  the AI can never edit a Check. Wrong bodies go back to Claude in
+  Accord's words. Coverage and floor refusals never do: only the person
+  can add Checks, so `fill` exits 4 ("your turn"). It is headless (stdout
+  program, stderr log, exit codes 0/1/2/3/4) and the only code that
+  imports `anthropic`, which it does lazily. The gate tests it with a
+  scripted stand-in and must keep passing without the SDK installed; CI
+  has no SDK and no key. Do not add a live API call to the gate.
 - **`core.py` never imports `parse.py`.** The gate asserts it. The
   semantics must not depend on the syntax.
 - **R6 counts what a Check executes, including recursive calls.** A Check

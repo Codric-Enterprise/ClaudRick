@@ -1,0 +1,11 @@
+# You write this file: the header, the trust you give each input, and the Checks.
+# `python3 accord.py fill examples/clamp.intent.accord` asks Claude for the body.
+To clamp given x, low and high, answering an Int:
+  x is an Int, trusted 256 of 256.
+  low is an Int, trusted 256 of 256.
+  high is an Int, trusted 256 of 256.
+Check: clamp of 5 and 0 and 10 gives 5, trusted 120.
+Check: clamp of negative 3 and 0 and 10 gives 0, trusted 120.
+Check: clamp of 12 and 0 and 10 gives 10, trusted 120.
+Check: clamp of 0 and 0 and 10 gives 0, trusted 120.
+Check: clamp of 10 and 0 and 10 gives 10, trusted 120.
