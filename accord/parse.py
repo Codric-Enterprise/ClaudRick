@@ -1,4 +1,4 @@
-"""Prose: the readable surface. Controlled English, one sentence form per construct."""
+"""Accord's syntax: controlled English, one sentence form per construct, read and written back."""
 
 from __future__ import annotations
 
@@ -401,3 +401,67 @@ def _value(s: Sentence, node):
     if isinstance(node, ListLit):
         return tuple(_value(s, item) for item in node.items)
     raise AccordError(s.number, "check values must be literals")
+
+
+# ── speaking the language back: every message a person reads is written in it ─
+
+WORDS = {op: " ".join(words) for words, op in COMPARE}
+ARITHMETIC = {"+": "plus", "-": "minus", "*": "times", "/": "divided by"}
+SPOKEN = {builtin: word for word, builtin in BUILTINS.items()}
+
+
+def render(e) -> str:
+    """An expression, in the words `parse` reads. parse(render(e)) gives e back."""
+    if isinstance(e, Lit):
+        return render_value(e.value)
+    if isinstance(e, Name):
+        return e.id
+    if isinstance(e, ListLit):
+        if not e.items:
+            return "the empty list"
+        items = [_operand(i) for i in e.items]
+        if len(items) == 1:
+            return f"the list of {items[0]}"
+        return f"the list of {', '.join(items[:-1])} and {items[-1]}"
+    if isinstance(e, Call):
+        if e.fn in SPOKEN:
+            return f"the {SPOKEN[e.fn]} of {_operand(e.args[0])}"
+        return f"{e.fn} of " + " and ".join(_operand(a, in_call=True) for a in e.args)
+    if isinstance(e, Bin):
+        if e.op in WORDS:
+            return f"{_operand(e.left)} is {WORDS[e.op]} {_operand(e.right)}"
+        return f"{_operand(e.left)} {ARITHMETIC[e.op]} {_operand(e.right)}"
+    raise TypeError(f"cannot render {e!r}")
+
+
+def _operand(e, in_call: bool = False) -> str:
+    wrap = isinstance(e, Bin) or (in_call and isinstance(e, (ListLit, Call)))
+    wrap = wrap or (isinstance(e, Lit) and _num(e.value) and e.value < 0)
+    return f"({render(e)})" if wrap else render(e)
+
+
+def _num(v) -> bool:
+    return isinstance(v, (int, float)) and not isinstance(v, bool)
+
+
+def render_value(v) -> str:
+    if isinstance(v, bool):
+        return "true" if v else "false"
+    if isinstance(v, str):
+        return f'"{v}"'
+    if isinstance(v, tuple):
+        return render(ListLit(tuple(Lit(x) for x in v)))
+    if _num(v) and v < 0:
+        return f"negative {-v}"
+    return str(v)
+
+
+def values(text: str) -> tuple:
+    """Arguments typed by a person, in the language: `200`, `the list of 1 and 2`, ..."""
+    s = Sentence(1, 0, lex(text, 1))
+    found = []
+    while s.i < len(s.tokens):
+        found.append(literal(s))
+        if s.i < len(s.tokens):
+            s.word("and") if s.is_word("and") else s.punct(",")
+    return tuple(found)

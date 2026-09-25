@@ -82,7 +82,7 @@ Key design decisions:
 │   └── LICENSE               # MIT — everything except pro-commands/ (see notice at top of file)
 ├── .github/workflows/ci.yml           # ruff + pytest (3.11-3.13) + docker build + `languages`
 │   #   `languages` job: ezr's 29-suite gate, the forge (81), the rhyming corpus (35),
-│   #   the Java runtime (98), Rime (74) and Accord (80) — the suites the other jobs
+│   #   the Java runtime (98), Rime (74) and Accord (74) — the suites the other jobs
 │   #   never touch. Each suite step carries `if: !cancelled()`, so one red suite fails
 │   #   the job without skipping the others (it used to hide 288 assertions when it tripped).
 ├── .github/workflows/deploy-pages.yml # publishes mastery-system/ to GitHub Pages on push to main
@@ -120,12 +120,12 @@ Key design decisions:
 │   ├── realm.py              # the matrix, the laws, the corpus, the CLI
 │   ├── realm_test.py         # the gate: 74 assertions
 │   └── LANGUAGE.md           # the spec — start here
-├── accord/                   # Accord — one program, two surfaces that must agree (see below)
-│   ├── core.py               # the tree, the checker (R1–R5), lowering to TAC, the TAC interpreter
-│   ├── emit.py prose.py      # two independent front ends; neither imports the other
-│   ├── accord.py             # `agree` and `tac` commands
-│   ├── accord_test.py        # the gate: 80 assertions
-│   ├── examples/             # each program as a .emit / .prose pair
+├── accord/                   # Accord — one language a person and an AI write one program in (see below)
+│   ├── parse.py              # the one syntax: reads Accord, and writes expressions/values back in it
+│   ├── core.py               # tree, checker (R1–R5), TAC, interpreter, verify (Checks, R6, trust, floor)
+│   ├── accord.py             # `check`, `run`, `tac`; `explain` words each verdict in the language
+│   ├── accord_test.py        # the gate: 74 assertions
+│   ├── examples/             # classify, fact, total, reverse (.accord)
 │   └── LANGUAGE.md           # the spec — start here
 ├── README.md
 └── .gitignore
@@ -481,36 +481,45 @@ cover ReVision. Run whichever matches what you touched.
 
 ## Accord (`accord/`) — a fourth project in the same repo
 
-`accord/` is **not part of ReVision, EZR or Rime**. Each program is
-written twice: in **Emit**, a dense surface an AI can produce without
-ambiguity, and in **Prose**, controlled English a person can check. It
-is accepted only if both front ends build the same tree, the checker
-passes it, both lower to the same TAC (SHA-256), and every example runs
-on that TAC and holds. Its trust rules are inherited from
-`ezr/SEMANTICS.md` (literal 120, chain `min`, lazy [IF-T]) and cited
-there, not re-derived. It imports nothing from `ezr/`.
+`accord/` is **not part of ReVision, EZR or Rime**. It is **one
+language in which a person and an AI write one program together**. The
+person writes the header, the trust given to each input, and the
+Checks. The AI writes the body. The body is a claim, and the Checks are
+its witnesses: a program runs only if every Check holds (value and
+trust), the Checks try every decision both ways and every ordering
+comparison at its edge (R6), and they earn trust of at least 128. Each
+refusal quotes the program back in Accord. The trust rules come from
+`ezr/SEMANTICS.md`, cited, not re-derived: literal 120, chain `min`,
+lazy [IF-T], examples earning trust (§4.2: 1 → 120, 2 → 183, 3 → 217),
+the answer cap (§4.3), and the 128 floor. It imports nothing from `ezr/`.
 
-- **Verify it:** `cd accord && python3 accord_test.py` — 80 assertions,
-  a plain script with its own tally, run by CI's `languages` job.
-- **Every rule must be seen to refuse.** Each of R1–R5 has a test that
-  must be rejected, not only examples that pass. A gate that could not
-  fail has already happened once here: a test that built the same tree
-  twice and compared the hashes.
-- **Keep `emit.py` and `prose.py` independent.** They share only
-  `core.py`'s tree types, and the gate asserts neither imports the
-  other. A defect in `core.py` is common to both surfaces, so the
-  agreement check cannot see it. That is why the checker and the
-  interpreter have their own refusal tests.
+- **Verify it:** `cd accord && python3 accord_test.py` — 74 assertions,
+  a plain script with its own tally, run by CI's `languages` job. Try a
+  program with `python3 accord.py check examples/classify.accord`.
+- **One syntax. Do not bring back a second surface.** v0.1–v0.3 made you
+  write every program twice (Emit and Prose) and compared them. That is
+  two languages, the thing Accord exists to avoid, and two versions
+  written by one author agree and prove nothing. R6 now catches what the
+  second version really caught (a `>=`/`>` slip at an untested edge) by
+  asking the person to add the Check. `accord/LANGUAGE.md` says so.
+- **Every rule must be seen to refuse.** Each of R1–R6, the floor and the
+  answer cap has a test that must be rejected, not only examples that
+  pass. A gate that could not fail has already happened once here: a
+  test that built the same tree twice and compared the hashes.
+- **`core.py` never imports `parse.py`.** The gate asserts it. The
+  semantics must not depend on the syntax.
+- **R6 counts what a Check executes, including recursive calls.** A Check
+  on `[1, 2, 3]` reaches the empty-list case on its way down, so that
+  case counts as tried. Do not "fix" that into per-Check-only coverage.
 - **Lists follow ezr's `CORE.md`, not its statement surface.** A list
-  carries one trust (the `min` of its elements), and `head`/`tail` answer
-  with it, so `head(tail([a@100, b@120]))` is 100. ezr's "index reads the
-  element's own trust" landmine belongs to `runtime.py`, where elements
-  are tracked one by one. Do not "fix" Accord toward it without adding
-  indexing and deciding that deliberately; `accord/LANGUAGE.md` records
-  the choice, and a test pins it. The one deliberate departure is `+` on
-  two lists, which joins them: ezr's `Eval.java` refuses it, while Accord
-  extends ezr's own Text-concatenation rule. That makes it an Accord rule,
-  labelled as one, and not a claim about ezr.
+  carries one trust (the `min` of its elements), and first/rest answer
+  with it, so the first of the rest of `[a@100, b@120]` is 100. ezr's
+  "index reads the element's own trust" landmine belongs to `runtime.py`.
+  Do not "fix" Accord toward it without adding indexing and deciding that
+  deliberately. The one deliberate departure is `plus` on two lists,
+  which joins them: ezr's `Eval.java` refuses it, and Accord extends
+  ezr's own Text-concatenation rule. That makes it an Accord rule,
+  labelled as one.
 - **Mutation-check with `PYTHONDONTWRITEBYTECODE=1`.** When checking the
   gate by sabotaging `core.py` in a copy, clear `__pycache__` first. A
   same-size edit (`min(` → `max(`) can reuse stale bytecode and read as

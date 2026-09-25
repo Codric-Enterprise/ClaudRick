@@ -1,4 +1,5 @@
-# A list is taken apart with head and tail; its length is the measure that shrinks.
+# You write the header, the trust you give each input, and the Checks.
+# The AI writes the body. It is a claim until your Checks witness it.
 To total given xs, answering an Int:
   xs is a List of Int, trusted 256 of 256.
   It shrinks by xs.

@@ -1,14 +1,19 @@
-"""Accord core: the tree both surfaces must produce, the checker, TAC, and its interpreter."""
+"""Accord core: the tree, the checker, TAC, its interpreter, and how Checks earn trust."""
 
 from __future__ import annotations
 
 import hashlib
+import math
 from dataclasses import dataclass, field
+from fractions import Fraction
 
 CERTAIN = 256
 LITERAL = 120  # SEMANTICS.md 3.1 [LIT]: a written value is Confident, not Certain
 INT_BOUND = 2**53  # past this, a double-backed runtime and an int-backed one disagree
 DEPTH_LIMIT = 256  # an implementation limit, reported as Z rather than a host stack overflow
+EXECUTE_FLOOR = 128  # SEMANTICS.md 0 / ir.py E_EXECUTE_FLOOR: nothing runs below it
+ORDERING = ("<", ">", "<=", ">=")
+COMPARISONS = ("==", "!=", *ORDERING)
 TYPES = ("Int", "Float", "Text", "Bool")
 PREDICATES = ("not_void",)
 BUILTINS = ("len", "head", "tail")  # ezr CORE.md 1.2, less `show`: Accord has no output
@@ -227,7 +232,7 @@ def _calls(node, name) -> bool:
 # ── lowering to TAC ──────────────────────────────────────────────────────────
 
 
-def lower(fn: Function) -> list[tuple]:
+def lower(fn: Function, notes: dict | None = None) -> list[tuple]:
     out: list[tuple] = [("fn", fn.name, fn.returns)]
     out += [("param", p.name, p.type, p.trust) for p in fn.params]
     out.append(("measure", fn.measure))
@@ -245,6 +250,8 @@ def lower(fn: Function) -> list[tuple]:
         if isinstance(e, Bin):
             a, b = expr(e.left), expr(e.right)
             t = temp()
+            if notes is not None:
+                notes[len(out)] = e
             out.append(("bin", t, e.op, a, b))
         elif isinstance(e, Call):
             args = tuple(expr(a) for a in e.args)
@@ -275,6 +282,8 @@ def lower(fn: Function) -> list[tuple]:
                 out.append(("ret", expr(s.expr)))
             elif isinstance(s, If):
                 c, lt, le = expr(s.cond), label(), label()
+                if notes is not None:
+                    notes[len(out)] = s.cond
                 out.append(("br", c, lt, le))
                 out.append(("label", lt))
                 block(s.then)
@@ -411,7 +420,11 @@ def _size(value) -> int:
 
 
 def run(
-    tac: list[tuple], args: tuple[Thread, ...], _measure: int | None = None, _depth: int = 0
+    tac: list[tuple],
+    args: tuple[Thread, ...],
+    _measure: int | None = None,
+    _depth: int = 0,
+    trace: dict | None = None,
 ) -> Thread:
     name = tac[0][1]
     if _depth >= DEPTH_LIMIT:
@@ -440,7 +453,12 @@ def run(
         elif op == "load":
             temps[ins[1]] = env.get(ins[2]) or Z(f"unbound: {ins[2]}")
         elif op == "bin":
-            temps[ins[1]] = _binop(ins[2], temps[ins[3]], temps[ins[4]])
+            left, right = temps[ins[3]], temps[ins[4]]
+            temps[ins[1]] = result = _binop(ins[2], left, right)
+            if trace is not None and ins[2] in COMPARISONS and not result.void:
+                trace.setdefault(("cmp", pc - 1), set()).add(result.value)
+                if ins[2] in ORDERING and equal(left.value, right.value):
+                    trace[("edge", pc - 1)] = True
         elif op == "list":
             items = [temps[t] for t in ins[2]]
             void = next((i for i in items if i.void), None)
@@ -454,7 +472,7 @@ def run(
         elif op == "call":
             call_args = tuple(temps[t] for t in ins[3])
             here = _size(env[measure].value) if measure is not None else None
-            temps[ins[1]] = run(tac, call_args, here, _depth + 1)
+            temps[ins[1]] = run(tac, call_args, here, _depth + 1, trace)
         elif op == "require":
             if env[ins[2]].void:
                 return env[ins[2]]
@@ -468,6 +486,8 @@ def run(
             if not isinstance(c.value, bool):
                 return Z(f"misbound: condition is {c.value!r}, not a Bool")
             path = min(path, c.trust)
+            if trace is not None:
+                trace.setdefault(("br", pc - 1), set()).add(c.value)
             pc = labels[ins[2]] + 1 if c.value else labels[ins[3]] + 1
         elif op == "ret":
             r = temps[ins[1]]
@@ -485,10 +505,89 @@ class Verdict:
     failed: list = field(default_factory=list)
 
 
-def run_examples(fn: Function, tac: list[tuple]) -> Verdict:
+def run_examples(fn: Function, tac: list[tuple], trace: dict | None = None) -> Verdict:
     verdict = Verdict()
     for ex in fn.examples:
-        got = run(tac, tuple(Thread(a, LITERAL) for a in ex.args))
+        got = run(tac, tuple(Thread(a, LITERAL) for a in ex.args), trace=trace)
         ok = not got.void and equal(got.value, ex.value) and got.trust == ex.trust
         (verdict.passed if ok else verdict.failed).append((ex, got))
     return verdict
+
+
+# ── the bridge: the body is a claim, the Checks are its witnesses ────────────
+
+
+def earned(passed: int, total: int) -> int:
+    """SEMANTICS.md 4.2 [EXAMPLE]: each passing Check corroborates at intake strength."""
+    if passed == 0 or total == 0:
+        return 0
+    doubt = Fraction(CERTAIN - LITERAL, CERTAIN) ** passed
+    return min(math.floor(CERTAIN * (1 - doubt) * Fraction(passed, total)), CERTAIN - 1)
+
+
+def coverage(tac: list[tuple], trace: dict) -> list[tuple]:
+    """Accord's own rule: every decision seen both ways, every ordering tried at its edge."""
+    produced_by_comparison = {ins[1] for ins in tac if ins[0] == "bin" and ins[2] in COMPARISONS}
+    gaps = []
+    for i, ins in enumerate(tac):
+        if ins[0] == "bin" and ins[2] in COMPARISONS:
+            for outcome in (True, False):
+                if outcome not in trace.get(("cmp", i), set()):
+                    gaps.append(("never", i, outcome))
+            if ins[2] in ORDERING and ("edge", i) not in trace:
+                gaps.append(("edge", i, None))
+        elif ins[0] == "br" and ins[1] not in produced_by_comparison:
+            for outcome in (True, False):
+                if outcome not in trace.get(("br", i), set()):
+                    gaps.append(("never", i, outcome))
+    return gaps
+
+
+@dataclass
+class Report:
+    stage: str
+    fn: Function | None = None
+    tac: list = field(default_factory=list)
+    notes: dict = field(default_factory=dict)
+    errors: list = field(default_factory=list)
+    failed: list = field(default_factory=list)
+    gaps: list = field(default_factory=list)
+    trust: int = 0
+
+    @property
+    def accepted(self) -> bool:
+        return self.stage == "accepted"
+
+
+def verify(fn: Function) -> Report:
+    """Checker, then the Checks, then their coverage, then the floor. First refusal wins."""
+    report = Report(stage="check", fn=fn)
+    report.errors = check(fn)
+    if report.errors:
+        return report
+    report.tac = lower(fn, report.notes)
+    trace: dict = {}
+    verdict = run_examples(fn, report.tac, trace)
+    report.trust = earned(len(verdict.passed), len(fn.examples))
+    if verdict.failed:
+        report.stage, report.failed = "checks", verdict.failed
+        return report
+    report.gaps = coverage(report.tac, trace)
+    if report.gaps:
+        report.stage = "coverage"
+        return report
+    if report.trust < EXECUTE_FLOOR:
+        report.stage = "floor"
+        return report
+    report.stage = "accepted"
+    return report
+
+
+def apply(report: Report, args: tuple, trust: int = LITERAL) -> Thread:
+    """SEMANTICS.md 4.3 [APP]: an answer is never more trusted than the function that gave it."""
+    if not report.accepted:
+        return Z(
+            f"unbound: {report.fn.name if report.fn else 'program'} was refused at {report.stage}"
+        )
+    got = run(report.tac, tuple(Thread(a, trust) for a in args))
+    return got if got.void else Thread(got.value, min(got.trust, report.trust), got.reason)
