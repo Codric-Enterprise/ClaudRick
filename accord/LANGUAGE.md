@@ -374,6 +374,7 @@ by asking you the question.
 | `fill.py` | the headless loop: your part, Claude's body, Accord's verdict; the only code that calls the API |
 | `accord_test.py` | the gate: a plain script that reports its own tally, like `realm_test.py` |
 | `finish.py` | the gate and everything around it, in one command, as CI runs it |
+| `README.md` | standalone usage: copy this directory out, nothing else required |
 | `mutants.py` | the deliberate bugs the gate must catch |
 | `examples/` | `classify`, `fact`, `total`, `reverse`, `leap` (`and`/`or`/`modulo`), `odd` (`not`); `stats`, a two-function program; and `clamp.intent`/`leap.intent`, a person's part awaiting `fill` |
 

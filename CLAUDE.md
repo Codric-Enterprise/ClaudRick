@@ -132,6 +132,8 @@ Key design decisions:
 │   ├── examples/             # classify, fact, total, reverse, leap, odd, stats (2); clamp+leap.intent
 │   ├── GRAMMAR.ebnf          # the grammar; the gate holds it to parse.py's reserved words and matches
 │   ├── SEMANTICS.md          # every rule, its source (ezr § or Accord's own) and the function doing it
+│   ├── ruff.toml             # this directory's own lint config, so it lints standalone too
+│   ├── README.md             # standalone usage: copy this directory out, nothing else required
 │   └── LANGUAGE.md           # the spec — start here
 ├── README.md
 └── .gitignore
@@ -499,6 +501,14 @@ refusal quotes the program back in Accord. The trust rules come from
 `ezr/SEMANTICS.md`, cited, not re-derived: literal 120, chain `min`,
 lazy [IF-T], examples earning trust (§4.2: 1 → 120, 2 → 183, 3 → 217),
 the answer cap (§4.3), and the 128 floor. It imports nothing from `ezr/`.
+
+- **It runs standalone: copy `accord/` out on its own, nothing else needed.**
+  Every module imports only the standard library and its own siblings; `ezr` is
+  cited in comments and `SEMANTICS.md` as where a rule's semantics came from, never
+  imported. `ruff.toml` gives the directory its own lint config so `finish.py`'s
+  lint step works with no `pyproject.toml` above it either. Verified: a copy of
+  `accord/` outside this repo, with the environment scrubbed (`env -i`), passes
+  `finish.py` end to end. `README.md` says so for a person opening the directory.
 
 - **Verify it:** `cd accord && python3 accord_test.py` — 186 assertions,
   a plain script with its own tally. **Before calling a change done, run
