@@ -68,13 +68,17 @@ def step_no_sdk() -> tuple[bool, str]:
 
 
 def step_counts(n: int) -> tuple[bool, str]:
+    # ROOT's own docs (CLAUDE.md, ci.yml) exist only when accord/ sits inside that monorepo.
+    # accord/ is otherwise standalone (stdlib only, no import outside this directory), so a
+    # copy of just this directory checks only LANGUAGE.md and is not missing anything.
+    checked = [(path, pattern) for path, pattern in COUNTS if path.exists()]
     wrong = []
-    for path, pattern in COUNTS:
+    for path, pattern in checked:
         text = path.read_text()
         if text.count(pattern.format(n=n)) != 1:
             stated = re.findall(re.escape(pattern).replace(r"\{n\}", r"(\d+)"), text)
             wrong.append(f"{path.relative_to(ROOT)} says {stated or 'nothing'}")
-    return not wrong, "; ".join(wrong) or f"{len(COUNTS)} places say {n}"
+    return not wrong, "; ".join(wrong) or f"{len(checked)} places say {n}"
 
 
 def step_examples() -> tuple[bool, str]:
