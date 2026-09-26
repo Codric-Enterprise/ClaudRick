@@ -151,6 +151,8 @@ e = parse_error(src("classify").replace("a Float, trusted 256 of 256, equal", "a
 ok(e.startswith("R1"), "a let without trust is refused")
 e = parse_error(src("classify").replace("  signal is a Float, trusted 100 of 256.\n", ""))
 ok(e != "", "an undeclared parameter is refused")
+errors = check(parse.parse(src("classify").replace(", trusted 100.\n", ", trusted 300.\n", 1)))
+ok(any(x.startswith("R1: a Check trust") for x in errors), "a Check trust past 256 is refused")
 
 # ── R2: a parameter is checked before it is used ────────────────────────────
 errors = check(parse.parse(src("classify").replace("  Make sure signal is not void.\n", "")))
@@ -177,6 +179,17 @@ ok(got.void and "Int bound" in got.reason, "19! overflows the bound and is refus
 ok(call(src("fact"), 18).value == 6402373705728000, "18! is inside the bound and exact")
 got = call(src("classify"), "loud")
 ok(got.void and "misbound" in got.reason, "Text where a Float is declared is refused")
+square = program(
+    "To square given x, answering a Float:",
+    "x is a Float, trusted 256 of 256.",
+    "It never repeats.",
+    "Make sure x is not void.",
+    "Answer x times x.",
+)
+ok(call(square, 1e200).value == float("inf"),
+   "unlike Int, Float has no bound: it overflows to infinity, not refused")  # fmt: skip
+nan = call(square, float("nan")).value
+ok(nan != nan, "NaN propagates rather than being refused (IEEE-754, as Java's double already is)")
 
 # ── R4: no Checks, no program ───────────────────────────────────────────────
 bare = "\n".join(x for x in src("fact").splitlines() if not x.startswith("Check"))

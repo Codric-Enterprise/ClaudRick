@@ -156,6 +156,8 @@ def check(fn: Function, known: dict | None = None) -> list[str]:
             errors.append(
                 f"R4: example gives {len(ex.args)} args, {fn.name} takes {len(fn.params)}"
             )
+        if not 0 <= ex.trust <= CERTAIN:
+            errors.append(f"R1: a Check trust {ex.trust} is outside 0..256")
 
     _check_block(fn, known or {}, fn.body, set(names), set(), errors)
     return errors

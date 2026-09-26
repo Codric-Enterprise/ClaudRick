@@ -10,7 +10,7 @@ earned enough trust. Each refusal quotes your own program back to you.
 
 ```
 cd accord
-python3 accord_test.py                                  # the gate: 186 assertions
+python3 accord_test.py                                  # the gate: 189 assertions
 python3 finish.py                                       # the gate and everything around it
 python3 accord.py check examples/classify.accord        # verify a program
 python3 accord.py run examples/classify.accord 200      # run it, if accepted
