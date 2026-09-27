@@ -22,6 +22,7 @@ MUTANTS = (
     ('core.py', '        if y == 0:\n            return Z("misbound: modulo by zero")\n', '', 'modulo by zero unguarded'),
     ('core.py', 'if not (_whole(x) and _whole(y)):', 'if not (_num(x) and _num(y)):', 'modulo on floats'),
     ('core.py', 'return got if got.void else Thread(got.value, min(got.trust, cap), got.reason)', 'return got', 'cap disabled'),
+    ('core.py', '        if not 0 <= ex.trust <= CERTAIN:\n            errors.append(f"R1: a Check trust {ex.trust} is outside 0..256")\n', '', 'Check trust out of range not refused'),
     ('parse.py', 'left = Bin("or", left, conjunction(s))', 'left = Bin("and", left, conjunction(s))', 'or read as and'),
     ('parse.py', '        return Not(negation(s))\n    return comparison(s)', '        return Not(comparison(s))\n    return comparison(s)', 'not not'),
     ('parse.py', '    left = conjunction(s)\n    while s.is_word("or")', '    left = negation(s)\n    while s.is_word("or")', 'no and level'),

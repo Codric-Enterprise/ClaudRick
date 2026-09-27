@@ -28,6 +28,16 @@ Types are closed: `Int`, `Float`, `Text`, `Bool`, and `List of T`.
 A `Bool` is never a number, at any depth: `true` is not `1`, and `[1]`
 is not `[true]` (`equal`).
 
+`Float` carries no such bound: it is IEEE-754 double, and an operation
+that overflows it answers `inf` or `nan` rather than being refused
+(**Accord**). This is not the same gap R3 closes for `Int`: Python's
+`float` and Java's `double` in `5-runtime-java/` are both IEEE-754
+doubles already, so a `Float` computation that reaches `inf` or `nan`
+gives the same answer on both runtimes — there is no disagreement to
+guard against. `equal` follows IEEE-754 too: `nan` is not `equal` to
+itself. Pinned in `accord_test.py` so a future bound on `Float` is a
+deliberate decision, not a drift.
+
 ## 2. Trust
 
 | Rule | Meaning | Source | In `core.py` |
