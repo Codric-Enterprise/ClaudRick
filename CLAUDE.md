@@ -82,9 +82,10 @@ Key design decisions:
 │   └── LICENSE               # MIT — everything except pro-commands/ (see notice at top of file)
 ├── .github/workflows/ci.yml           # ruff + pytest (3.11-3.13) + docker build + `languages`
 │   #   `languages` job: ezr's 29-suite gate, the forge (81), the rhyming corpus (35),
-│   #   the Java runtime (98), Rime (74) and Accord (189) — the suites the other jobs
-│   #   never touch. Each suite step carries `if: !cancelled()`, so one red suite fails
-│   #   the job without skipping the others (it used to hide 288 assertions when it tripped).
+│   #   the Java runtime (98), Rime (74) and Accord (189) — plus accord-mcp's end-to-end
+│   #   stdio test — the suites the other jobs never touch. Each suite step carries
+│   #   `if: !cancelled()`, so one red suite fails the job without skipping the others
+│   #   (it used to hide 288 assertions when it tripped).
 ├── .github/workflows/deploy-pages.yml # publishes mastery-system/ to GitHub Pages on push to main
 ├── .github/workflows/publish-image.yml # GHCR image publish — v*.*.* tag or manual; dry_run defaults true
 ├── .github/workflows/publish-npm.yml  # power-pack/ -> npm as `slash-pack`; manual only, needs NPM_TOKEN
@@ -135,6 +136,11 @@ Key design decisions:
 │   ├── ruff.toml             # this directory's own lint config, so it lints standalone too
 │   ├── README.md             # standalone usage: copy this directory out, nothing else required
 │   └── LANGUAGE.md           # the spec — start here
+├── accord-mcp/                # accord_check/run/tac/build as MCP tools over accord/, nothing else
+│   ├── server.py              # imports accord/'s own modules by path; fill.py is not exposed
+│   ├── test_server.py         # the gate: server.py as a real subprocess, driven over stdio
+│   ├── pyproject.toml         # its own deps (mcp, pydantic) and matching ruff settings
+│   └── README.md              # tools, why fill is excluded, how to run and register it
 ├── README.md
 └── .gitignore
 ```
@@ -591,6 +597,18 @@ the answer cap (§4.3), and the 128 floor. It imports nothing from `ezr/`.
 Unlike `ezr/` and `realm/`, `accord/` is **not** in ruff's
 `extend-exclude`. It is ordinary Python and passes `ruff check` and
 `ruff format --check` with the rest of the repo.
+
+**`accord-mcp/`** is a sibling directory, not part of `accord/` itself:
+an MCP server exposing `accord_check`/`accord_run`/`accord_tac`/
+`accord_build` as tools, over `accord/`'s own modules (imported by
+path, never reimplemented). It is the one place in the repo that
+depends on the `mcp` SDK — `accord/` stays dependency-free, per its own
+README. `fill` is deliberately not exposed as a tool: it costs money
+and calls the live API, which does not belong behind a call an MCP
+client can make without warning. Verify it with
+`cd accord-mcp && pip install -e . && python3 test_server.py` — a real
+subprocess driven over stdio, not an import test; CI's `languages` job
+runs the same thing.
 
 ## Two gotchas that cost real time
 
