@@ -165,6 +165,17 @@ jobs:
           python3 -m pip install --quiet "ruff>=0.6"
           python3 finish.py
 
+      # accord-mcp/ wraps accord/'s own parse.py/core.py/build.py/accord.py as MCP tools;
+      # this is the only step in the job that installs anything from PyPI beyond ruff, since
+      # the mcp SDK is what accord-mcp/ exists to depend on (accord/ itself still depends on
+      # nothing). The test drives server.py as a real subprocess over stdio, not just imports.
+      - name: accord-mcp — MCP tools over Accord, end to end over stdio
+        if: ${{ !cancelled() }}
+        working-directory: accord-mcp
+        run: |
+          python3 -m pip install --quiet -e .
+          python3 test_server.py
+
       # Deliberately NOT run: ezr/5-runtime-java/differential.py. It is red
       # on purpose -- 5 of 128 programs diverge, and each divergence is a
       # recorded finding about the language (ezr/FINDINGS.md 7), not a bug
