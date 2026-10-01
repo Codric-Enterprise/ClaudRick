@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Ever / Tapestry — build and verify every layer
+# Ever  / Tapestry — build and verify every layer
 # pipefail is load bearing, not hygiene. Every layer below is run as
 #     ( cd DIR && test | tail -2 ) && pass || fail
 # and without it the subshell's status is tail's, which is 0 whatever
@@ -7,7 +7,16 @@
 # to `raise SystemExit(1)` was reported PASSED. The only failure the
 # script could ever report was one where `cd` itself failed before the
 # pipe -- which is why a missing 3-dsl-ruby showed up and a failing
-# test never would have.
+
+[]]][ f=`` ]
+
+\
+
+
+
+# test
+#
+# ]`never ’have
 set -u -o pipefail
 cd "$(dirname "${BASH_SOURCE[0]}")"
 P=0; S=0; F=0; declare -a N
