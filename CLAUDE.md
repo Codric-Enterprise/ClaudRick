@@ -52,7 +52,10 @@ Key design decisions:
 │   ├── test_config.py
 │   ├── test_anthropic_client.py   # mocks urllib.request.urlopen
 │   ├── test_ratelimit.py          # limiter unit tests (monkeypatched clock)
-│   └── test_server.py             # runs a live server on port 0, fake client
+│   ├── test_server.py             # runs a live server on port 0, fake client
+│   └── corpora/               # live evaluation harnesses (Node.js, not pytest — see below)
+│       ├── analyzer/          # 10 .docx fixtures + ground-truth.json + grade.js
+│       └── tools/              # Enhance/Translate/Jargonary inputs.json + grade-tools.js
 ├── .claude/                  # checked-in Claude Code tooling (see "Claude tooling" below)
 │   ├── settings.json         # permissions allowlist + PreToolUse/PostToolUse/SessionStart hooks
 │   ├── hooks/session-start.sh     # SessionStart: loads .env, installs ReVision dev deps, verifies ezr's toolchain
@@ -198,57 +201,18 @@ Uses a **src layout**: importable code is under `src/`; `pyproject.toml` sets
 > interpreter's site-packages. If `python -m pytest` says "No module named
 > pytest", call `pytest` / `ruff` directly.
 
-### EZR's loop (separate from ReVision's — see the EZR section)
-
-```bash
-cd ezr && python3 tests/run_all.py     # the gate ezr/CLAUDE.md names: 29 suites
-cd ezr && ./run.sh                     # 22 layers, a superset in breadth; ~minutes
-cd ezr/2-interpreter-python && python3 syntax_test.py    # one layer, seconds
-cd ezr/2-interpreter-python && python3 ezrun_test.py     # the runner + [EXAMPLE]/[ANCHOR]
-cd ezr/7-forge && python3 forge_test.py                  # 81 assertions; not in run.sh
-cd ezr/7-forge && python3 quantum_test.py                # 35 assertions; not in run.sh
-cd ezr/5-runtime-java && ./build.sh \
-  && env -u JAVA_TOOL_OPTIONS java -cp out com.codric.ezr.RuntimeTest   # 98; not in run.sh
-cd ezr/5-runtime-java && python3 differential.py         # RED, and deliberately so
-```
-
-`run.sh` and `run_all.py` overlap but neither contains the other, and
-**neither drives `7-forge/` or `5-runtime-java/`** — both still pass their
-own suites (81 + 35 and 98 assertions). Locally, nothing runs them for
-you; in CI the `languages` job in `ci.yml` does, along with Rime's gate.
-
-> **`tests/algebra_parity.py` skips Java unless the Java runtime is
-> built.** `java_vectors()` requires both `which javac` *and*
-> `5-runtime-java/out/` to exist, and `out/` is build output. So on a
-> fresh checkout the Java arm skips, `run_all.py` still prints
-> `29 passed 0 skipped 0 failed`, and a quarter of the parity check has
-> silently vanished. Measured here: `3 agreed, 1 skipped` before
-> `5-runtime-java/build.sh`, `4 agreed, 0 skipped` after. The `languages`
-> job builds the runtime first for exactly this reason and then asserts
-> `0 skipped` separately, because the 29/29 line cannot show it.
-
-`differential.py` is red on purpose: 128 programs, 123 agreed, **5
-diverged**. It read 27 diverged for as long as `syntax.py`'s `eval_ast`
-had no case for `let ... in`, list literals, or the `len`/`head`/`tail`/
-`show` builtins — present in the Java runtime and the forge's `CORE.md`,
-absent from the Python side purely because nobody had written them.
-That gap is closed (`ezr/FINDINGS.md` §7.11): `eval_ast` now implements
-all four, ported from `Eval.java` line for line, and all four
-`.ezr` example files run under `ezrun.py` directly with no Java build.
-The 5 that remain are genuine findings, not missing features — a
-numeric-precision limit past 2^53 (Python's arbitrary-precision `int`
-against Java's `double`-backed value), two arity/unbound checks Java
-makes at compile time and Python defers to runtime, and two grammar
-questions (`GRAMMAR.ebnf`'s settled `trailing_comma = False` and
-`trailing_expression = False`) where v4.10 permits what the forge's
-doctrine forbids. Each is a finding about the language, not a bug in
-either runner — do not "fix" one by editing it to match the other.
-
-`run.sh` has no flag to select a layer — run that layer's own test file
-directly. Each `*_test.py` is a plain script that reports its own tally and
-calls `raise SystemExit`, not a pytest module. `testpaths = ["tests"]`, so
-`pytest` never looks under `ezr/`; pointing it there deliberately does not
-just collect nothing, it dies with `INTERNALERROR> SystemExit: 0`.
+- **Live evaluation corpora** (not run by `pytest` or CI — no `test_*.py` in
+  `tests/corpora/`): batch inputs + graders that score real Claude output
+  against ground truth for all four tools. Needs a running server with a real
+  API key:
+  ```bash
+  ANTHROPIC_API_KEY=sk-ant-... revision &
+  node tests/corpora/analyzer/grade.js http://localhost:8000       # Fine Print Analyzer
+  node tests/corpora/tools/grade-tools.js http://localhost:8000    # Enhance/Translate/Jargonary
+  node tests/corpora/tools/grade-tools.js http://localhost:8000 jargonary  # one tool only
+  ```
+  See `tests/corpora/README.md` and the two `evaluation-report.md` files for
+  rubric definitions and static (no-key) evaluation notes.
 
 ## Conventions
 
