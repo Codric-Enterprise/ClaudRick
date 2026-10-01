@@ -150,6 +150,32 @@ jobs:
         working-directory: realm
         run: python3 realm_test.py
 
+      # accord/ IS linted by the test job (it is not in extend-exclude), but
+      # its gate is a plain script like realm's, so pytest never runs it.
+      # finish.py is the gate and everything around it: the gate again with the
+      # anthropic SDK unimportable, every doc that states the gate's size
+      # checked against its tally, every example built to Python and run
+      # standalone, every mutant in mutants.py caught, and ruff. Its lint step
+      # fails rather than skips when ruff is absent, so this job installs it
+      # with the same floor pyproject.toml's dev extra pins.
+      - name: Accord — one language, Checks decide trust (189 assertions)
+        if: ${{ !cancelled() }}
+        working-directory: accord
+        run: |
+          python3 -m pip install --quiet "ruff>=0.6"
+          python3 finish.py
+
+      # accord-mcp/ wraps accord/'s own parse.py/core.py/build.py/accord.py as MCP tools;
+      # this is the only step in the job that installs anything from PyPI beyond ruff, since
+      # the mcp SDK is what accord-mcp/ exists to depend on (accord/ itself still depends on
+      # nothing). The test drives server.py as a real subprocess over stdio, not just imports.
+      - name: accord-mcp — MCP tools over Accord, end to end over stdio
+        if: ${{ !cancelled() }}
+        working-directory: accord-mcp
+        run: |
+          python3 -m pip install --quiet -e .
+          python3 test_server.py
+
       # Deliberately NOT run: ezr/5-runtime-java/differential.py. It is red
       # on purpose -- 5 of 128 programs diverge, and each divergence is a
       # recorded finding about the language (ezr/FINDINGS.md 7), not a bug

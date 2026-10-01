@@ -82,9 +82,10 @@ Key design decisions:
 │   └── LICENSE               # MIT — everything except pro-commands/ (see notice at top of file)
 ├── .github/workflows/ci.yml           # ruff + pytest (3.11-3.13) + docker build + `languages`
 │   #   `languages` job: ezr's 29-suite gate, the forge (81), the rhyming corpus (35),
-│   #   the Java runtime (98) and Rime (74) — the suites the other jobs never touch.
-│   #   Each suite step carries `if: !cancelled()`, so one red suite fails the job
-│   #   without skipping the other five (it used to hide 288 assertions when it tripped).
+│   #   the Java runtime (98), Rime (74) and Accord (189) — plus accord-mcp's end-to-end
+│   #   stdio test — the suites the other jobs never touch. Each suite step carries
+│   #   `if: !cancelled()`, so one red suite fails the job without skipping the others
+│   #   (it used to hide 288 assertions when it tripped).
 ├── .github/workflows/deploy-pages.yml # publishes mastery-system/ to GitHub Pages on push to main
 ├── .github/workflows/publish-image.yml # GHCR image publish — v*.*.* tag or manual; dry_run defaults true
 ├── .github/workflows/publish-npm.yml  # power-pack/ -> npm as `slash-pack`; manual only, needs NPM_TOKEN
@@ -120,6 +121,26 @@ Key design decisions:
 │   ├── realm.py              # the matrix, the laws, the corpus, the CLI
 │   ├── realm_test.py         # the gate: 74 assertions
 │   └── LANGUAGE.md           # the spec — start here
+├── accord/                   # Accord — one language a person and an AI write one program in (see below)
+│   ├── parse.py              # the one syntax: reads Accord, and writes expressions/values back in it
+│   ├── core.py               # tree, checker (R1–R5), TAC, interpreter, verify (Checks, R6, trust, floor)
+│   ├── accord.py             # `check`, `run`, `tac`, `build`, `fill`; `explain` words each verdict
+│   ├── fill.py               # headless: person's intent -> Claude's body -> verdict; only API caller
+│   ├── build.py              # `build`: accepted program -> standalone Python module, Checks re-run on it
+│   ├── accord_test.py        # the gate: 189 assertions
+│   ├── finish.py             # gate + no-SDK gate + doc counts + examples built + mutants + ruff
+│   ├── mutants.py            # the deliberate bugs the gate must catch (stale or surviving = fail)
+│   ├── examples/             # classify, fact, total, reverse, leap, odd, stats (2); clamp+leap.intent
+│   ├── GRAMMAR.ebnf          # the grammar; the gate holds it to parse.py's reserved words and matches
+│   ├── SEMANTICS.md          # every rule, its source (ezr § or Accord's own) and the function doing it
+│   ├── ruff.toml             # this directory's own lint config, so it lints standalone too
+│   ├── README.md             # standalone usage: copy this directory out, nothing else required
+│   └── LANGUAGE.md           # the spec — start here
+├── accord-mcp/                # accord_check/run/tac/build as MCP tools over accord/, nothing else
+│   ├── server.py              # imports accord/'s own modules by path; fill.py is not exposed
+│   ├── test_server.py         # the gate: server.py as a real subprocess, driven over stdio
+│   ├── pyproject.toml         # its own deps (mcp, pydantic) and matching ruff settings
+│   └── README.md              # tools, why fill is excluded, how to run and register it
 ├── README.md
 └── .gitignore
 ```
@@ -267,8 +288,9 @@ Done:
   proxies Anthropic's SSE stream straight through; the frontend's `callClaude`
   reads it incrementally and reports live progress on each tool's button
   while still returning/parsing the full text once the stream ends.
-- ✅ Dependency auditing — `.github/workflows/security.yml` runs `pip-audit`
-  (root Python deps) and `npm audit --audit-level=high` (`power-pack/`) on
+- ✅ Dependency auditing — `.github/workflows/security.yml` runs `pip-audit
+  --skip-editable` (root Python deps; ReVision itself is skipped because an
+  unrelated PyPI project owns the name `revision`) and `npm audit --audit-level=high` (`power-pack/`) on
   push/PR plus a weekly cron.
 
 - ✅ Release pipelines — `publish-image.yml` builds the image, proves it
@@ -471,6 +493,122 @@ keeps its own conventions, its vocabulary table is hand-aligned so a
 rhyme class reads as a block, and `ruff format` would explode it. So
 ReVision's gate does not cover `realm/`, and `realm_test.py` does not
 cover ReVision. Run whichever matches what you touched.
+
+## Accord (`accord/`) — a fourth project in the same repo
+
+`accord/` is **not part of ReVision, EZR or Rime**. It is **one
+language in which a person and an AI write one program together**. The
+person writes the header, the trust given to each input, and the
+Checks. The AI writes the body. The body is a claim, and the Checks are
+its witnesses: a program runs only if every Check holds (value and
+trust), the Checks try every decision both ways and every ordering
+comparison at its edge (R6), and they earn trust of at least 128. Each
+refusal quotes the program back in Accord. The trust rules come from
+`ezr/SEMANTICS.md`, cited, not re-derived: literal 120, chain `min`,
+lazy [IF-T], examples earning trust (§4.2: 1 → 120, 2 → 183, 3 → 217),
+the answer cap (§4.3), and the 128 floor. It imports nothing from `ezr/`.
+
+- **It runs standalone: copy `accord/` out on its own, nothing else needed.**
+  Every module imports only the standard library and its own siblings; `ezr` is
+  cited in comments and `SEMANTICS.md` as where a rule's semantics came from, never
+  imported. `ruff.toml` gives the directory its own lint config so `finish.py`'s
+  lint step works with no `pyproject.toml` above it either. Verified: a copy of
+  `accord/` outside this repo, with the environment scrubbed (`env -i`), passes
+  `finish.py` end to end. `README.md` says so for a person opening the directory.
+
+- **Verify it:** `cd accord && python3 accord_test.py` — 189 assertions,
+  a plain script with its own tally. **Before calling a change done, run
+  `python3 finish.py`**. CI's `languages` job runs the same command.
+  It runs the gate, the gate again with the SDK blocked, a check that every doc
+  states this tally, every example built and run standalone, the mutants
+  and ruff. Try a program with `python3 accord.py check examples/classify.accord`.
+- **One syntax. Do not bring back a second surface.** v0.1–v0.3 made you
+  write every program twice (Emit and Prose) and compared them. That is
+  two languages, the thing Accord exists to avoid, and two versions
+  written by one author agree and prove nothing. R6 now catches what the
+  second version really caught (a `>=`/`>` slip at an untested edge) by
+  asking the person to add the Check. `accord/LANGUAGE.md` says so.
+- **Every rule must be seen to refuse.** Each of R1–R6, the floor and the
+  answer cap has a test that must be rejected, not only examples that
+  pass. A gate that could not fail has already happened once here: a
+  test that built the same tree twice and compared the hashes.
+- **`fill` is the bridge's AI end, and it owns the roles.** It sends
+  Claude the language card plus the person's header, trust lines and
+  Checks, takes back only a body, and assembles the program itself, so
+  the AI can never edit a Check. Wrong bodies go back to Claude in
+  Accord's words. Coverage and floor refusals never do: only the person
+  can add Checks, so `fill` exits 4 ("your turn"). It is headless (stdout
+  program, stderr log, exit codes 0/1/2/3/4) and the only code that
+  imports `anthropic`, which it does lazily. The gate tests it with a
+  scripted stand-in and must keep passing without the SDK installed; CI
+  has no SDK and no key. Do not add a live API call to the gate.
+- **A program is several functions, verified helpers first** (`verify_program`).
+  Each is witnessed only by its own Checks: traces are keyed by function
+  name, so a caller's Checks can never count toward a helper's coverage.
+  A caller of a refused helper is refused (`depends`). Mutual recursion is
+  refused (R5), because a measure only proves self-recursion stops. Calls
+  across functions cap the answer at the helper's earned trust (§4.3).
+- **`core.py` never imports `parse.py`.** The gate asserts it. The
+  semantics must not depend on the syntax.
+- **R6 counts what a Check executes, including recursive calls.** A Check
+  on `[1, 2, 3]` reaches the empty-list case on its way down, so that
+  case counts as tried. Do not "fix" that into per-Check-only coverage.
+- **Lists follow ezr's `CORE.md`, not its statement surface.** A list
+  carries one trust (the `min` of its elements), and first/rest answer
+  with it, so the first of the rest of `[a@100, b@120]` is 100. ezr's
+  "index reads the element's own trust" landmine belongs to `runtime.py`.
+  Do not "fix" Accord toward it without adding indexing and deciding that
+  deliberately. The one deliberate departure is `plus` on two lists,
+  which joins them: ezr's `Eval.java` refuses it, and Accord extends
+  ezr's own Text-concatenation rule. That makes it an Accord rule,
+  labelled as one.
+- **`and`/`or`/`not` and `modulo` are Accord's own** (ezr has none), and
+  `accord/SEMANTICS.md` §4 states them. A skipped side never runs and
+  never counts: `false and x` answers at that `false`'s trust, not
+  `min` with `x`'s. Each side is an R6 decision. `modulo` takes whole
+  numbers and follows the divisor's sign.
+- **`build` shares semantics with the interpreter by copying source.**
+  `build.py` pastes `core.py`'s own functions (`build.SEMANTICS`) into
+  the module rather than re-implementing them, and it refuses a module
+  unless every Check, run at trust 120 and at 256, gives exactly what
+  the interpreter gives. A new TAC op needs a case in `build._function`
+  *and* its helper added to `build.SEMANTICS`. Put the semantics in a
+  core function the interpreter calls, never inline in `run`, or the
+  two drift apart. Landed this way once already: `not` had a
+  `build._function` case and a `build.SEMANTICS` entry from day one
+  (v0.7), but no example used `not`, so nothing ever built it --
+  `examples/odd.accord` closed that, and `finish.py`'s "examples" step
+  now compiles it every run. A construct isn't covered by having a
+  case; it's covered by an example that reaches that case.
+- **`GRAMMAR.ebnf` and `SEMANTICS.md` are gated.** The gate checks the
+  grammar's quoted words and reserved list against `parse.py`, and the
+  functions `SEMANTICS.md` cites against `core.py`. Adding a keyword
+  means editing all three.
+- **New rule, new mutant.** Add the bug the rule prevents to
+  `accord/mutants.py`. `finish.py` fails when a mutant survives, and
+  also when its text has gone stale because the code moved. Never keep a
+  mutant that survives because it changes nothing (an equivalent
+  mutant). Delete it.
+- **Mutation-check with `PYTHONDONTWRITEBYTECODE=1`.** When checking the
+  gate by sabotaging `core.py` in a copy, clear `__pycache__` first. A
+  same-size edit (`min(` → `max(`) can reuse stale bytecode and read as
+  a surviving mutant when it was caught.
+
+Unlike `ezr/` and `realm/`, `accord/` is **not** in ruff's
+`extend-exclude`. It is ordinary Python and passes `ruff check` and
+`ruff format --check` with the rest of the repo.
+
+**`accord-mcp/`** is a sibling directory, not part of `accord/` itself:
+an MCP server exposing `accord_check`/`accord_run`/`accord_tac`/
+`accord_build` as tools, over `accord/`'s own modules (imported by
+path, never reimplemented). It is the one place in the repo that
+depends on the `mcp` SDK — `accord/` stays dependency-free, per its own
+README. `fill` is deliberately not exposed as a tool: it costs money
+and calls the live API, which does not belong behind a call an MCP
+client can make without warning. Verify it with
+`cd accord-mcp && pip install -e . && python3 test_server.py` — a real
+subprocess driven over stdio, not an import test; CI's `languages` job
+runs the same thing.
 
 ## Two gotchas that cost real time
 

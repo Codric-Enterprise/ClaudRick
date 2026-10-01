@@ -1,0 +1,9 @@
+# Lets accord/ be linted on its own, copied out of ClaudRick with nothing else: ruff finds the
+# nearest config walking up from the current directory, so `cd accord && ruff check .` reads
+# this file even where ClaudRick/pyproject.toml doesn't exist. Settings mirror it exactly
+# (line-length, target-version, lint.select) so nothing here behaves differently in either place.
+line-length = 100
+target-version = "py311"
+
+[lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
