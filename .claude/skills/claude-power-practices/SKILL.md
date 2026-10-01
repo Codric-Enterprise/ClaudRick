@@ -57,7 +57,7 @@ Frame non-trivial requests with: **C**ontext, **S**pecific ask,
 - **Cite your sources** in analysis so claims are traceable, and keep a short
   "work log" of what changed when the task is multi-step.
 
-## Companion commands (83 total)
+## Companion commands (84 total)
 
 The `.claude/commands/` directory turns the full command cheat-sheet into real
 slash commands, grouped as:

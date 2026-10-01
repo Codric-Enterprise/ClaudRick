@@ -57,7 +57,7 @@ Frame non-trivial requests with: **C**ontext, **S**pecific ask,
 - **Cite your sources** in analysis so claims are traceable, and keep a short
   "work log" of what changed when the task is multi-step.
 
-## Companion commands (83 total)
+## Companion commands (80 total)
 
 The `.claude/commands/` directory turns the full command cheat-sheet into real
 slash commands, grouped as:
@@ -81,7 +81,6 @@ slash commands, grouped as:
 - **Collaborate:** `/email`, `/feedback`
 - **Content transforms:** `/eli5`, `/tldr`, `/factcheck`, `/proofread`,
   `/glossary`, `/keypoints`
-- **Repo dev (project-specific):** `/check`, `/run-app`, `/smoke`
 
 `/clear`, `/memory`, and `/review` collide with Claude Code built-ins — the
 built-in takes precedence. See `docs/commands-pack.md` for the paste-ready

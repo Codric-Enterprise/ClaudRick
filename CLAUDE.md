@@ -58,7 +58,7 @@ Key design decisions:
 │       └── tools/              # Enhance/Translate/Jargonary inputs.json + grade-tools.js
 ├── .claude/                  # checked-in Claude Code tooling (see "Claude tooling" below)
 │   ├── settings.json         # permissions allowlist + PreToolUse/PostToolUse/SessionStart hooks
-│   ├── hooks/session-start.sh     # SessionStart: loads .env if present, installs dev deps on cold containers
+│   ├── hooks/session-start.sh     # SessionStart: loads .env, installs ReVision dev deps, verifies ezr's toolchain
 │   ├── hooks/git-safety-guard.sh  # PreToolUse (Bash): blocks force-push/reset --hard/clean -f/--no-verify/…
 │   ├── hooks/secret-scan-precommit.sh # PreToolUse (Bash): blocks `git commit` on a likely-secret staged diff
 │   ├── commands/             # custom slash commands (/analyze, /think, /check, /run-app, /prd, …)
@@ -67,7 +67,7 @@ Key design decisions:
 │   └── README.md             # explains the whole .claude/ setup
 ├── docs/claude-playbook.md   # full Claude tips + command reference (source of the above)
 ├── docs/claude-2026-cheatsheet.md # 2026 sheets: 5 surfaces, model stack, core files, app workflow
-├── docs/commands-pack.md     # all 83 commands: slash form + paste-ready prompt
+├── docs/commands-pack.md     # paste-ready prompt for each command (78 of the 84 in .claude/commands/)
 ├── docs/prompt-library.md    # saved prompts that worked well, maintained by the prompt-library skill
 ├── docs/command-console.html # interactive searchable console (shareable artifact)
 ├── mastery-system/index.html # "Mastery Protocol" — standalone 6-levels tool (model tree, prompt formula, core files)
@@ -83,14 +83,67 @@ Key design decisions:
 │   ├── index.html            # product landing page
 │   ├── README.md             # standalone product README
 │   └── LICENSE               # MIT — everything except pro-commands/ (see notice at top of file)
-├── .github/workflows/ci.yml           # ruff check + ruff format --check + pytest (3.11-3.13) + docker build
+├── .github/workflows/ci.yml           # ruff + pytest (3.11-3.13) + docker build + `languages`
+│   #   `languages` job: ezr's 29-suite gate, the forge (81), the rhyming corpus (35),
+│   #   the Java runtime (98), Rime (74) and Accord (189) — plus accord-mcp's end-to-end
+│   #   stdio test — the suites the other jobs never touch. Each suite step carries
+│   #   `if: !cancelled()`, so one red suite fails the job without skipping the others
+│   #   (it used to hide 288 assertions when it tripped).
 ├── .github/workflows/deploy-pages.yml # publishes mastery-system/ to GitHub Pages on push to main
+├── .github/workflows/publish-image.yml # GHCR image publish — v*.*.* tag or manual; dry_run defaults true
+├── .github/workflows/publish-npm.yml  # power-pack/ -> npm as `slash-pack`; manual only, needs NPM_TOKEN
 ├── .github/workflows/security.yml     # pip-audit (root) + npm audit (power-pack/); push/PR + weekly Mon 06:00 UTC cron
+│   # NOTE: CodeQL also runs on every PR — "Analyze (ruby)" and "Analyze (java-kotlin)",
+│   # so 14 check runs, not 12. It is GitHub default setup (repo settings), NOT a workflow
+│   # in this tree — you will not find a file for it, and the language list grows by itself:
+│   # java-kotlin appeared on its own once ezr/5-runtime-java/ landed.
 ├── .devcontainer/devcontainer.json    # generic universal devcontainer (no repo-specific setup)
 ├── Dockerfile                # stdlib-only image; binds 0.0.0.0:8000; HEALTHCHECK /healthz
 ├── .dockerignore
 ├── pyproject.toml            # hatchling build; pytest + ruff config
 ├── .env.example              # local env template (ANTHROPIC_API_KEY, GITHUB_TOKEN, …); copy to gitignored .env
+├── ezr/                      # Ever / Tapestry — a separate language project (see below)
+│   ├── 0-atom-c/ 1-phase-cpp/ 2-interpreter-python/ 3-dsl-ruby/
+│   ├── 4-archive-sql/ 6-interface-html/
+│   ├── 5-runtime-java/       # the core again, in Java, + a differential harness
+│   ├── 7-forge/              # the language forge: 20 front ends, one core
+│   ├── tests/                # run_all.py — the 29-suite gate ezr/CLAUDE.md names
+│   ├── examples/             # runnable programs, both lineages — start here
+│   ├── edapt/ archive/       # adaptive layer; repair archive
+│   ├── CLAUDE.md             # ezr's own rules — read it before touching ezr/
+│   ├── CORE.md               # the core the forge settled on (the 5-runtime-java language)
+│   ├── SEMANTICS.md PIPELINE.md VOWELS.md ABI.md   # the specs `ever run` follows
+│   ├── FINDINGS.md           # what was computed, not asserted (research.py corroborates it)
+│   ├── .claude/skills/verify/  # directory-scoped skill: how to drive EZR's surfaces
+│   └── run.sh                # 22 layers. NOT 7-forge or 5-runtime-java — see below
+├── realm/                    # Rime — a language whose grammar rhymes (see below)
+│   ├── contract.py           # tokens, the vocabulary, trees, printing
+│   ├── lexers.py parsers.py  # 3 scanners x 3 parsers = 9 front ends
+│   ├── machine.py            # the stack, the store, the voice
+│   ├── rhyme.py              # the rhyme rule, run backwards as a generator
+│   ├── realm.py              # the matrix, the laws, the corpus, the CLI
+│   ├── realm_test.py         # the gate: 74 assertions
+│   └── LANGUAGE.md           # the spec — start here
+├── accord/                   # Accord — one language a person and an AI write one program in (see below)
+│   ├── parse.py              # the one syntax: reads Accord, and writes expressions/values back in it
+│   ├── core.py               # tree, checker (R1–R5), TAC, interpreter, verify (Checks, R6, trust, floor)
+│   ├── accord.py             # `check`, `run`, `tac`, `build`, `fill`; `explain` words each verdict
+│   ├── fill.py               # headless: person's intent -> Claude's body -> verdict; only API caller
+│   ├── build.py              # `build`: accepted program -> standalone Python module, Checks re-run on it
+│   ├── accord_test.py        # the gate: 189 assertions
+│   ├── finish.py             # gate + no-SDK gate + doc counts + examples built + mutants + ruff
+│   ├── mutants.py            # the deliberate bugs the gate must catch (stale or surviving = fail)
+│   ├── examples/             # classify, fact, total, reverse, leap, odd, stats (2); clamp+leap.intent
+│   ├── GRAMMAR.ebnf          # the grammar; the gate holds it to parse.py's reserved words and matches
+│   ├── SEMANTICS.md          # every rule, its source (ezr § or Accord's own) and the function doing it
+│   ├── ruff.toml             # this directory's own lint config, so it lints standalone too
+│   ├── README.md             # standalone usage: copy this directory out, nothing else required
+│   └── LANGUAGE.md           # the spec — start here
+├── accord-mcp/                # accord_check/run/tac/build as MCP tools over accord/, nothing else
+│   ├── server.py              # imports accord/'s own modules by path; fill.py is not exposed
+│   ├── test_server.py         # the gate: server.py as a real subprocess, driven over stdio
+│   ├── pyproject.toml         # its own deps (mcp, pydantic) and matching ruff settings
+│   └── README.md              # tools, why fill is excluded, how to run and register it
 ├── README.md
 └── .gitignore
 ```
@@ -133,6 +186,8 @@ Uses a **src layout**: importable code is under `src/`; `pyproject.toml` sets
 ## Development workflows
 
 - **Run tests:** `pytest`
+- **One test file / one test:** `pytest tests/test_server.py`,
+  `pytest tests/test_server.py::test_healthz`, or `pytest -k ratelimit`
 - **Lint:** `ruff check .`
 - **Format:** `ruff format .`
 - **Run the app:** `revision [--host H --port P --model M]`, or without install
@@ -197,17 +252,51 @@ Done:
   proxies Anthropic's SSE stream straight through; the frontend's `callClaude`
   reads it incrementally and reports live progress on each tool's button
   while still returning/parsing the full text once the stream ends.
-- ✅ Dependency auditing — `.github/workflows/security.yml` runs `pip-audit`
-  (root Python deps) and `npm audit --audit-level=high` (`power-pack/`) on
+- ✅ Dependency auditing — `.github/workflows/security.yml` runs `pip-audit
+  --skip-editable` (root Python deps; ReVision itself is skipped because an
+  unrelated PyPI project owns the name `revision`) and `npm audit --audit-level=high` (`power-pack/`) on
   push/PR plus a weekly cron.
+
+- ✅ Release pipelines — `publish-image.yml` builds the image, proves it
+  answers `/healthz`, and pushes it to GHCR on a `v*.*.*` tag or a manual
+  dispatch; `publish-npm.yml` publishes `power-pack/` to npm. Neither fires
+  on a push to `main`: publishing is a release act, so both want a human
+  choosing the moment. Both default to a dry run.
 
 Likely next steps toward production:
 
 - Persisting the model/config and per-tool token limits.
-- Publishing the Docker image (registry) and a deploy target.
+- A deploy target for the image (nothing hosts it yet — the pipeline
+  publishes, it does not run it anywhere).
 - A proper ASGI stack (e.g. FastAPI + uvicorn) *if* concurrency needs outgrow
   the stdlib `ThreadingHTTPServer` — this would add the first runtime deps.
 - Shared/persistent rate-limit store (e.g. Redis) if run multi-process.
+
+## Publishing (release pipelines)
+
+Neither pipeline runs on a push to `main`, and both default to a dry run.
+CI already builds the image on every PR, which is what catches a broken
+Dockerfile; publishing is a separate act with different consequences.
+
+- **Image → GHCR** (`publish-image.yml`). Fires on a `v*.*.*` tag, or a
+  manual dispatch with `dry_run=false`. No secret needed — it authenticates
+  with the built-in `GITHUB_TOKEN` under `packages: write`. Before pushing
+  it starts the container and waits for `/healthz` to answer, because CI's
+  `docker build` only proves the Dockerfile parses, not that the image
+  serves.
+- **`power-pack/` → npm** (`publish-npm.yml`). Manual dispatch only.
+  Requires an `NPM_TOKEN` repository secret (automation token; a read-only
+  one fails at publish). It refuses to republish a version that already
+  exists — bump `power-pack/package.json` instead.
+
+> **The npm one ships proprietary content.** `package.json`'s `files` list
+> includes `pro-commands/`, which is under a proprietary single-user
+> licence, *not* the MIT covering the rest of `power-pack/`. Publishing
+> makes those 30 commands publicly installable by anyone. The workflow
+> prints this and will not publish unless `confirm_proprietary` is typed
+> exactly, so the decision is recorded in the run rather than assumed.
+> `slash-pack` is currently **unclaimed on npm**, so the first publish
+> takes that global name permanently.
 
 ## Git & branching
 
@@ -253,7 +342,15 @@ model stack, the core-files framework, and the Claude Code app workflow):
   notes checklist below).
 - **`settings.json` + `hooks/`** — a `permissions.allow` list pre-authorizing
   `ruff`/`pytest`/`python`/`revision`/`curl`; a `SessionStart` hook
-  (`hooks/session-start.sh`) that installs dev deps on a cold remote container;
+  (`hooks/session-start.sh`) that installs dev deps on a cold remote container
+  and verifies the C/C++/Ruby/Java toolchains `ezr/`'s gate needs — because
+  `run.sh` and `algebra_parity.py` *skip* a layer whose toolchain is absent and
+  still exit 0, so a degraded container reads green (measured: hiding `/usr/bin`
+  takes `algebra_parity` from 4 agreed to 2 agreed / 2 skipped, exit 0 both
+  times; that measurement was not reproducible in the 2026-09 container,
+  where hiding `/usr/bin` changed nothing and the arm that skipped was
+  Java, gated on `5-runtime-java/out/` rather than on `PATH` — the class
+  of problem is the same, the trigger was not). It also warns when `JAVA_TOOL_OPTIONS` is set, per the gotcha below;
   and two `PreToolUse` hooks matched on `Bash` calls — `git-safety-guard.sh`
   (hard-blocks force-push without `--force-with-lease`, `reset --hard`,
   `clean -f`, `branch -D`, discard-all `checkout`/`restore .`, and
@@ -273,10 +370,259 @@ model stack, the core-files framework, and the Claude Code app workflow):
 The prompt/command aids don't touch the ReVision app's runtime code, endpoints,
 or the server-side-key rules above.
 
+## EZR (`ezr/`) — a separate project in the same repo
+
+`ezr/` is **not part of ReVision**. It is the EZR language
+project: a multi-layer language where every value carries how much it is
+trusted (C atom → C++ phase engine → Python interpreter → Ruby DSL → SQL
+archive → Java runtime → HTML interface). It shares nothing with
+`src/revision/` — no imports, no endpoints, no configuration — and the
+two are verified by separate commands.
+
+- **Verify it:** `cd ezr && ./run.sh` — 22 layers (needs gcc, g++,
+  python3 and ruby; skips any layer whose toolchain is absent rather
+  than failing). `ezr/CLAUDE.md` names `python3 tests/run_all.py` (29
+  suites) as the gate to be green before and after a change; run both.
+- **In a container:** `cd ezr && docker compose run --rm verify`.
+  The image verifies itself at build time.
+- **`ezr/7-forge/`** is the language forge: four independent lexers and
+  five independent parsers, run as all twenty pairings against a shared
+  conformance corpus and seven universal laws, with a fuzz budget that
+  doubles after every clean generation. Where the pairs disagree, the
+  language was never specified; the forge arbitrates by published doctrine,
+  then cross-stage coverage, then its own laws, then consensus, and
+  withholds below all four. `ezr/CORE.md` records what it settled;
+  `ezr/7-forge/GRAMMAR.ebnf` is emitted from the chart parser's rule
+  table so it cannot drift from the code.
+  `ezr/7-forge/quantum.py` is a second generator alongside `corpus.py`'s
+  seeded fuzzer: it collapses each construction site from a phrase by
+  *address* (FNV-1a over the path) rather than by a draw, so any subtree
+  regenerates alone and `PYTHONHASHSEED` cannot change the corpus. It
+  emits rhyming couplets — two programs whose last k token kinds match
+  and whose skeletons differ — which makes the scanners' agreement about
+  where a program *ends* directly checkable (`law_rhyme`). Do not
+  reintroduce `random` or `hash()` there, and note `--emit` writes a
+  `.ezr` into `7-forge/generated/`, which is build output and not an
+  entry for `ezr/examples/`.
+- **`ezr/5-runtime-java/`** is a second implementation of the core, in a
+  language that shares no interpreter, type system or habits with the
+  Python one. It is checked twice, as two separate layers: `RuntimeTest`
+  against `SEMANTICS.md`, and `differential.py` running one corpus
+  through both the Python runner and the Java runner as processes and
+  comparing value, exit code, refusing stage and binding defect. A
+  divergence there is a finding about the language, not a bug report
+  against one side. It found three, recorded in `ezr/FINDINGS.md` §7.
+- **Boundaries matter here.** Each numbered directory is a distinct language
+  and toolchain. Do not let Python interpretation rules leak into the C++
+  phase, or vice versa; do not add language features that `SEMANTICS.md`
+  does not already imply.
+
+ReVision's own gate (`pytest`, `ruff check .`) does not cover `ezr/`,
+and `ezr/run.sh` does not cover ReVision. Run whichever matches what
+you touched.
+
+## Rime (`realm/`) — a third project in the same repo
+
+`realm/` is **not part of ReVision and not part of EZR**. It is Rime, a
+small postfix language whose *well-formedness condition is rhyme*: a
+program is a sequence of couplets, a line ends in a verb, and a couplet
+is legal only when its two verbs rhyme. It shares no code with
+`src/revision/` or `ezr/` — no imports, no tokens, no trees.
+
+- **Verify it:** `cd realm && python3 realm_test.py` — 74 assertions,
+  a plain script that reports its own tally and calls `raise
+  SystemExit`, like `ezr/`'s suites and unlike a pytest module.
+  `testpaths = ["tests"]`, so `pytest` never looks here.
+- **See it run:** `cd realm && python3 realm.py` — writes a poem from a
+  phrase, runs it, then puts the whole corpus to nine front ends and
+  reports whether they converged. Exits non-zero if a law breaks.
+- **The one idea.** The vocabulary is built so that **a rhyme class is
+  exactly an operation family** (`-ow` moves numbers, `-eep` touches the
+  store, and so on). Rhyme is a typing discipline written as verse, not
+  decoration. Do not add a verb without placing it in the family its
+  sound already claims — `law_family` exists to catch precisely that.
+- **Deterministic generation.** Because a class is a finite *ordered*
+  list, the answering verb of a couplet is simply the next one, so half
+  of every program is derived rather than chosen. The rest collapses
+  from a phrase via a hand-written FNV-1a, addressed by path. There is
+  no random source in `realm/`, and `hash()` is never touched — keep it
+  that way, or `PYTHONHASHSEED` starts changing the corpus.
+- **The order of complaint is part of the language.** A program can be
+  wrong several ways at once; the phases (shape → vocabulary → pairing
+  → rhyme) are published in `parsers.py` so three parsers cannot each
+  pick a favourite fault. Changing that order changes Rime.
+
+`realm/` is in ruff's `extend-exclude` for the same reason `ezr/` is: it
+keeps its own conventions, its vocabulary table is hand-aligned so a
+rhyme class reads as a block, and `ruff format` would explode it. So
+ReVision's gate does not cover `realm/`, and `realm_test.py` does not
+cover ReVision. Run whichever matches what you touched.
+
+## Accord (`accord/`) — a fourth project in the same repo
+
+`accord/` is **not part of ReVision, EZR or Rime**. It is **one
+language in which a person and an AI write one program together**. The
+person writes the header, the trust given to each input, and the
+Checks. The AI writes the body. The body is a claim, and the Checks are
+its witnesses: a program runs only if every Check holds (value and
+trust), the Checks try every decision both ways and every ordering
+comparison at its edge (R6), and they earn trust of at least 128. Each
+refusal quotes the program back in Accord. The trust rules come from
+`ezr/SEMANTICS.md`, cited, not re-derived: literal 120, chain `min`,
+lazy [IF-T], examples earning trust (§4.2: 1 → 120, 2 → 183, 3 → 217),
+the answer cap (§4.3), and the 128 floor. It imports nothing from `ezr/`.
+
+- **It runs standalone: copy `accord/` out on its own, nothing else needed.**
+  Every module imports only the standard library and its own siblings; `ezr` is
+  cited in comments and `SEMANTICS.md` as where a rule's semantics came from, never
+  imported. `ruff.toml` gives the directory its own lint config so `finish.py`'s
+  lint step works with no `pyproject.toml` above it either. Verified: a copy of
+  `accord/` outside this repo, with the environment scrubbed (`env -i`), passes
+  `finish.py` end to end. `README.md` says so for a person opening the directory.
+
+- **Verify it:** `cd accord && python3 accord_test.py` — 189 assertions,
+  a plain script with its own tally. **Before calling a change done, run
+  `python3 finish.py`**. CI's `languages` job runs the same command.
+  It runs the gate, the gate again with the SDK blocked, a check that every doc
+  states this tally, every example built and run standalone, the mutants
+  and ruff. Try a program with `python3 accord.py check examples/classify.accord`.
+- **One syntax. Do not bring back a second surface.** v0.1–v0.3 made you
+  write every program twice (Emit and Prose) and compared them. That is
+  two languages, the thing Accord exists to avoid, and two versions
+  written by one author agree and prove nothing. R6 now catches what the
+  second version really caught (a `>=`/`>` slip at an untested edge) by
+  asking the person to add the Check. `accord/LANGUAGE.md` says so.
+- **Every rule must be seen to refuse.** Each of R1–R6, the floor and the
+  answer cap has a test that must be rejected, not only examples that
+  pass. A gate that could not fail has already happened once here: a
+  test that built the same tree twice and compared the hashes.
+- **`fill` is the bridge's AI end, and it owns the roles.** It sends
+  Claude the language card plus the person's header, trust lines and
+  Checks, takes back only a body, and assembles the program itself, so
+  the AI can never edit a Check. Wrong bodies go back to Claude in
+  Accord's words. Coverage and floor refusals never do: only the person
+  can add Checks, so `fill` exits 4 ("your turn"). It is headless (stdout
+  program, stderr log, exit codes 0/1/2/3/4) and the only code that
+  imports `anthropic`, which it does lazily. The gate tests it with a
+  scripted stand-in and must keep passing without the SDK installed; CI
+  has no SDK and no key. Do not add a live API call to the gate.
+- **A program is several functions, verified helpers first** (`verify_program`).
+  Each is witnessed only by its own Checks: traces are keyed by function
+  name, so a caller's Checks can never count toward a helper's coverage.
+  A caller of a refused helper is refused (`depends`). Mutual recursion is
+  refused (R5), because a measure only proves self-recursion stops. Calls
+  across functions cap the answer at the helper's earned trust (§4.3).
+- **`core.py` never imports `parse.py`.** The gate asserts it. The
+  semantics must not depend on the syntax.
+- **R6 counts what a Check executes, including recursive calls.** A Check
+  on `[1, 2, 3]` reaches the empty-list case on its way down, so that
+  case counts as tried. Do not "fix" that into per-Check-only coverage.
+- **Lists follow ezr's `CORE.md`, not its statement surface.** A list
+  carries one trust (the `min` of its elements), and first/rest answer
+  with it, so the first of the rest of `[a@100, b@120]` is 100. ezr's
+  "index reads the element's own trust" landmine belongs to `runtime.py`.
+  Do not "fix" Accord toward it without adding indexing and deciding that
+  deliberately. The one deliberate departure is `plus` on two lists,
+  which joins them: ezr's `Eval.java` refuses it, and Accord extends
+  ezr's own Text-concatenation rule. That makes it an Accord rule,
+  labelled as one.
+- **`and`/`or`/`not` and `modulo` are Accord's own** (ezr has none), and
+  `accord/SEMANTICS.md` §4 states them. A skipped side never runs and
+  never counts: `false and x` answers at that `false`'s trust, not
+  `min` with `x`'s. Each side is an R6 decision. `modulo` takes whole
+  numbers and follows the divisor's sign.
+- **`build` shares semantics with the interpreter by copying source.**
+  `build.py` pastes `core.py`'s own functions (`build.SEMANTICS`) into
+  the module rather than re-implementing them, and it refuses a module
+  unless every Check, run at trust 120 and at 256, gives exactly what
+  the interpreter gives. A new TAC op needs a case in `build._function`
+  *and* its helper added to `build.SEMANTICS`. Put the semantics in a
+  core function the interpreter calls, never inline in `run`, or the
+  two drift apart. Landed this way once already: `not` had a
+  `build._function` case and a `build.SEMANTICS` entry from day one
+  (v0.7), but no example used `not`, so nothing ever built it --
+  `examples/odd.accord` closed that, and `finish.py`'s "examples" step
+  now compiles it every run. A construct isn't covered by having a
+  case; it's covered by an example that reaches that case.
+- **`GRAMMAR.ebnf` and `SEMANTICS.md` are gated.** The gate checks the
+  grammar's quoted words and reserved list against `parse.py`, and the
+  functions `SEMANTICS.md` cites against `core.py`. Adding a keyword
+  means editing all three.
+- **New rule, new mutant.** Add the bug the rule prevents to
+  `accord/mutants.py`. `finish.py` fails when a mutant survives, and
+  also when its text has gone stale because the code moved. Never keep a
+  mutant that survives because it changes nothing (an equivalent
+  mutant). Delete it.
+- **Mutation-check with `PYTHONDONTWRITEBYTECODE=1`.** When checking the
+  gate by sabotaging `core.py` in a copy, clear `__pycache__` first. A
+  same-size edit (`min(` → `max(`) can reuse stale bytecode and read as
+  a surviving mutant when it was caught.
+
+Unlike `ezr/` and `realm/`, `accord/` is **not** in ruff's
+`extend-exclude`. It is ordinary Python and passes `ruff check` and
+`ruff format --check` with the rest of the repo.
+
+**`accord-mcp/`** is a sibling directory, not part of `accord/` itself:
+an MCP server exposing `accord_check`/`accord_run`/`accord_tac`/
+`accord_build` as tools, over `accord/`'s own modules (imported by
+path, never reimplemented). It is the one place in the repo that
+depends on the `mcp` SDK — `accord/` stays dependency-free, per its own
+README. `fill` is deliberately not exposed as a tool: it costs money
+and calls the live API, which does not belong behind a call an MCP
+client can make without warning. Verify it with
+`cd accord-mcp && pip install -e . && python3 test_server.py` — a real
+subprocess driven over stdio, not an import test; CI's `languages` job
+runs the same thing.
+
+## Two gotchas that cost real time
+
+**The format-on-write hook ignores ruff's own exclusion.** `.claude/settings.json`
+has a `PostToolUse` hook matched on `Write|Edit` that runs
+`ruff check --fix --select I` and `ruff format` on any `.py` path it is handed.
+It has no path filter, and passing ruff an explicit file path overrides
+`pyproject.toml`'s `extend-exclude = ["ezr"]` (ruff only honours exclusions for
+explicit paths when given `--force-exclude`). So editing any file under `ezr/`
+with Write/Edit silently reformats it — re-sorting imports and exploding the
+hand-aligned tables that layer uses. A two-line fix to `syntax.py` came back as
+a 331-line diff this way. Either add `--force-exclude` to the hook, or make
+edits under `ezr/` through Bash (`python3`/`sed`), which the hook does not match.
+
+**`ever run` personalises its output, from a file outside the repo.**
+`ever_cli.py` keeps a learner profile at `~/.ever/profile.json` and
+`runtime.run_source` derives a `scaffold` band from it; below a score of 112
+the run is prefixed with a legend line and a blank line. So `ever run f.ever`
+has one output per band, not one output. This cost a day of CI: a fresh
+runner starts at `P_START = 64`, so the first three examples printed the
+legend and failed their pins in `tests/examples_test.py` while the rest
+passed — `51 passed, 3 failed`, always the same three, and green again on a
+second run in the same job, because by then the score had climbed past 112.
+Developer machines were green from the start (the profile here had **490
+sessions** banked, every test run the suite had ever done). `examples_test.py`
+now runs every subprocess under its own seeded `HOME`, and pins the
+first-run legend separately. Anything else that pins `ever run` output must
+do the same, or it is really pinning whoever ran it last.
+
+**`ezr/5-runtime-java` needs JDK 21 or newer.** It uses pattern matching in
+`switch`, which was a *preview* feature through JDK 20 and only became final
+in 21 (JEP 441). `build.sh` passes no `--release`, so it compiles against
+whichever JDK is on `PATH`: on 21 it builds 35 classes, on 17 it dies with
+four `patterns in switch statements are a preview feature` errors. Nothing
+in the tree pins this, so CI's `languages` job asserts the major version and
+says so plainly rather than letting javac's preview-feature error stand as
+the explanation.
+
+**`JAVA_TOOL_OPTIONS` corrupts the Java runtime's output.** When the environment
+sets it, the JVM prints `Picked up JAVA_TOOL_OPTIONS: ...` to stderr on every
+start, which breaks the byte comparison `ezr/5-runtime-java/differential.py`
+depends on. Setting it empty does **not** help — the banner still prints with an
+empty value. It has to be removed: `env -u JAVA_TOOL_OPTIONS java ...`. The
+`ezr/5-runtime-java/ezr` wrapper already does this; a raw `java -cp out` does not.
+
 ## Notes for AI assistants
 
 - Verify claims against the actual repository before acting.
-- Run `pytest` and `ruff check .` before committing non-trivial changes.
+- Run `pytest` and `ruff check .` before committing non-trivial changes to
+  ReVision; run `ezr/run.sh` for changes under `ezr/`.
 - Keep this file updated as the codebase evolves; treat documentation drift as a
   bug. When you add a top-level directory, tool, endpoint, or workflow, update
   the relevant section here in the same change.

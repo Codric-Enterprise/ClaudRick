@@ -17,7 +17,7 @@ every clone and every Claude Code on the web session picks it up automatically.
 | `agents/code-reviewer.md` | Read-only subagent: reviews a diff against `CLAUDE.md`'s invariants |
 | `agents/test-writer.md` | Subagent: adds pytest coverage mirroring the existing test conventions |
 | `agents/security-auditor.md` | Read-only subagent: audits against the Security notes checklist |
-| `hooks/session-start.sh` | `SessionStart` — installs dev deps on a cold remote container |
+| `hooks/session-start.sh` | `SessionStart` — installs ReVision dev deps on a cold remote container; verifies `ezr/`'s gcc/g++/ruby/javac/java toolchain and warns on `JAVA_TOOL_OPTIONS` |
 | `hooks/git-safety-guard.sh` | `PreToolUse` (Bash) — hard-blocks destructive git commands (force-push, `reset --hard`, `clean -f`, `--no-verify`, …) |
 | `hooks/secret-scan-precommit.sh` | `PreToolUse` (Bash) — blocks `git commit` when the staged diff matches a likely-secret pattern |
 | `settings.json` | permissions allowlist, `PreToolUse` guard hooks, `PostToolUse` auto-format hook, hidden attribution |

@@ -1,0 +1,47 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Ever: Run Current File (auto-detect lineage)",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/ezr/ever",
+      "args": ["${file}"],
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}/ezr",
+      "// note": "Follows into the dispatched runner so breakpoints in eval_ast/runtime.py still hit.",
+      "subProcess": true,
+      "justMyCode": false
+    },
+    {
+      "name": "Ever: Debug via ever_cli.py run (v4.10)",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/ezr/2-interpreter-python/ever_cli.py",
+      "args": ["run", "${file}"],
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}/ezr/2-interpreter-python",
+      "justMyCode": false
+    },
+    {
+      "name": "Ever: Debug via ezrun.py (confidence algebra + core)",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/ezr/2-interpreter-python/ezrun.py",
+      "args": ["${file}"],
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}/ezr/2-interpreter-python",
+      "justMyCode": false
+    },
+    {
+      "name": "ReVision: Run server",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "revision.cli",
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}",
+      "env": { "PYTHONPATH": "src" },
+      "justMyCode": false
+    }
+  ]
+}

@@ -722,6 +722,68 @@
             });
         });
 
+        // Redaction Gate — mirrors RedactionGate.kt on the Android side.
+        // Runs on ALL text before it is sent to the backend, for every tool
+        // (Analyzer, Jargonary, Translate, Enhance), not just the Fine Print
+        // Analyzer. Catches structurally-detectable sensitive data (SSNs,
+        // cards, credentials, emails, phones, API keys); it will NOT catch a
+        // name or address written in free prose — that gap is real, not hidden.
+        const REDACTION_RULES = [
+            { category: 'US Social Security Number', placeholder: '[REDACTED-SSN]', regex: /\b\d{3}[-\s]\d{2}[-\s]\d{4}\b/g },
+            { category: 'Immigration A-Number', placeholder: '[REDACTED-A-NUMBER]', regex: /\bA-?\d{7,9}\b/gi },
+            { category: 'US bank routing number', placeholder: '[REDACTED-ROUTING]', regex: /routing\s*(?:number|no\.?|#)?\s*[:\-]?\s*(\d{9})\b/gi },
+            { category: 'Password / credential value', placeholder: '[REDACTED-PASSWORD]', regex: /\b(password|pwd|passcode|pin code|secret)\s*[:=]\s*\S+/gi },
+            { category: 'API key / access token', placeholder: '[REDACTED-TOKEN]', regex: /\b(sk-[A-Za-z0-9]{16,}|AKIA[0-9A-Z]{16}|ghp_[A-Za-z0-9]{30,}|xox[baprs]-[A-Za-z0-9-]{10,})\b/g },
+            { category: 'API key / access token', placeholder: '[REDACTED-TOKEN]', regex: /\b(api[_\s-]?key|access[_\s-]?token|secret[_\s-]?key)\s*[:=]\s*['"]?[A-Za-z0-9_\-]{12,}['"]?/gi },
+            { category: 'Email address', placeholder: '[REDACTED-EMAIL]', regex: /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/g },
+            { category: 'Phone number', placeholder: '[REDACTED-PHONE]', regex: /\b(?:\+?1[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}\b/g },
+        ];
+
+        function luhnCheck(digitString) {
+            const clean = digitString.replace(/\D/g, '');
+            if (clean.length < 13 || clean.length > 19) return false;
+            let sum = 0, alt = false;
+            for (let i = clean.length - 1; i >= 0; i--) {
+                let d = parseInt(clean[i], 10);
+                if (alt) { d *= 2; if (d > 9) d -= 9; }
+                sum += d; alt = !alt;
+            }
+            return sum % 10 === 0;
+        }
+
+        function runRedactionGate(text) {
+            let working = text;
+            const findings = [];
+
+            const cardMatches = [...working.matchAll(/\b(?:\d[ -]*?){13,19}\b/g)]
+                .filter(m => luhnCheck(m[0]));
+            if (cardMatches.length > 0) {
+                findings.push({ category: 'Credit/debit card number', count: cardMatches.length });
+                cardMatches.sort((a, b) => b.index - a.index).forEach(m => {
+                    working = working.slice(0, m.index) + '[REDACTED-CARD]' + working.slice(m.index + m[0].length);
+                });
+            }
+
+            REDACTION_RULES.forEach(rule => {
+                const matches = [...working.matchAll(rule.regex)];
+                if (matches.length === 0) return;
+                findings.push({ category: rule.category, count: matches.length });
+                working = working.replace(rule.regex, rule.placeholder);
+            });
+
+            return { redactedText: working, findings };
+        }
+
+        function renderRedactionNotice(findings) {
+            if (findings.length === 0) return '';
+            const rows = findings.map(f => `<div class="detection-item">${escapeHtml(f.category)}: <strong>${f.count} found and redacted</strong></div>`).join('');
+            return `<div class="synthesis" style="background:#fff3cd;color:#664d03;">
+                <div class="synthesis-title">🔒 Sensitive data found and removed</div>
+                <div class="synthesis-text">Nothing below was sent to the AI backend in its original form — only the redacted version was analyzed.</div>
+                ${rows}
+            </div>`;
+        }
+
         // Shared API helper — talks to the ReVision backend proxy (never the
         // Anthropic API directly), so the API key stays server-side. The model
         // is chosen by the server via configuration. Requests are streamed
@@ -861,8 +923,12 @@ By responding you agree to enrollment in our partner marketing program and a rec
         });
 
         analyzeBtn.addEventListener('click', async () => {
-            const text = analyzerInput.value.trim();
-            if (!text) { alert('Please paste some text to analyze'); return; }
+            const rawInput = analyzerInput.value.trim();
+            if (!rawInput) { alert('Please paste some text to analyze'); return; }
+
+            // Redaction Gate runs before anything else — the AI backend
+            // never sees the original SSN/password/card number/etc.
+            const { redactedText: text, findings: redactionFindings } = runRedactionGate(rawInput);
 
             analyzeBtn.disabled = true;
             analyzeBtn.innerHTML = '<span class="loading"><span class="spinner"></span>Analyzing...</span>';
@@ -907,11 +973,17 @@ Return this exact JSON structure:
       { "type": "hidden_fee|auto_renewal|forced_continuity|cancellation_obstruction|buried_limitation", "phrase": "exact phrase", "explanation": "what cost or obligation is buried or hard to escape", "severity": "critical|high|medium|low" }
     ]
   },
+  "contract_traps": {
+    "severity": "critical|high|medium|low",
+    "detections": [
+      { "type": "arbitration_clause|indemnification|liability_waiver|jurisdiction_shopping|class_action_waiver|unilateral_modification|confession_of_judgment", "phrase": "exact phrase", "explanation": "what right this clause takes away and why it matters if this ever goes wrong", "severity": "critical|high|medium|low" }
+    ]
+  },
   "synthesis": "1-2 sentence summary of the overall manipulation profile and recommendations"
 }`, 2000, streamProgress(analyzeBtn, 'Analyzing'));
 
                 const analysis = JSON.parse(raw.replace(/```json\n?|\n?```/g, '').trim());
-                displayAnalysisResults(analysis);
+                displayAnalysisResults(analysis, text, redactionFindings);
             } catch (error) {
                 analyzerResults.innerHTML = `<div class="error">Error: ${escapeHtml(error.message)}</div>`;
             } finally {
@@ -920,8 +992,26 @@ Return this exact JSON structure:
             }
         });
 
-        function displayAnalysisResults(analysis) {
-            analyzerResults.innerHTML = `<div class="synthesis">
+        // Devil's Advocate Scenario 2: confirm every quoted "exact phrase" the
+        // model returns actually appears in the source text before it's shown
+        // to the user as fact. Mirrors PhraseVerifier.kt on the Android side —
+        // same normalization, same known limitation (exact/normalized substring
+        // match only, so paraphrases or OCR noise can produce false "unverified"
+        // flags on real findings; that's why we warn rather than delete).
+        function normalizeForVerification(s) {
+            return s.toLowerCase()
+                .replace(/[\u2018\u2019]/g, "'")
+                .replace(/[\u201C\u201D]/g, '"')
+                .replace(/\s+/g, ' ')
+                .trim();
+        }
+
+        function verifyPhrase(sourceText, phrase) {
+            return normalizeForVerification(sourceText).includes(normalizeForVerification(phrase));
+        }
+
+        function displayAnalysisResults(analysis, sourceText, redactionFindings = []) {
+            analyzerResults.innerHTML = renderRedactionNotice(redactionFindings) + `<div class="synthesis">
                 <div class="synthesis-title">Overall Risk Score: ${analysis.overall_risk_score}/100</div>
             </div>`;
 
@@ -937,8 +1027,29 @@ Return this exact JSON structure:
                 { key: 'tone_manipulation', title: '😠 Tone Manipulation' },
                 { key: 'scare_tactics', title: '😨 Scare Tactics' },
                 { key: 'artificial_urgency', title: '⏰ Artificial Urgency' },
-                { key: 'hidden_terms_and_costs', title: '💸 Hidden Terms & Costs' }
+                { key: 'hidden_terms_and_costs', title: '💸 Hidden Terms & Costs' },
+                { key: 'contract_traps', title: '⚖️ Contract Traps' }
             ];
+
+            let verifiedCount = 0;
+            let totalCount = 0;
+            sections.forEach(section => {
+                const data = analysis[section.key];
+                if (data && data.detections) {
+                    data.detections.forEach(d => {
+                        totalCount++;
+                        if (verifyPhrase(sourceText, d.phrase)) verifiedCount++;
+                    });
+                }
+            });
+
+            if (totalCount > 0 && verifiedCount < totalCount) {
+                analyzerResults.innerHTML += `<div class="synthesis" style="background:#fff3cd;color:#664d03;">
+                    <div class="synthesis-text">🔎 ${verifiedCount} of ${totalCount} flagged quotes were confirmed
+                    word-for-word in your document. The rest are marked below — they may still be accurate
+                    (paraphrasing or scan noise can cause this), but couldn't be automatically verified.</div>
+                </div>`;
+            }
 
             sections.forEach(section => {
                 const data = analysis[section.key];
@@ -948,13 +1059,16 @@ Return this exact JSON structure:
                             <div class="result-title">${section.title}</div>
                             <span class="severity-badge severity-${data.severity}">${data.severity}</span>
                         </div>
-                        ${data.detections.map(d => `
+                        ${data.detections.map(d => {
+                            const verified = verifyPhrase(sourceText, d.phrase);
+                            return `
                             <div class="detection-item">
                                 <div class="detection-type">${escapeHtml(d.type)}</div>
                                 <div class="detection-text">"${escapeHtml(d.phrase)}"</div>
                                 <div style="color: #cbd5e1; font-size: 0.9em;">${escapeHtml(d.explanation)}</div>
-                            </div>
-                        `).join('')}
+                                ${verified ? '' : '<div style="color: #dc3545; font-size: 0.85em; margin-top: 4px;">⚠️ Couldn\'t confirm this exact quote appears in your document — worth checking against the original before acting on it.</div>'}
+                            </div>`;
+                        }).join('')}
                     </div>`;
                 }
             });

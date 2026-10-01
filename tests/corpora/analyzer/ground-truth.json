@@ -36,7 +36,7 @@
       "id": "D01",
       "file": "D01-gym-membership.docx",
       "kind": "predatory",
-      "title": "FitLife Health Club — Membership Agreement",
+      "title": "FitLife Health Club \u2014 Membership Agreement",
       "planted": [
         {
           "category": "hidden_terms_and_costs",
@@ -184,7 +184,7 @@
       "id": "D05",
       "file": "D05-subscription-box.docx",
       "kind": "predatory",
-      "title": "GlowBox Beauty — Subscription Offer",
+      "title": "GlowBox Beauty \u2014 Subscription Offer",
       "planted": [
         {
           "category": "artificial_urgency",
@@ -265,6 +265,7 @@
       "file": "D07-apartment-lease.docx",
       "kind": "predatory",
       "title": "Maple Court Apartments — Lease Addendum",
+      "title": "Maple Court Apartments \u2014 Lease Addendum",
       "planted": [
         {
           "category": "hidden_terms_and_costs",
@@ -302,6 +303,7 @@
       "file": "D08-crypto-pitch.docx",
       "kind": "predatory",
       "title": "NovaCoin — Private Presale Access",
+      "title": "NovaCoin \u2014 Private Presale Access",
       "planted": [
         {
           "category": "tone_manipulation",
@@ -345,6 +347,7 @@
       "file": "C01-library-newsletter.docx",
       "kind": "control",
       "title": "Riverside Public Library — Monthly Newsletter",
+      "title": "Riverside Public Library \u2014 Monthly Newsletter",
       "planted": [],
       "expected_score_band": [
         0,
@@ -357,6 +360,7 @@
       "file": "C02-fair-refund-policy.docx",
       "kind": "control",
       "title": "Northwind Books — Refund Policy",
+      "title": "Northwind Books \u2014 Refund Policy",
       "planted": [],
       "expected_score_band": [
         0,

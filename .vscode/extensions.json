@@ -1,0 +1,10 @@
+{
+  "recommendations": [
+    "ms-python.python",
+    "ms-python.debugpy",
+    "charliermarsh.ruff",
+    "ms-vscode.cpptools",
+    "rebornix.ruby",
+    "redhat.java"
+  ]
+}
