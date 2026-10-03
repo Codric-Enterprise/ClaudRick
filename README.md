@@ -75,6 +75,8 @@ All settings come from the environment (CLI flags override where provided):
 | `REVISION_RATE_LIMIT`  | `30`               | Max `/api/messages` requests per window per client (0 = off). |
 | `REVISION_RATE_WINDOW` | `60`               | Rate-limit window, in seconds.                                 |
 | `REVISION_TRUST_PROXY` | `false`            | Trust `X-Forwarded-For` for client IP (enable only behind a proxy). |
+| `REVISION_MAX_TOKENS`  | `8192`             | Ceiling for a request's `max_tokens`; larger values are clamped. |
+| `REVISION_MAX_BODY_BYTES` | `1048576`       | Largest `/api/messages` body accepted (else `413`).            |
 | `GITHUB_TOKEN`         | *(unset)*          | GitHub token for local GitHub API / git operations (not used by the server). |
 
 ### Auth & rate limiting

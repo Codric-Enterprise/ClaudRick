@@ -55,6 +55,10 @@ class Config:
     rate_window: float = 60.0
     #: Trust ``X-Forwarded-For`` for the client IP (enable only behind a proxy).
     trust_proxy: bool = False
+    #: Largest ``max_tokens`` a client may request; larger values are clamped.
+    max_tokens: int = 8192
+    #: Largest request body accepted on ``/api/messages``, in bytes (else 413).
+    max_body_bytes: int = 1_048_576
 
     @classmethod
     def from_env(cls) -> "Config":
@@ -68,4 +72,6 @@ class Config:
             rate_limit=_env_int("REVISION_RATE_LIMIT", 30),
             rate_window=float(_env_int("REVISION_RATE_WINDOW", 60)),
             trust_proxy=_env_bool("REVISION_TRUST_PROXY", False),
+            max_tokens=_env_int("REVISION_MAX_TOKENS", 8192),
+            max_body_bytes=_env_int("REVISION_MAX_BODY_BYTES", 1_048_576),
         )
