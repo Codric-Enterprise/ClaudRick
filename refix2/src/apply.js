@@ -186,7 +186,11 @@ function loadReceipts(receiptsDir) {
 
 function revertLast(receiptsDir) {
   const receipts = loadReceipts(receiptsDir);
-  const active   = receipts.filter(r => !r.reverted_ms);
+  // A revert appends a copy of the receipt carrying reverted_ms; the
+  // original line is never rewritten, so match superseded ones by key.
+  const key        = r => [r.ts_ms, r.file, r.hash_before, r.hash_after].join('|');
+  const superseded = new Set(receipts.filter(r => r.reverted_ms).map(key));
+  const active     = receipts.filter(r => !r.reverted_ms && !superseded.has(key(r)));
   if (!active.length) return { reverted: false, reason: 'no applied edits' };
   const last = active[active.length - 1];
   const cur  = _readOrEmpty(last.file);

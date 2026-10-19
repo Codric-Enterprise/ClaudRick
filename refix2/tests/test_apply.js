@@ -125,6 +125,10 @@ t('revert restores the pre-image exactly', () => {
   assert.ok(r.reverted, JSON.stringify(r));
   const after = fs.readFileSync(path.join(root, 'app/build.gradle.kts'), 'utf8');
   assert.strictEqual(after, original);
+  // The reverted receipt is no longer active: a second revert has nothing to undo.
+  const again = revertLast(rec);
+  assert.strictEqual(again.reverted, false);
+  assert.ok(/no applied edits/i.test(again.reason), again.reason);
 });
 
 t('revert refuses when the file has changed since apply', () => {

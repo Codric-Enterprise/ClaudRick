@@ -225,6 +225,8 @@ try {
       return positional[0] ? cmdApply(positional[0], opts) : usage();
     }
     case 'revert':     return cmdRevert();
+    case '--help':
+    case '-h':         return usage(0);
     default:           return usage(cmd ? 2 : 0);
   }
 } catch (e) {

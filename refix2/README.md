@@ -1,74 +1,73 @@
-# ReFix v2
+# ReFix
 
-Zero-dependency Node CLI. Matches Gradle build errors against a signature
-corpus, archives every accepted repair as a `(Failure, Fixture)` pair,
-synthesizes new rules only when the same fixture recurs across distinct
-sources and replays against the entire archive without changing any prior
-outcome, and (v2.1) **applies fixtures to your project with a revert
-receipt for every write**.
+Stop googling the same Gradle error twice.
 
-The mechanism ports from Ever/Tapestry `SEMANTICS.md` §9 and
-`4-archive-sql/repair.sql`. Constants live in one file (`src/constants.js`)
-and derive from `E_CERTAIN = 256`.
+ReFix is a zero-dependency command-line tool that reads a captured Gradle build log, matches the error against a library of known error signatures, and applies the fix. Every change ReFix makes is logged with a receipt, so you can undo it.
 
-## What's in and what's not
+## Install
 
-**In:**
-- 10 hand-authored Gradle signatures drawn from documented AGP/Gradle errors
-- Failure/Fixture archive as append-only JSONL
-- Recurrence detection at `E_ASCEND_POINTS = 3` distinct sources
-- Rule proposal with replay-against-archive gate
-- Admission at `E_EXECUTE_FLOOR = 128`; rejected rules preserved forever
-- 4 applier planners (`SET_COMPILE_SDK`, `SET_AGP_VERSION`, `SET_NAMESPACE`,
-  `CREATE_LOCAL_PROPERTIES`) that turn a `fixture_form` into a real edit
-- Revert receipts hashed pre/post so tampered files refuse rewind
-- 28 tests, zero deps
+    npm install -g refix-cli
 
-**Not in, and not pretending to be:**
-- No trained corpus. The archive starts empty. Users build the moat.
-- Only 4 fixture_forms have appliers today. Signatures whose form is not
-  in the applier registry are refused with the reason; adding a new form
-  is one function in `src/apply.js` and one signature in `gradle.json`.
-- No hosted / team archive. Local JSONL only.
+Requires Node.js (tested on Node 22). No other dependencies.
+
+## How it works
+
+1. Your Gradle build fails, and you save its output to a log file.
+2. `refix scan` matches the log against the signature corpus (`signatures/gradle.json`).
+3. `refix apply` shows the plan for each match and writes it, unless you pass `--dry-run`, which shows the plan and changes nothing.
+4. Each write gets a receipt, a hashed record appended to `receipts.jsonl` in the ReFix home directory (`$REFIX_HOME`, or `~/.refix` by default).
+5. If the fix doesn't work, `refix revert` restores the file from the receipt.
 
 ## Usage
 
-```
-refix scan <build.log>              — what signatures match?
-refix accept <build.log> <src-id>   — archive matches as accepted repairs
-refix candidates                    — fixtures that cleared the threshold
-refix propose                       — attempt admission; replay-gated
-refix rules                         — admitted & rejected rules
-refix archive                       — raw JSONL to stdout
-refix apply <build.log>             — plan and write; --dry-run to preview
-refix revert                        — undo the last apply; refuses on tamper
-```
+Match a build log against the signatures:
 
-Archive lives at `$REFIX_HOME` or `~/.refix`. Apply looks at the current
-directory unless `--project <dir>` is given.
+    refix scan <build.log>
 
-## Tests
+Preview a fix without touching any files:
 
-```
-node tests/test_all.js     # 15 archive/match tests
-node tests/test_apply.js   # 13 planner/receipt tests
-```
+    refix apply <build.log> --dry-run
 
-## Two bugs the mechanism caught during its own construction
+Apply a fix to a specific project:
 
-Kept here because the project's discipline says gaps are documented, not
-swept.
+    refix apply <build.log> --project ./my-android-app
 
-1. The `unresolved_dependency` regex used capturing alternation
-   `(resolve|find)` — the first capture slot became `"resolve"` instead
-   of the group id. The recurrence engine would have detected divergent
-   `fixture_form` values across identical failures. Fixed to
-   `(?:resolve|find)`.
+Undo the last applied fix:
 
-2. The `agp_too_old` regex used `[\d\.]+`, which swallowed the sentence-
-   final period into the version string, producing `8.5.2.` instead of
-   `8.5.2`. Test caught it. Fixed to `\d+(?:\.\d+)*`.
+    refix revert
 
-Both are the failure mode ReFix exists to prevent in Gradle output —
-regex overreach — appearing in ReFix's own regex file. Noted because
-the tool is not exempt from its own claims.
+Archive the matches from a build log as accepted repairs, tagged with a source name:
+
+    refix accept <build.log> <source-ident>
+
+Other commands:
+
+    refix candidates    # fixtures seen across enough distinct sources to propose
+    refix propose       # try to admit each candidate; gated by replay
+    refix rules         # admitted and rejected rules
+    refix archive       # raw archive as JSON lines on stdout
+
+`apply` can write four kinds of fix: set `compileSdk`, pin the Android Gradle Plugin version, set the `namespace` from the manifest, and create `local.properties` with `sdk.dir`. Matches for other signatures are reported and skipped.
+
+## Safety
+
+- ReFix records a receipt for every write it makes.
+- Every receipt is hashed. `refix revert` refuses to restore a file that no longer matches the state ReFix wrote.
+- `revert` undoes only the most recent applied fix. Run it again to undo the one before, if that one is still in place.
+- Use `--dry-run` to see exactly what would change first.
+
+## Status
+
+v2.1 has 28 passing tests (`npm test`). Accepted repairs are stored in the local archive. A rule is admitted only after the same fix recurs across three distinct sources and passes a replay against the whole archive.
+
+## Source
+
+https://github.com/Codric-Enterprise/ClaudRick/tree/main/refix2
+
+## License
+
+MIT
+
+## Author
+
+Rick Erickson, Codric Enterprise
