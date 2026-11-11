@@ -7,6 +7,7 @@ standard-library ``http.server`` to avoid runtime dependencies.
 """
 
 import hmac
+import http.client
 import json
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -134,14 +135,36 @@ class RevisionHandler(BaseHTTPRequestHandler):
         self._send_json(200, result)
 
     def _read_json_body(self) -> dict | None:
-        """Read and parse the request body; sends a 400 and returns None on bad JSON."""
-        length = int(self.headers.get("content-length", 0) or 0)
+        """Read and parse the request body into a JSON object.
+
+        Sends a 400 (bad ``Content-Length``, bad JSON, or not an object) or a
+        413 (body over ``max_body_bytes``) and returns None if it can't.
+        """
+        raw_length = self.headers.get("content-length", "0").strip() or "0"
+        try:
+            length = int(raw_length)
+        except ValueError:
+            length = -1
+        if length < 0:
+            self._send_json(400, {"error": {"message": "Invalid Content-Length header."}})
+            return None
+        if length > self.config.max_body_bytes:
+            self._send_json(
+                413,
+                {"error": {"message": f"Request body exceeds {self.config.max_body_bytes} bytes."}},
+            )
+            return None
+
         raw = self.rfile.read(length) if length else b"{}"
         try:
-            return json.loads(raw)
-        except json.JSONDecodeError:
+            data = json.loads(raw)
+        except ValueError:  # JSONDecodeError and UnicodeDecodeError (invalid UTF-8)
             self._send_json(400, {"error": {"message": "Request body is not valid JSON."}})
             return None
+        if not isinstance(data, dict):
+            self._send_json(400, {"error": {"message": "Request body must be a JSON object."}})
+            return None
+        return data
 
     def _extract_message_params(self, data: dict) -> tuple[str, int, bool] | None:
         """Validate the prompt/max_tokens fields; sends a 400 and returns None if invalid."""
@@ -151,10 +174,12 @@ class RevisionHandler(BaseHTTPRequestHandler):
             return None
 
         max_tokens = data.get("max_tokens", 3000)
-        if not isinstance(max_tokens, int) or max_tokens <= 0:
-            max_tokens = 3000
+        # bool is an int subclass, so `true` would otherwise pass as 1.
+        if isinstance(max_tokens, bool) or not isinstance(max_tokens, int) or max_tokens <= 0:
+            self._send_json(400, {"error": {"message": "'max_tokens' must be a positive integer."}})
+            return None
 
-        return prompt, max_tokens, bool(data.get("stream"))
+        return prompt, min(max_tokens, self.config.max_tokens), bool(data.get("stream"))
 
     def _handle_stream(self, prompt: str, max_tokens: int) -> None:
         """Proxy an Anthropic SSE stream straight through to the browser."""
@@ -173,9 +198,21 @@ class RevisionHandler(BaseHTTPRequestHandler):
                 self.wfile.write(line)
                 self.wfile.flush()
         except (BrokenPipeError, ConnectionResetError):
-            pass
+            pass  # the browser went away; nothing left to tell it
+        except (OSError, http.client.HTTPException) as exc:
+            # Headers are already sent, so a status code is no longer possible;
+            # tell the client in-band instead of leaving it a silently truncated stream.
+            self._send_stream_error(f"Upstream stream failed: {exc}")
         finally:
             upstream.close()
+
+    def _send_stream_error(self, message: str) -> None:
+        payload = json.dumps({"type": "error", "error": {"message": message}})
+        try:
+            self.wfile.write(f"event: error\ndata: {payload}\n\n".encode())
+            self.wfile.flush()
+        except OSError:
+            pass
 
     def log_message(self, *args) -> None:  # noqa: A002 (silence default stderr logging)
         """Suppress the default per-request stderr logging."""

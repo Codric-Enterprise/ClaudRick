@@ -53,6 +53,7 @@ Key design decisions:
 │   ├── test_anthropic_client.py   # mocks urllib.request.urlopen
 │   ├── test_ratelimit.py          # limiter unit tests (monkeypatched clock)
 │   ├── test_server.py             # runs a live server on port 0, fake client
+│   ├── test_hooks.py              # drives .claude/hooks/*.sh with tool_input JSON; exit 2 = blocked
 │   └── corpora/               # live evaluation harnesses (Node.js, not pytest — see below)
 │       ├── analyzer/          # 10 .docx fixtures + ground-truth.json + grade.js
 │       └── tools/              # Enhance/Translate/Jargonary inputs.json + grade-tools.js
@@ -60,7 +61,7 @@ Key design decisions:
 │   ├── settings.json         # permissions allowlist + PreToolUse/PostToolUse/SessionStart hooks
 │   ├── hooks/session-start.sh     # SessionStart: loads .env, installs ReVision dev deps, verifies ezr's toolchain
 │   ├── hooks/git-safety-guard.sh  # PreToolUse (Bash): blocks force-push/reset --hard/clean -f/--no-verify/…
-│   ├── hooks/secret-scan-precommit.sh # PreToolUse (Bash): blocks `git commit` on a likely-secret staged diff
+│   ├── hooks/secret-scan-precommit.sh # PreToolUse (Bash): blocks `git commit` on a likely-secret diff (staged, + unstaged for -a)
 │   ├── commands/             # custom slash commands (/analyze, /think, /check, /run-app, /prd, …)
 │   ├── skills/               # claude-power-practices + dev skills (dev-check, run-app, add-tool, test-and-lint, prompt-library)
 │   ├── agents/                # standalone subagents: code-reviewer, test-writer, security-auditor (each read-only/single-purpose)
@@ -160,14 +161,20 @@ Key design decisions:
 - `GET /` and other paths → static files from `src/revision/static/` (traversal-guarded).
 - `GET /healthz` → `{"status": "ok"}`; does not call Anthropic (used by Docker HEALTHCHECK).
 - `POST /api/messages` → `{prompt, max_tokens?, stream?}`; enforces optional
-  bearer auth, then rate limiting, then proxies to Claude. When `stream` is
+  bearer auth, then rate limiting, then proxies to Claude. The body must be a
+  JSON object no larger than `REVISION_MAX_BODY_BYTES` (default 1 MiB);
+  `max_tokens` must be a positive integer (default 3000) and is clamped to
+  `REVISION_MAX_TOKENS` (default 8192). When `stream` is
   true, the response is `text/event-stream` — the upstream Anthropic SSE
   payload forwarded through byte-for-byte (see `AnthropicClient.open_message_stream`
   / `RevisionHandler._handle_stream`); otherwise it's the full JSON message.
-  Errors are `{"error": {"message"}}` with `400` (bad input), `401` (auth),
-  `429` (rate limit, sends `Retry-After`), or `502` (Anthropic error) — the
-  same shape whether or not streaming was requested, since stream errors
-  surface before any SSE bytes are written.
+  Errors are `{"error": {"message"}}` with `400` (bad input: invalid or
+  non-object JSON, bad `Content-Length`, bad `prompt`/`max_tokens`), `401`
+  (auth), `413` (body too large), `429` (rate limit, sends `Retry-After`), or
+  `502` (Anthropic error) — the same shape whether or not streaming was
+  requested, since errors that happen before the first SSE byte are returned
+  as ordinary JSON. A failure *after* the stream has started can no longer
+  change the status, so it is sent in-band as an `event: error` SSE frame.
 
 Uses a **src layout**: importable code is under `src/`; `pyproject.toml` sets
 `pythonpath = ["src"]` so tests run without an editable install. The
@@ -352,16 +359,24 @@ model stack, the core-files framework, and the Claude Code app workflow):
   Java, gated on `5-runtime-java/out/` rather than on `PATH` — the class
   of problem is the same, the trigger was not). It also warns when `JAVA_TOOL_OPTIONS` is set, per the gotcha below;
   and two `PreToolUse` hooks matched on `Bash` calls — `git-safety-guard.sh`
-  (hard-blocks force-push without `--force-with-lease`, `reset --hard`,
-  `clean -f`, `branch -D`, discard-all `checkout`/`restore .`, and
-  `--no-verify`/`--no-gpg-sign`) and `secret-scan-precommit.sh` (blocks
-  `git commit` when the staged diff matches an Anthropic/AWS/GitHub/Slack key
-  or a PEM private-key block). Both are backstops, not a substitute for
-  judgment, and both are line-based text scanners (each check requires the
-  dangerous pattern and an actual `git <verb>` on the same physical line) —
-  precise enough to ignore prose that merely *mentions* a flag, but a
-  contrived one-liner could still evade or false-positive it. See
-  `.claude/README.md` for the full rundown.
+  (hard-blocks force-push without `--force-with-lease` — `--force`, `-f`/`-fu`,
+  `+refspec`, `:ref` deletes and `--mirror` included — `reset --hard`,
+  `clean -f`/`--force`, `branch -D`, discard-all `checkout`/`restore .`,
+  `checkout -f`, and `--no-verify`/`-n`/`--no-gpg-sign`) and
+  `secret-scan-precommit.sh` (blocks `git commit` when the changes it records
+  match an Anthropic/OpenAI/AWS/GitHub/Slack/Stripe/Google key or a PEM
+  private-key block; `git commit -a/-i/-o` also scans unstaged tracked
+  changes). Both are backstops, not a substitute for judgment, and both are
+  line-based text scanners: each check requires the dangerous pattern and an
+  actual `git <verb>` on the same physical line (after joining
+  backslash-continued lines and skipping global options such as `git -C dir`
+  or `git -c k=v`) — precise enough to ignore prose that merely *mentions* a
+  flag, but a contrived one-liner could still evade or false-positive it
+  (known gaps: `git commit <pathspec>` without `-a`, quoted flags are matched
+  as written, and the secret patterns are a list, not entropy detection).
+  Without `jq` both fail **closed** for git commands, because they can no
+  longer read the command. `tests/test_hooks.py` pins every one of these.
+  See `.claude/README.md` for the full rundown.
 
 > Gotcha: Claude Code only watches `.claude/` dirs that had a settings file when
 > the session **started**. Editing `settings.json` or the hooks mid-session

@@ -17,6 +17,7 @@ class RateLimiter:
         self.window = window
         self._hits: dict[str, deque[float]] = defaultdict(deque)
         self._lock = Lock()
+        self._next_sweep = 0.0
 
     def check(self, key: str) -> tuple[bool, int]:
         """Record an attempt for ``key``.
@@ -31,6 +32,7 @@ class RateLimiter:
         now = time.monotonic()
         cutoff = now - self.window
         with self._lock:
+            self._sweep(now, cutoff)
             hits = self._hits[key]
             while hits and hits[0] <= cutoff:
                 hits.popleft()
@@ -38,5 +40,16 @@ class RateLimiter:
                 retry_after = self.window - (now - hits[0])
                 return False, max(1, int(retry_after) + 1)
             hits.append(now)
-            # Drop empty deques opportunistically to bound memory growth.
             return True, 0
+
+    def _sweep(self, now: float, cutoff: float) -> None:
+        """Forget keys whose hits have all expired, at most once per window.
+
+        Without this a key that never returns keeps its (empty) deque forever,
+        so memory grows with every distinct client ever seen. Caller holds the lock.
+        """
+        if now < self._next_sweep:
+            return
+        self._next_sweep = now + self.window
+        for stale in [k for k, hits in self._hits.items() if not hits or hits[-1] <= cutoff]:
+            del self._hits[stale]

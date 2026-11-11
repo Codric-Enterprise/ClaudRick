@@ -19,7 +19,7 @@ every clone and every Claude Code on the web session picks it up automatically.
 | `agents/security-auditor.md` | Read-only subagent: audits against the Security notes checklist |
 | `hooks/session-start.sh` | `SessionStart` — installs ReVision dev deps on a cold remote container; verifies `ezr/`'s gcc/g++/ruby/javac/java toolchain and warns on `JAVA_TOOL_OPTIONS` |
 | `hooks/git-safety-guard.sh` | `PreToolUse` (Bash) — hard-blocks destructive git commands (force-push, `reset --hard`, `clean -f`, `--no-verify`, …) |
-| `hooks/secret-scan-precommit.sh` | `PreToolUse` (Bash) — blocks `git commit` when the staged diff matches a likely-secret pattern |
+| `hooks/secret-scan-precommit.sh` | `PreToolUse` (Bash) — blocks `git commit` when the changes it records (staged, plus unstaged for `-a`) match a likely-secret pattern |
 | `settings.json` | permissions allowlist, `PreToolUse` guard hooks, `PostToolUse` auto-format hook, hidden attribution |
 
 ## Durable install: project `.claude/`, not `~/.claude/`
