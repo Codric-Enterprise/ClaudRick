@@ -1,0 +1,55 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Ever: Run Current File",
+      "detail": "One command, either lineage -- ezr/ever picks ever_cli.py run or ezrun.py by the file's extension.",
+      "type": "shell",
+      "command": "python3",
+      "args": ["${workspaceFolder}/ezr/ever", "${file}"],
+      "options": { "cwd": "${workspaceFolder}" },
+      "group": { "kind": "build", "isDefault": true },
+      "presentation": { "reveal": "always", "panel": "dedicated", "clear": true },
+      "problemMatcher": []
+    },
+    {
+      "label": "Ever: Verify (ezr gate, 29 suites)",
+      "detail": "python3 tests/run_all.py",
+      "type": "shell",
+      "command": "python3",
+      "args": ["tests/run_all.py"],
+      "options": { "cwd": "${workspaceFolder}/ezr" },
+      "group": { "kind": "test", "isDefault": true },
+      "problemMatcher": []
+    },
+    {
+      "label": "Ever: Verify examples only",
+      "detail": "python3 tests/examples_test.py -- every example's output pinned",
+      "type": "shell",
+      "command": "python3",
+      "args": ["tests/examples_test.py"],
+      "options": { "cwd": "${workspaceFolder}/ezr" },
+      "problemMatcher": []
+    },
+    {
+      "label": "ReVision: Run server",
+      "detail": "PYTHONPATH=src python -m revision.cli",
+      "type": "shell",
+      "command": "python3",
+      "args": ["-m", "revision.cli"],
+      "options": {
+        "cwd": "${workspaceFolder}",
+        "env": { "PYTHONPATH": "src" }
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "ReVision: Test + lint",
+      "detail": "pytest && ruff check .",
+      "type": "shell",
+      "command": "pytest -q && ruff check . && ruff format --check .",
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": []
+    }
+  ]
+}

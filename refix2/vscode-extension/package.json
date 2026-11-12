@@ -1,0 +1,84 @@
+{
+  "name": "refix-vscode",
+  "displayName": "ReFix",
+  "description": "Scan a failed Gradle build log, apply the known fix, and revert it from a hashed receipt. Wraps the refix-cli command line tool.",
+  "version": "2.1.0",
+  "publisher": "codric-enterprise",
+  "license": "MIT",
+  "author": "Rick Erickson, Codric Enterprise",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Codric-Enterprise/ClaudRick.git",
+    "directory": "refix2/vscode-extension"
+  },
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "keywords": [
+    "gradle",
+    "android",
+    "build",
+    "fix"
+  ],
+  "main": "./extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "refix.scan",
+        "title": "Scan Build Log",
+        "category": "ReFix"
+      },
+      {
+        "command": "refix.apply",
+        "title": "Apply Fix (Preview, then Confirm)",
+        "category": "ReFix"
+      },
+      {
+        "command": "refix.revert",
+        "title": "Revert Last Fix",
+        "category": "ReFix"
+      },
+      {
+        "command": "refix.accept",
+        "title": "Accept Build Log Repairs",
+        "category": "ReFix"
+      }
+    ],
+    "menus": {
+      "explorer/context": [
+        {
+          "command": "refix.scan",
+          "when": "resourceExtname == .log || resourceExtname == .txt",
+          "group": "refix@1"
+        },
+        {
+          "command": "refix.apply",
+          "when": "resourceExtname == .log || resourceExtname == .txt",
+          "group": "refix@2"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "ReFix",
+      "properties": {
+        "refix.cliPath": {
+          "type": "string",
+          "default": "refix",
+          "description": "Path to the refix executable (install with: npm install -g refix-cli)."
+        },
+        "refix.home": {
+          "type": "string",
+          "default": "",
+          "description": "Directory for the ReFix archive and receipts.jsonl. Empty uses the CLI default (~/.refix or $REFIX_HOME)."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "test": "node --test",
+    "package": "npx --yes @vscode/vsce package"
+  }
+}

@@ -49,6 +49,8 @@ Don't pay for brains you don't need. Match the model to the task.
 
 **Pro tip:** start with **Sonnet**; upgrade to **Fable** or **Opus** when
 quality matters. Switch models mid-task to hit the right cost/quality point.
+Operationalized as the [`/model-picker`](../.claude/commands/model-picker.md)
+command.
 
 > This is the same stack shown in the [Mastery Protocol](../mastery-system/index.html)
 > model tree — keep the two in sync when the lineup changes.
@@ -72,7 +74,8 @@ the active project folder, read uploaded files before acting, ask clarifying
 questions when needed, and stay concise, accurate, and source-aware.
 
 > Operationalized here as the [`/about-me`](../.claude/commands/about-me.md)
-> command, which drafts and maintains the profile file.
+> command, which drafts and maintains the profile file, and as the "Write Your
+> Core Files" section of the [Mastery Protocol](../mastery-system/index.html).
 
 ---
 
@@ -240,4 +243,9 @@ storytelling · analytical · high-authority.
   reusable command.
 - **[`/about-me`](../.claude/commands/about-me.md)** — drafts the §3 core profile
   file.
-- This reference doc, linked from `CLAUDE.md` and `README.md`.
+- **[`/model-picker`](../.claude/commands/model-picker.md)** — the §2 model
+  choice as a reusable command.
+- **"Write Your Core Files"** section (§3) on the Mastery Protocol page.
+- A **"Try an Example"** button in the Fine Print Analyzer preloading fictional
+  scammy ad copy (§5's "be careful with" tactics, made demonstrable).
+- This reference doc, linked from `CLAUDE.md`.

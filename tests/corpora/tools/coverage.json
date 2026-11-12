@@ -1,0 +1,43 @@
+{
+  "generated": "2026-07-19T04:10:17.694Z",
+  "tools": {
+    "enhance": {
+      "inputs": 6,
+      "doc_types": 6,
+      "rubric": 5
+    },
+    "translate": {
+      "inputs": 6,
+      "target_langs": [
+        "Spanish",
+        "English",
+        "German",
+        "Japanese"
+      ],
+      "source_langs_detected": [
+        "English",
+        "French",
+        "Spanish",
+        "German"
+      ],
+      "rubric": 6
+    },
+    "jargonary": {
+      "inputs": 6,
+      "domains": [
+        "legal",
+        "medical",
+        "finance",
+        "bureaucratic",
+        "technical",
+        "insurance"
+      ],
+      "levels": [
+        "plain",
+        "eli5"
+      ],
+      "glossary_terms": 24,
+      "rubric": 5
+    }
+  }
+}

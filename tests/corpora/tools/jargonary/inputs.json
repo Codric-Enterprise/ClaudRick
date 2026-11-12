@@ -1,0 +1,102 @@
+{
+  "tool": "jargonary",
+  "output": "json",
+  "rubric": [
+    "valid_json",
+    "simplified_non_empty",
+    "key_takeaway_non_empty",
+    "glossary_covers_terms",
+    "preserves_must_keep"
+  ],
+  "inputs": [
+    {
+      "id": "J1",
+      "level": "plain",
+      "domain": "legal",
+      "text": "The party of the first part hereby indemnifies and holds harmless the party of the second part from any and all liabilities arising in perpetuity, notwithstanding any force majeure event.",
+      "expect_terms": [
+        "indemnifies",
+        "holds harmless",
+        "in perpetuity",
+        "force majeure"
+      ],
+      "must_keep": []
+    },
+    {
+      "id": "J2",
+      "level": "plain",
+      "domain": "medical",
+      "text": "The patient presented with acute idiopathic tachycardia. Recommend 50mg metoprolol BID and follow-up echocardiogram in 2 weeks.",
+      "expect_terms": [
+        "idiopathic",
+        "tachycardia",
+        "BID",
+        "echocardiogram"
+      ],
+      "must_keep": [
+        "50mg",
+        "2 weeks"
+      ]
+    },
+    {
+      "id": "J3",
+      "level": "eli5",
+      "domain": "finance",
+      "text": "The fund employs a leveraged carry strategy exploiting the basis between spot and futures, subject to margin calls upon adverse mark-to-market movements.",
+      "expect_terms": [
+        "leveraged",
+        "carry",
+        "basis",
+        "margin calls",
+        "mark-to-market"
+      ],
+      "must_keep": []
+    },
+    {
+      "id": "J4",
+      "level": "plain",
+      "domain": "bureaucratic",
+      "text": "Applicants must remit the requisite remittance of $85 concomitant with submission; failure to do so will result in the application being deemed non-compliant and returned in toto.",
+      "expect_terms": [
+        "remit",
+        "requisite",
+        "concomitant",
+        "in toto"
+      ],
+      "must_keep": [
+        "$85"
+      ]
+    },
+    {
+      "id": "J5",
+      "level": "plain",
+      "domain": "technical",
+      "text": "The service enforces idempotency via a mutex on the write path; exceeding the rate limit returns HTTP 429 with an exponential backoff header.",
+      "expect_terms": [
+        "idempotency",
+        "mutex",
+        "rate limit",
+        "exponential backoff"
+      ],
+      "must_keep": [
+        "429"
+      ]
+    },
+    {
+      "id": "J6",
+      "level": "eli5",
+      "domain": "insurance",
+      "text": "Coverage is subject to a $2,000 deductible and a 20% coinsurance obligation until the out-of-pocket maximum of $8,000 is satisfied within the benefit period.",
+      "expect_terms": [
+        "deductible",
+        "coinsurance",
+        "out-of-pocket maximum"
+      ],
+      "must_keep": [
+        "$2,000",
+        "20%",
+        "$8,000"
+      ]
+    }
+  ]
+}

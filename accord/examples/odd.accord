@@ -1,0 +1,8 @@
+# not. No example before this one answers with `not`, so build's `not` case was unbuilt code.
+To odd given n, answering a Bool:
+  n is an Int, trusted 256 of 256.
+  It never repeats.
+  Make sure n is not void.
+  Answer not (n modulo 2 is equal to 0).
+Check: odd of 4 gives false, trusted 120.
+Check: odd of 5 gives true, trusted 120.

@@ -1,0 +1,37 @@
+ClaudRick Enterprises — Pro Pack Commercial License
+Copyright (c) 2025 ReVision Contributors
+
+This license applies only to the contents of this `pro-commands/` directory
+(the "Pro Commands"). The MIT license in the parent directory's `LICENSE`
+file does not cover this directory — see the notice at the top of that file.
+
+1. GRANT. Subject to payment of the applicable license fee and activation
+   with a valid license key (`npx slash-pack --activate KEY`), the copyright
+   holder grants the purchaser a personal, non-exclusive, non-transferable,
+   non-sublicensable license to install and use the Pro Commands for the
+   purchaser's own prompting and development work.
+
+2. RESTRICTIONS. Without separate written permission from the copyright
+   holder, the purchaser may not:
+   a. redistribute, publish, host, or share the Pro Commands, in whole or in
+      part, in source or any other form, with any third party;
+   b. resell, sublicense, rent, or lease the Pro Commands or access to them;
+   c. remove or obscure this license notice from any copy; or
+   d. use the Pro Commands to build or offer a substantially similar
+      commands pack to others.
+
+3. TERM. This license is valid for as long as the purchaser holds a valid
+   license key. It terminates automatically and immediately on breach of
+   Section 2, without notice.
+
+4. NO WARRANTY. THE PRO COMMANDS ARE PROVIDED "AS IS", WITHOUT WARRANTY OF
+   ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+   OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, AND
+   NONINFRINGEMENT. IN NO EVENT SHALL THE COPYRIGHT HOLDER BE LIABLE FOR ANY
+   CLAIM, DAMAGES, OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
+   TORT, OR OTHERWISE, ARISING FROM THE USE OF THE PRO COMMANDS.
+
+---
+This is a standard-form starting point, not a substitute for legal review.
+Have it reviewed by a lawyer licensed in your jurisdiction before relying on
+it for commercial enforcement at any real scale.

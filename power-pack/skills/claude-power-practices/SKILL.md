@@ -63,9 +63,9 @@ The `.claude/commands/` directory turns the full command cheat-sheet into real
 slash commands, grouped as:
 
 - **Focus & context:** `/focus`, `/context`, `/details`, `/examples`,
-  `/clarify`, `/define`, `/assumptions`, `/priorities`, `/constraints`
+  `/clarify`, `/define`, `/assumptions`, `/priorities`, `/constraints`, `/brief`
 - **Think & solve:** `/think`, `/analyze`, `/compare`, `/pros-cons`,
-  `/proscons`, `/evaluate`, `/recommend`, `/brainstorm`, `/solve`, `/challenge`
+  `/proscons`, `/evaluate`, `/recommend`, `/brainstorm`, `/solve`, `/challenge`, `/model-picker`
 - **Organize & structure:** `/outline`, `/structure`, `/bullet`, `/numbered`,
   `/table`, `/summary`, `/key-points`, `/mindmap`, `/flowchart`
 - **Code & tech:** `/code`, `/debug`, `/explain`, `/optimize`, `/refactor`,
@@ -73,7 +73,7 @@ slash commands, grouped as:
 - **Automate & integrate:** `/workflow`, `/automate`, `/api`, `/integrate`,
   `/schedule`, `/trigger`, `/tasklist`, `/checklist`
 - **Personalize & control:** `/preferences`, `/memory`, `/tone`, `/style`,
-  `/length`, `/format`, `/reset`, `/clear`
+  `/length`, `/format`, `/reset`, `/clear`, `/about-me`
 - **Write & edit:** `/write`, `/edit`, `/rewrite`, `/shorten`, `/expand`,
   `/improve`, `/paraphrase`
 - **Data & analysis:** `/insights`, `/forecast`, `/report`, `/stats`, `/clean`
@@ -81,7 +81,6 @@ slash commands, grouped as:
 - **Collaborate:** `/email`, `/feedback`
 - **Content transforms:** `/eli5`, `/tldr`, `/factcheck`, `/proofread`,
   `/glossary`, `/keypoints`
-- **Repo dev (project-specific):** `/check`, `/run-app`, `/smoke`
 
 `/clear`, `/memory`, and `/review` collide with Claude Code built-ins — the
 built-in takes precedence. See `docs/commands-pack.md` for the paste-ready

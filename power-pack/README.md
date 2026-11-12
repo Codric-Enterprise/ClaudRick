@@ -2,7 +2,7 @@
 
 **Structured Language And System Heuristics**
 
-77 battle-tested prompt-commands for Claude — as slash commands in Claude Code,
+80 battle-tested prompt-commands for Claude — as slash commands in Claude Code,
 or copy-paste prompts in any Claude chat.
 
 Each command is a carefully crafted prompt that turns a vague ask into a
@@ -10,16 +10,16 @@ structured, high-quality result.
 
 ## What's inside
 
-### Free (77 commands)
+### Free (80 commands)
 
 | Group | Commands | Examples |
 |-------|----------|----------|
-| Focus & Context | 9 | `/focus`, `/context`, `/clarify`, `/define` |
-| Think & Solve | 10 | `/think`, `/analyze`, `/compare`, `/challenge` |
+| Focus & Context | 10 | `/focus`, `/context`, `/clarify`, `/brief` |
+| Think & Solve | 11 | `/think`, `/analyze`, `/model-picker`, `/challenge` |
 | Organize & Structure | 9 | `/summary`, `/outline`, `/table`, `/flowchart` |
 | Code & Tech | 9 | `/code`, `/debug`, `/test`, `/refactor` |
 | Automate & Integrate | 8 | `/workflow`, `/automate`, `/api`, `/checklist` |
-| Personalize & Control | 8 | `/tone`, `/style`, `/format`, `/reset` |
+| Personalize & Control | 9 | `/tone`, `/style`, `/about-me`, `/reset` |
 | Write & Edit | 7 | `/write`, `/improve`, `/shorten`, `/rewrite` |
 | Data & Analysis | 5 | `/insights`, `/report`, `/stats`, `/forecast` |
 | Learn & Research | 4 | `/research`, `/learn`, `/sources`, `/explore` |
@@ -42,41 +42,42 @@ prompt structure, truthfulness, and real deliverables.
 
 ## Install
 
-### npx (recommended — works on macOS, Linux, Windows)
+### Bash (Unix) — works today
+
+```bash
+git clone https://github.com/Codric-Enterprise/ClaudRick.git
+cd ClaudRick/power-pack
+bash install.sh
+```
+
+```bash
+# Preview what would change:
+bash install.sh --dry-run
+
+# Cleanly remove:
+bash install.sh --uninstall
+```
+
+### npx (coming soon)
 
 ```bash
 npx slash-pack
 ```
 
-One command. No clone required. Works everywhere Node.js runs.
-
-```bash
-# Preview what would change:
-npx slash-pack --dry-run
-
-# Check installation status:
-npx slash-pack --status
-
-# Cleanly remove:
-npx slash-pack --uninstall
-```
+This is the target one-command install once `slash-pack` is published to npm
+— it isn't yet, so this won't work today. Use the Bash install above until
+then; `cli.js` behind it is the same installer either way (`--dry-run`,
+`--status`, `--uninstall`, `--activate KEY` all work identically once live).
 
 ### Activate Pro
 
 After purchasing a Pro license:
 
 ```bash
-npx slash-pack --activate YOUR-LICENSE-KEY
-npx slash-pack   # re-run to install the 30 pro commands
+bash install.sh   # or: npx slash-pack, once published
+node cli.js --activate YOUR-LICENSE-KEY
+bash install.sh   # re-run to install the 30 pro commands
 ```
-
-### Bash (Unix)
-
-```bash
-bash install.sh
-```
-
-Same flags: `--dry-run` to preview, `--uninstall` to remove.
 
 Both paths copy everything to `~/.claude/` so commands are available globally
 in every project. Existing commands are backed up automatically.
@@ -117,4 +118,5 @@ guardrails for reasoning, truthfulness, and deliverable quality.
 ## License
 
 Free tier: MIT — see [LICENSE](LICENSE).
-Pro commands: proprietary license, single-user. See purchase terms.
+Pro commands: proprietary, single-user, non-transferable — see
+[pro-commands/LICENSE](pro-commands/LICENSE). No redistribution or resale.

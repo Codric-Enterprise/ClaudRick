@@ -1,0 +1,9 @@
+# You write this file: the header, the trust you give each input, and the Checks.
+# `python3 accord.py fill examples/leap.intent.accord` asks Claude for the body.
+# Unlike clamp.intent, an accepted body here must use `and`, `or` and `modulo`.
+To leap given year, answering a Bool:
+  year is an Int, trusted 256 of 256.
+Check: leap of 2024 gives true, trusted 120.
+Check: leap of 2023 gives false, trusted 120.
+Check: leap of 1900 gives false, trusted 120.
+Check: leap of 2000 gives true, trusted 120.

@@ -492,6 +492,7 @@
                     <textarea id="analyzerInput" placeholder="Paste the text you want to analyze..."></textarea>
                     <div class="button-group">
                         <button class="primary-btn" id="analyzeBtn">Analyze Document</button>
+                        <button class="secondary-btn" id="exampleAnalyzerBtn">Try an Example</button>
                         <button class="secondary-btn" id="clearAnalyzerBtn">Clear</button>
                     </div>
                 </div>
@@ -721,23 +722,136 @@
             });
         });
 
+        // Redaction Gate — mirrors RedactionGate.kt on the Android side.
+        // Runs on ALL text before it is sent to the backend, for every tool
+        // (Analyzer, Jargonary, Translate, Enhance), not just the Fine Print
+        // Analyzer. Catches structurally-detectable sensitive data (SSNs,
+        // cards, credentials, emails, phones, API keys); it will NOT catch a
+        // name or address written in free prose — that gap is real, not hidden.
+        const REDACTION_RULES = [
+            { category: 'US Social Security Number', placeholder: '[REDACTED-SSN]', regex: /\b\d{3}[-\s]\d{2}[-\s]\d{4}\b/g },
+            { category: 'Immigration A-Number', placeholder: '[REDACTED-A-NUMBER]', regex: /\bA-?\d{7,9}\b/gi },
+            { category: 'US bank routing number', placeholder: '[REDACTED-ROUTING]', regex: /routing\s*(?:number|no\.?|#)?\s*[:\-]?\s*(\d{9})\b/gi },
+            { category: 'Password / credential value', placeholder: '[REDACTED-PASSWORD]', regex: /\b(password|pwd|passcode|pin code|secret)\s*[:=]\s*\S+/gi },
+            { category: 'API key / access token', placeholder: '[REDACTED-TOKEN]', regex: /\b(sk-[A-Za-z0-9]{16,}|AKIA[0-9A-Z]{16}|ghp_[A-Za-z0-9]{30,}|xox[baprs]-[A-Za-z0-9-]{10,})\b/g },
+            { category: 'API key / access token', placeholder: '[REDACTED-TOKEN]', regex: /\b(api[_\s-]?key|access[_\s-]?token|secret[_\s-]?key)\s*[:=]\s*['"]?[A-Za-z0-9_\-]{12,}['"]?/gi },
+            { category: 'Email address', placeholder: '[REDACTED-EMAIL]', regex: /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/g },
+            { category: 'Phone number', placeholder: '[REDACTED-PHONE]', regex: /\b(?:\+?1[-.\s]?)?\(?\d{3}\)?[-.\s]?\d{3}[-.\s]?\d{4}\b/g },
+        ];
+
+        function luhnCheck(digitString) {
+            const clean = digitString.replace(/\D/g, '');
+            if (clean.length < 13 || clean.length > 19) return false;
+            let sum = 0, alt = false;
+            for (let i = clean.length - 1; i >= 0; i--) {
+                let d = parseInt(clean[i], 10);
+                if (alt) { d *= 2; if (d > 9) d -= 9; }
+                sum += d; alt = !alt;
+            }
+            return sum % 10 === 0;
+        }
+
+        function runRedactionGate(text) {
+            let working = text;
+            const findings = [];
+
+            const cardMatches = [...working.matchAll(/\b(?:\d[ -]*?){13,19}\b/g)]
+                .filter(m => luhnCheck(m[0]));
+            if (cardMatches.length > 0) {
+                findings.push({ category: 'Credit/debit card number', count: cardMatches.length });
+                cardMatches.sort((a, b) => b.index - a.index).forEach(m => {
+                    working = working.slice(0, m.index) + '[REDACTED-CARD]' + working.slice(m.index + m[0].length);
+                });
+            }
+
+            REDACTION_RULES.forEach(rule => {
+                const matches = [...working.matchAll(rule.regex)];
+                if (matches.length === 0) return;
+                findings.push({ category: rule.category, count: matches.length });
+                working = working.replace(rule.regex, rule.placeholder);
+            });
+
+            return { redactedText: working, findings };
+        }
+
+        function renderRedactionNotice(findings) {
+            if (findings.length === 0) return '';
+            const rows = findings.map(f => `<div class="detection-item">${escapeHtml(f.category)}: <strong>${f.count} found and redacted</strong></div>`).join('');
+            return `<div class="synthesis" style="background:#fff3cd;color:#664d03;">
+                <div class="synthesis-title">🔒 Sensitive data found and removed</div>
+                <div class="synthesis-text">Nothing below was sent to the AI backend in its original form — only the redacted version was analyzed.</div>
+                ${rows}
+            </div>`;
+        }
+
         // Shared API helper — talks to the ReVision backend proxy (never the
         // Anthropic API directly), so the API key stays server-side. The model
-        // is chosen by the server via configuration.
-        async function callClaude(prompt, maxTokens = 3000) {
+        // is chosen by the server via configuration. Requests are streamed
+        // (SSE) for lower perceived latency; pass onChunk to observe the
+        // response as it accumulates. The full text is still returned/thrown
+        // only once the stream completes, so callers that need a whole
+        // response (e.g. to JSON.parse it) don't have to change.
+        async function callClaude(prompt, maxTokens = 3000, onChunk = null) {
             const response = await fetch('/api/messages', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ prompt, max_tokens: maxTokens })
+                body: JSON.stringify({ prompt, max_tokens: maxTokens, stream: true })
             });
-            const data = await response.json();
-            if (data.error) {
-                throw new Error((data.error && data.error.message) || 'API error');
+
+            const contentType = response.headers.get('content-type') || '';
+            if (!contentType.includes('text/event-stream')) {
+                // Non-streaming path: server-side errors (and any other
+                // non-SSE reply) come back as plain JSON.
+                const data = await response.json();
+                if (data.error) {
+                    throw new Error((data.error && data.error.message) || 'API error');
+                }
+                return data.content
+                    .filter(item => item.type === 'text')
+                    .map(item => item.text)
+                    .join('\n');
             }
-            return data.content
-                .filter(item => item.type === 'text')
-                .map(item => item.text)
-                .join('\n');
+
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            let buffer = '';
+            let text = '';
+            let streamError = null;
+
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+                buffer += decoder.decode(value, { stream: true });
+                const events = buffer.split('\n\n');
+                buffer = events.pop();
+                for (const event of events) {
+                    const dataLine = event.split('\n').find(line => line.startsWith('data:'));
+                    if (!dataLine) continue;
+                    let payload;
+                    try {
+                        payload = JSON.parse(dataLine.slice(5).trim());
+                    } catch {
+                        continue;
+                    }
+                    if (payload.type === 'content_block_delta' && payload.delta?.type === 'text_delta') {
+                        text += payload.delta.text;
+                        if (onChunk) onChunk(text);
+                    } else if (payload.type === 'error') {
+                        streamError = (payload.error && payload.error.message) || 'API error';
+                    }
+                }
+            }
+
+            if (streamError) throw new Error(streamError);
+            return text;
+        }
+
+        // Updates a loading button's label with a live progress readout as a
+        // streamed response accumulates, so the wait doesn't feel static.
+        function streamProgress(btn, label) {
+            return text => {
+                btn.innerHTML = `<span class="loading"><span class="spinner"></span>${label} (${text.length.toLocaleString()} chars)</span>`;
+            };
         }
 
         function escapeHtml(str) {
@@ -790,16 +904,38 @@
             noAnalyzerResults.style.display = 'block';
         });
 
+        // Fictional ad copy packed with the tactics the analyzer flags:
+        // artificial urgency, scarcity, guarantee claims, price anchoring,
+        // pressure CTA, and buried recurring-billing fine print.
+        const ANALYZER_EXAMPLE = `LAST CHANCE — only 3 spots left!
+
+Our exclusive system is GUARANTEED to 10x your income in 30 days or your money back. Normally $499, today only $29. No experience needed — everyone qualifies!
+
+But hurry: this offer disappears at midnight TONIGHT and will never be repeated. Thousands are already inside — don't be the one who missed out.
+
+Message "READY" now to claim your spot before it's gone forever.
+
+By responding you agree to enrollment in our partner marketing program and a recurring monthly membership of $89 after the trial period, cancellable only by certified mail.`;
+
+        document.getElementById('exampleAnalyzerBtn').addEventListener('click', () => {
+            analyzerInput.value = ANALYZER_EXAMPLE;
+            analyzerInput.focus();
+        });
+
         analyzeBtn.addEventListener('click', async () => {
-            const text = analyzerInput.value.trim();
-            if (!text) { alert('Please paste some text to analyze'); return; }
+            const rawInput = analyzerInput.value.trim();
+            if (!rawInput) { alert('Please paste some text to analyze'); return; }
+
+            // Redaction Gate runs before anything else — the AI backend
+            // never sees the original SSN/password/card number/etc.
+            const { redactedText: text, findings: redactionFindings } = runRedactionGate(rawInput);
 
             analyzeBtn.disabled = true;
             analyzeBtn.innerHTML = '<span class="loading"><span class="spinner"></span>Analyzing...</span>';
             noAnalyzerResults.style.display = 'none';
 
             try {
-                const raw = await callClaude(`Analyze this text for manipulative language patterns. Return ONLY valid JSON (no markdown, no explanations).
+                const raw = await callClaude(`Analyze this text for manipulative language and hidden or predatory terms. Return ONLY valid JSON (no markdown, no explanations).
 
 Text to analyze:
 ${text}
@@ -831,11 +967,23 @@ Return this exact JSON structure:
       { "type": "time_pressure|scarcity_claim|now_or_never|limited_quantity", "phrase": "exact phrase", "explanation": "the urgency tactic", "severity": "critical|high|medium|low" }
     ]
   },
+  "hidden_terms_and_costs": {
+    "severity": "critical|high|medium|low",
+    "detections": [
+      { "type": "hidden_fee|auto_renewal|forced_continuity|cancellation_obstruction|buried_limitation", "phrase": "exact phrase", "explanation": "what cost or obligation is buried or hard to escape", "severity": "critical|high|medium|low" }
+    ]
+  },
+  "contract_traps": {
+    "severity": "critical|high|medium|low",
+    "detections": [
+      { "type": "arbitration_clause|indemnification|liability_waiver|jurisdiction_shopping|class_action_waiver|unilateral_modification|confession_of_judgment", "phrase": "exact phrase", "explanation": "what right this clause takes away and why it matters if this ever goes wrong", "severity": "critical|high|medium|low" }
+    ]
+  },
   "synthesis": "1-2 sentence summary of the overall manipulation profile and recommendations"
-}`, 2000);
+}`, 2000, streamProgress(analyzeBtn, 'Analyzing'));
 
                 const analysis = JSON.parse(raw.replace(/```json\n?|\n?```/g, '').trim());
-                displayAnalysisResults(analysis);
+                displayAnalysisResults(analysis, text, redactionFindings);
             } catch (error) {
                 analyzerResults.innerHTML = `<div class="error">Error: ${escapeHtml(error.message)}</div>`;
             } finally {
@@ -844,8 +992,26 @@ Return this exact JSON structure:
             }
         });
 
-        function displayAnalysisResults(analysis) {
-            analyzerResults.innerHTML = `<div class="synthesis">
+        // Devil's Advocate Scenario 2: confirm every quoted "exact phrase" the
+        // model returns actually appears in the source text before it's shown
+        // to the user as fact. Mirrors PhraseVerifier.kt on the Android side —
+        // same normalization, same known limitation (exact/normalized substring
+        // match only, so paraphrases or OCR noise can produce false "unverified"
+        // flags on real findings; that's why we warn rather than delete).
+        function normalizeForVerification(s) {
+            return s.toLowerCase()
+                .replace(/[\u2018\u2019]/g, "'")
+                .replace(/[\u201C\u201D]/g, '"')
+                .replace(/\s+/g, ' ')
+                .trim();
+        }
+
+        function verifyPhrase(sourceText, phrase) {
+            return normalizeForVerification(sourceText).includes(normalizeForVerification(phrase));
+        }
+
+        function displayAnalysisResults(analysis, sourceText, redactionFindings = []) {
+            analyzerResults.innerHTML = renderRedactionNotice(redactionFindings) + `<div class="synthesis">
                 <div class="synthesis-title">Overall Risk Score: ${analysis.overall_risk_score}/100</div>
             </div>`;
 
@@ -860,8 +1026,30 @@ Return this exact JSON structure:
                 { key: 'deceptive_language', title: '🚩 Deceptive Language' },
                 { key: 'tone_manipulation', title: '😠 Tone Manipulation' },
                 { key: 'scare_tactics', title: '😨 Scare Tactics' },
-                { key: 'artificial_urgency', title: '⏰ Artificial Urgency' }
+                { key: 'artificial_urgency', title: '⏰ Artificial Urgency' },
+                { key: 'hidden_terms_and_costs', title: '💸 Hidden Terms & Costs' },
+                { key: 'contract_traps', title: '⚖️ Contract Traps' }
             ];
+
+            let verifiedCount = 0;
+            let totalCount = 0;
+            sections.forEach(section => {
+                const data = analysis[section.key];
+                if (data && data.detections) {
+                    data.detections.forEach(d => {
+                        totalCount++;
+                        if (verifyPhrase(sourceText, d.phrase)) verifiedCount++;
+                    });
+                }
+            });
+
+            if (totalCount > 0 && verifiedCount < totalCount) {
+                analyzerResults.innerHTML += `<div class="synthesis" style="background:#fff3cd;color:#664d03;">
+                    <div class="synthesis-text">🔎 ${verifiedCount} of ${totalCount} flagged quotes were confirmed
+                    word-for-word in your document. The rest are marked below — they may still be accurate
+                    (paraphrasing or scan noise can cause this), but couldn't be automatically verified.</div>
+                </div>`;
+            }
 
             sections.forEach(section => {
                 const data = analysis[section.key];
@@ -871,13 +1059,16 @@ Return this exact JSON structure:
                             <div class="result-title">${section.title}</div>
                             <span class="severity-badge severity-${data.severity}">${data.severity}</span>
                         </div>
-                        ${data.detections.map(d => `
+                        ${data.detections.map(d => {
+                            const verified = verifyPhrase(sourceText, d.phrase);
+                            return `
                             <div class="detection-item">
                                 <div class="detection-type">${escapeHtml(d.type)}</div>
                                 <div class="detection-text">"${escapeHtml(d.phrase)}"</div>
                                 <div style="color: #cbd5e1; font-size: 0.9em;">${escapeHtml(d.explanation)}</div>
-                            </div>
-                        `).join('')}
+                                ${verified ? '' : '<div style="color: #dc3545; font-size: 0.85em; margin-top: 4px;">⚠️ Couldn\'t confirm this exact quote appears in your document — worth checking against the original before acting on it.</div>'}
+                            </div>`;
+                        }).join('')}
                     </div>`;
                 }
             });
@@ -927,7 +1118,7 @@ ${custom ? `ADDITIONAL INSTRUCTION: ${custom}` : ''}
 ORIGINAL DOCUMENT:
 ${text}
 
-Provide ONLY the enhanced document text, no explanations or meta-commentary. Maintain the original structure and intent while applying the requested enhancements.`);
+Provide ONLY the enhanced document text, no explanations or meta-commentary. Maintain the original structure and intent while applying the requested enhancements.`, 3000, streamProgress(enhanceBtn, 'Enhancing'));
 
                 const clipKey = storeForClipboard(enhanced);
                 revisionResults.innerHTML = `
@@ -1006,7 +1197,7 @@ Return ONLY valid JSON (no markdown fences):
 }
 
 TEXT TO TRANSLATE:
-${text}`);
+${text}`, 3000, streamProgress(translateBtn, 'Translating'));
 
                 const result = JSON.parse(raw.replace(/```json\n?|\n?```/g, '').trim());
                 const clipKey = storeForClipboard(result.translation);
@@ -1083,7 +1274,7 @@ Return ONLY valid JSON (no markdown fences):
 Include EVERY jargon term, legalism, acronym, or technical phrase in the glossary. Do not skip any obligations, deadlines, dollar amounts, or conditions in the simplified text.
 
 TEXT TO DECODE:
-${text}`, 4000);
+${text}`, 4000, streamProgress(jargonaryBtn, 'Decoding'));
 
                 const result = JSON.parse(raw.replace(/```json\n?|\n?```/g, '').trim());
                 const clipKey = storeForClipboard(result.simplified_text);

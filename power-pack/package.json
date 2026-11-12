@@ -1,6 +1,6 @@
 {
   "name": "slash-pack",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "S.L.A.S.H. — 77 battle-tested prompt-commands for Claude. Structured Language And System Heuristics.",
   "keywords": [
     "claude",
@@ -12,11 +12,11 @@
     "ai",
     "productivity"
   ],
-  "license": "MIT",
+  "license": "SEE LICENSE IN LICENSE",
   "author": "ReVision Contributors",
   "repository": {
     "type": "git",
-    "url": "https://github.com/zdycomp/claudrick"
+    "url": "https://github.com/Codric-Enterprise/ClaudRick"
   },
   "bin": {
     "slash-pack": "cli.js"

@@ -1,0 +1,82 @@
+{
+  "documents": 10,
+  "predatory": 8,
+  "controls": 2,
+  "planted_total": 34,
+  "hidden_terms_planted": 12,
+  "coverage": {
+    "deceptive_language": {
+      "expected_subtypes": [],
+      "exercised": [
+        "contradiction",
+        "framing",
+        "false_guarantee"
+      ],
+      "missing": []
+    },
+    "tone_manipulation": {
+      "expected_subtypes": [
+        "fear_appeal",
+        "emotional_appeal",
+        "greed_appeal",
+        "false_authority",
+        "false_consensus"
+      ],
+      "exercised": [
+        "emotional_appeal",
+        "greed_appeal",
+        "false_authority",
+        "false_consensus",
+        "fear_appeal"
+      ],
+      "missing": []
+    },
+    "scare_tactics": {
+      "expected_subtypes": [
+        "negative_consequence",
+        "threat",
+        "worst_case_framing",
+        "social_harm"
+      ],
+      "exercised": [
+        "negative_consequence",
+        "social_harm",
+        "threat",
+        "worst_case_framing"
+      ],
+      "missing": []
+    },
+    "artificial_urgency": {
+      "expected_subtypes": [
+        "time_pressure",
+        "scarcity_claim",
+        "now_or_never",
+        "limited_quantity"
+      ],
+      "exercised": [
+        "now_or_never",
+        "scarcity_claim",
+        "limited_quantity",
+        "time_pressure"
+      ],
+      "missing": []
+    },
+    "hidden_terms_and_costs": {
+      "expected_subtypes": [
+        "hidden_fee",
+        "auto_renewal",
+        "forced_continuity",
+        "cancellation_obstruction",
+        "buried_limitation"
+      ],
+      "exercised": [
+        "auto_renewal",
+        "cancellation_obstruction",
+        "hidden_fee",
+        "forced_continuity",
+        "buried_limitation"
+      ],
+      "missing": []
+    }
+  }
+}

@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "revision"
-version = "0.1.0"
+version = "2.0.0"
 description = "ReVision — a Claude-powered document toolkit (analyze, enhance, translate, simplify)."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -33,6 +33,20 @@ pythonpath = ["src"]
 line-length = 100
 target-version = "py311"
 src = ["src", "tests"]
+# ezr/ is a separate project vendored into this repo (see CLAUDE.md).
+# It keeps its own conventions and is verified by ezr/run.sh, not by
+# this gate; reformatting it would also break fidelity to the Ever V3.0
+# source it was seeded from.
+# Vendored standalone projects: each ships its own pyproject.toml,
+# its own test suite and its own conventions. ReVision's lint rules
+# are not theirs, and reformatting them here would fork them from
+# upstream for no gain.
+# realm/ is excluded for the same reason ezr/ is, though it is written
+# here rather than vendored: it is a separate language with its own
+# gate (realm/realm_test.py). Its vocabulary table is hand-aligned so
+# that a rhyme class reads as a block, and `ruff format` would explode
+# it -- which is the same trap CLAUDE.md records for ezr/.
+extend-exclude = ["ezr", "everconf", "realm"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM"]
