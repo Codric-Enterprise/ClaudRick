@@ -49,6 +49,10 @@ def _run(cmd: list[str]) -> subprocess.CompletedProcess:
     return subprocess.run(cmd, capture_output=True, text=True)
 
 
+def _has_output(result: subprocess.CompletedProcess) -> bool:
+    return bool(result.stdout.strip() or result.stderr.strip())
+
+
 def main(argv: list[str]) -> int:
     if len(argv) < 2:
         print("usage: ever FILE [args...]", file=sys.stderr)
@@ -79,7 +83,7 @@ def main(argv: list[str]) -> int:
         return 2
 
     primary = _run(primary_cmd)
-    if primary.stdout.strip():
+    if _has_output(primary):
         sys.stdout.write(primary.stdout)
         sys.stderr.write(primary.stderr)
         return primary.returncode
@@ -87,7 +91,7 @@ def main(argv: list[str]) -> int:
     # Primary said nothing (whatever its exit code). Try the other
     # lineage's runner before reporting silence as the answer.
     fallback = _run(fallback_cmd)
-    if fallback.stdout.strip():
+    if _has_output(fallback):
         sys.stdout.write(fallback.stdout)
         sys.stderr.write(fallback.stderr)
         return fallback.returncode
