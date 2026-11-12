@@ -225,8 +225,8 @@ Uses a **src layout**: importable code is under `src/`; `pyproject.toml` sets
 
 - **Layout:** shippable code under `src/revision/`; tests under `tests/` mirror
   the module they cover (`server.py` -> `test_server.py`).
-- **Style/lint:** ruff, line length 100, rules `E, F, I, UP, B, SIM`
-  (see `[tool.ruff.lint]`). Run `ruff format` before committing.
+- **Style/lint:** ruff (config in `[tool.ruff.lint]`). Run `ruff format` before
+  committing.
 - **Typing:** type-hint public functions.
 - **HTTP handlers:** `do_GET` / `do_POST` are the `http.server` API and carry
   `# noqa: N802`; keep the handler bound to its client via `make_handler`.
@@ -323,16 +323,14 @@ model stack, the core-files framework, and the Claude Code app workflow):
 
 - **Commands pack** — `docs/commands-pack.md` lists every command's slash form
   alongside its paste-ready prompt (for use in a plain claude.ai chat, where
-  slash commands aren't available).
-- **Slash commands** in `.claude/commands/` — the full command reference as
-  reusable prompt shortcuts across six groups (focus/context, think/solve,
-  organize, code, automate, personalize): `/think`, `/analyze`, `/challenge`,
-  `/compare`, `/recommend`, `/solve`, `/summary`, `/outline`, `/table`,
-  `/mindmap`, `/flowchart`, `/explain`, `/debug`, `/optimize`, `/refactor`,
-  `/test`, `/convert`, `/workflow`, `/automate`, `/tasklist`, `/checklist`,
-  `/brief`, `/about-me`, `/model-picker`, and more. Invoke with `/name [args]`. Note: `/clear`,
-  `/memory`, and `/review` collide with Claude Code built-ins, which take
-  precedence.
+  slash commands aren't available). `tests/test_commands_pack.py` fails CI if
+  this pack and `.claude/commands/` drift out of sync (dev-only `/check`,
+  `/run-app`, `/smoke` are excluded).
+- **Slash commands** in `.claude/commands/` — reusable prompt shortcuts across
+  six groups (focus/context, think/solve, organize, code, automate,
+  personalize); run `ls .claude/commands/` or see `docs/commands-pack.md` for
+  the full list. Invoke with `/name [args]`. Note: `/clear`, `/memory`, and
+  `/review` collide with Claude Code built-ins, which take precedence.
 - **Skills** in `.claude/skills/` —
   - `claude-power-practices`: auto-applied guardrails for high-stakes work (pick
     the right model, structure prompts with XML tags, use extended thinking,
