@@ -309,3 +309,10 @@ def mse(predicted: Iterable[Union["C", Any]],
             return C(None, confidence=0)
         sq_errors.append((pi.value - ai.value) ** 2)
     return C(sum(sq_errors) / len(sq_errors), confidence=cmin_conf(p + a))
+
+
+# Graded decisions (bands, reasons, audit). Imported last: decision.py
+# imports C/UNKNOWN from this module.
+from .decision import (  # noqa: E402
+    BANDS, PROFILES, REASON_CODES, Decision, Reason, append_audit,
+    audit_record, band_for, decide, percent, plain_label, require_band)
