@@ -6,6 +6,7 @@ auth and per-client rate limiting protect that endpoint. Built on the
 standard-library ``http.server`` to avoid runtime dependencies.
 """
 
+import hashlib
 import hmac
 import http.client
 import json
@@ -36,6 +37,7 @@ class RevisionHandler(BaseHTTPRequestHandler):
     static_dir: Path
     config: Config
     limiter: RateLimiter
+    static_cache: dict[str, tuple[bytes, str]]
 
     server_version = "ReVision"
 
@@ -86,11 +88,28 @@ class RevisionHandler(BaseHTTPRequestHandler):
             self.send_error(404, "Not found")
             return
 
-        content = target.read_bytes()
+        cache_key = str(target)
+        cached = self.static_cache.get(cache_key)
+        if cached is None:
+            content = target.read_bytes()
+            etag = f'"{hashlib.sha256(content).hexdigest()}"'
+            cached = (content, etag)
+            self.static_cache[cache_key] = cached
+        content, etag = cached
         ctype = _CONTENT_TYPES.get(target.suffix, "application/octet-stream")
+
+        if self.headers.get("If-None-Match") == etag:
+            self.send_response(304)
+            self.send_header("cache-control", "public, max-age=300")
+            self.send_header("etag", etag)
+            self.end_headers()
+            return
+
         self.send_response(200)
         self.send_header("content-type", ctype)
         self.send_header("content-length", str(len(content)))
+        self.send_header("cache-control", "public, max-age=300")
+        self.send_header("etag", etag)
         self.end_headers()
         self.wfile.write(content)
 
@@ -230,6 +249,7 @@ def make_handler(
             "static_dir": static_dir,
             "config": config,
             "limiter": limiter,
+            "static_cache": {},
         },
     )
 
