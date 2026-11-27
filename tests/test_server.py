@@ -90,9 +90,29 @@ def test_get_index_served():
     with running_server(client) as base:
         with urllib.request.urlopen(base + "/") as resp:
             body = resp.read().decode()
+            headers = resp.headers
         assert resp.status == 200
         assert "✨ ReVision" in body
         assert "/api/messages" in body
+        assert headers.get("Cache-Control") == "public, max-age=300"
+        assert headers.get("ETag", "").startswith('"')
+
+
+def test_get_index_revalidates_with_etag():
+    client = _FakeClient(result={"content": []})
+    with running_server(client) as base:
+        with urllib.request.urlopen(base + "/") as resp:
+            etag = resp.headers["ETag"]
+
+        request = urllib.request.Request(
+            base + "/", headers={"If-None-Match": etag}, method="GET"
+        )
+        with pytest.raises(urllib.error.HTTPError) as exc:
+            urllib.request.urlopen(request)
+
+        assert exc.value.code == 304
+        assert exc.value.headers.get("ETag") == etag
+        assert exc.value.headers.get("Cache-Control") == "public, max-age=300"
 
 
 def test_healthz():
